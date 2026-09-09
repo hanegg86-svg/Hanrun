@@ -62,7 +62,7 @@
         const store = tx.objectStore(STORE_HISTORY);
         const req = store.add(record);
         req.onsuccess = () => resolve(req.result);
-        req.onerror = (e) => reject(e.target.error);
+        req.onerror = () => reject(e.target.error);
       });
     },
     async getAllRunHistory() {
@@ -764,15 +764,32 @@
 
           if (accuracy > 30) return; // กรองสัญญาณกระตุก
 
-          if (lastCoord) {
-            const deltaKm = calculateDistance(lastCoord.latitude, lastCoord.longitude, latitude, longitude);
-            // กรองสปีดกระโดดที่เกินจริง (> 35 km/h)
-            if (deltaKm > 0.005 && deltaKm < 0.2) {
+          const now = Date.now();
+
+          if (!lastCoord) {
+            lastCoord = { latitude, longitude, time: now };
+            return;
+          }
+
+          const deltaKm = calculateDistance(lastCoord.latitude, lastCoord.longitude, latitude, longitude);
+          const timeDeltaSec = (now - (lastCoord.time || now)) / 1000;
+
+          // สะสมระยะทางเมื่อขยับตั้งแต่ 2 เมตร (0.002 กม.) ขึ้นไป เพื่อไม่ให้ระยะทางตกหล่น
+          if (deltaKm >= 0.002) {
+            const speedKmh = timeDeltaSec > 0 ? (deltaKm / (timeDeltaSec / 3600)) : 0;
+
+            // กรองสปีดกระโดดที่เกินจริง (> 35 km/h) เช่น GPS วาร์ป หรือนั่งรถ
+            if (speedKmh <= 35) {
               runDistanceKm += deltaKm;
               applyDistanceDamage(deltaKm);
+              lastCoord = { latitude, longitude, time: now };
+            } else {
+              // กรณีความเร็วกระโดดเกินจริง ให้รีเซ็ตจุดอ้างอิงเป็นจุดปัจจุบันโดยไม่บวกระยะทาง
+              lastCoord = { latitude, longitude, time: now };
             }
           }
-          lastCoord = { latitude, longitude };
+          // หาก deltaKm ยังไม่ถึง 0.002 กม. จะไม่ทำการอัปเดต lastCoord เพื่อสะสมระยะทางต่อเนื่องในการส่งพิกัดครั้งถัดไป
+
           renderUI();
         },
         (err) => {
