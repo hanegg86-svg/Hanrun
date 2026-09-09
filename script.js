@@ -1,6 +1,86 @@
 // ShadowStrider: Dark Run RPG Core Engine
-(function () {
+(async function () {
   'use strict';
+
+  // --- IndexedDB Database Layer (จัดเก็บข้อมูลไม่จำกัดขนาด) ---
+  const DB_NAME = 'ShadowStriderDB';
+  const DB_VERSION = 1;
+  const STORE_PLAYER = 'player_state';
+  const STORE_HISTORY = 'run_history';
+
+  const DB = {
+    db: null,
+    async init() {
+      if (this.db) return this.db;
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_PLAYER)) {
+            db.createObjectStore(STORE_PLAYER, { keyPath: 'key' });
+          }
+          if (!db.objectStoreNames.contains(STORE_HISTORY)) {
+            const histStore = db.createObjectStore(STORE_HISTORY, { keyPath: 'id', autoIncrement: true });
+            histStore.createIndex('timestamp', 'timestamp', { unique: false });
+          }
+        };
+        req.onsuccess = (e) => {
+          this.db = e.target.result;
+          // ขอสิทธิ์ Persistent Storage เพื่อป้องกัน OS เคลียร์ข้อมูลทิ้ง
+          if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().catch(() => {});
+          }
+          resolve(this.db);
+        };
+        req.onerror = (e) => reject(e.target.error);
+      });
+    },
+    async getPlayerState() {
+      const db = await this.init();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_PLAYER, 'readonly');
+        const store = tx.objectStore(STORE_PLAYER);
+        const req = store.get('current');
+        req.onsuccess = () => resolve(req.result ? req.result.data : null);
+        req.onerror = () => resolve(null);
+      });
+    },
+    async savePlayerState(state) {
+      const db = await this.init();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_PLAYER, 'readwrite');
+        const store = tx.objectStore(STORE_PLAYER);
+        const req = store.put({ key: 'current', data: state, updatedAt: Date.now() });
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e.target.error);
+      });
+    },
+    async addRunRecord(record) {
+      const db = await this.init();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_HISTORY, 'readwrite');
+        const store = tx.objectStore(STORE_HISTORY);
+        const req = store.add(record);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = (e) => reject(e.target.error);
+      });
+    },
+    async getAllRunHistory() {
+      const db = await this.init();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_HISTORY, 'readonly');
+        const store = tx.objectStore(STORE_HISTORY);
+        const req = store.getAll();
+        req.onsuccess = () => {
+          const list = req.result || [];
+          // จัดเรียงล่าสุดขึ้นก่อน
+          list.sort((a, b) => b.id - a.id);
+          resolve(list);
+        };
+        req.onerror = () => resolve([]);
+      });
+    }
+  };
 
   // --- Web Audio Synthesizer (เสียงประกอบ RPG ในตัว ไม่ง้อไฟล์นอก) ---
   const AudioEngine = {
@@ -43,6 +123,11 @@
       this.playTone(180, 'sawtooth', 0.1, 0);
       this.playTone(90, 'sawtooth', 0.15, 60);
     },
+    sfxCrit() {
+      this.init();
+      this.playTone(587.3, 'sawtooth', 0.08, 0);
+      this.playTone(880.0, 'sawtooth', 0.15, 60);
+    },
     sfxBossDefeat() {
       this.init();
       this.playTone(330, 'square', 0.15, 0);
@@ -65,17 +150,36 @@
     { tier: 'TIER III', name: 'Ancient Bone Dragon', avatar: '🐉', maxHpKm: 5.0, desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 5.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!', rewardExp: 7500, rewardGold: 800 }
   ];
 
+  // --- Dynamic Title System ---
+  function getTitleForLevel(level) {
+    if (level >= 25) return 'Shadow Sovereign';
+    if (level >= 20) return 'Dread Champion';
+    if (level >= 15) return 'Abyssal Dreadnought';
+    if (level >= 10) return 'Abyss Stalker';
+    if (level >= 5) return 'Crypt Slayer';
+    return 'Shadow Initiate';
+  }
+
   // --- Game State Object ---
   const defaultState = {
     level: 1,
+    title: 'Shadow Initiate',
     currentExp: 0,
     nextExp: 1000,
     gold: 0,
+    statPoints: 0,
     stats: { str: 10, sta: 10, agi: 10 },
     bossIndex: 0,
     bossHpRemain: 1.0,
     totalDistanceKm: 0.0,
     lastDailyDate: new Date().toDateString(),
+    career: {
+      totalRuns: 0,
+      totalDistanceKm: 0.0,
+      totalSeconds: 0,
+      totalBossDefeated: 0,
+      longestRunKm: 0.0
+    },
     dailyQuests: [
       { id: 'q1', name: 'วอร์มอัพผจญภัย: สะสมระยะทาง 1.0 กม.', target: 1.0, current: 0.0, unit: 'กม.', rewardExp: 500, rewardGold: 50, claimed: false },
       { id: 'q2', name: 'จู่โจมเงียบ: วิ่งต่อเนื่อง 10 นาที', target: 600, current: 0, unit: 'วินาที', rewardExp: 600, rewardGold: 80, claimed: false },
@@ -83,10 +187,38 @@
     ]
   };
 
-  let gameState = JSON.parse(localStorage.getItem('shadow_strider_save')) || defaultState;
+  let gameState = defaultState;
+
+  // --- State Migration & Persistence ---
+  async function loadGameState() {
+    let saved = await DB.getPlayerState();
+    if (!saved) {
+      // ตรวจสอบข้อมูลเก่าจาก localStorage เพื่อย้ายเข้าสู่ IndexedDB
+      const legacySave = localStorage.getItem('shadow_strider_save');
+      if (legacySave) {
+        try {
+          saved = JSON.parse(legacySave);
+          localStorage.removeItem('shadow_strider_save');
+          console.log('ย้ายข้อมูลผู้เล่นเดิมจาก localStorage เข้าสู่ IndexedDB สำเร็จ');
+        } catch (e) {
+          console.warn('โหลด save เดิมไม่สำเร็จ', e);
+        }
+      }
+    }
+
+    if (saved) {
+      gameState = Object.assign({}, defaultState, saved);
+      gameState.stats = Object.assign({}, defaultState.stats, saved.stats || {});
+      gameState.career = Object.assign({}, defaultState.career, saved.career || {});
+      gameState.dailyQuests = saved.dailyQuests || defaultState.dailyQuests;
+    } else {
+      gameState = defaultState;
+    }
+    await DB.savePlayerState(gameState);
+  }
 
   function saveGame() {
-    localStorage.setItem('shadow_strider_save', JSON.stringify(gameState));
+    DB.savePlayerState(gameState).catch(err => console.error('Save error', err));
   }
 
   // --- Daily Quest Reset Check ---
@@ -111,16 +243,27 @@
   let runTimerInterval = null;
   let watchId = null;
   let lastCoord = null;
+  let sessionBossKills = 0;
 
   // --- DOM Elements ---
+  const playerTitleEl = document.getElementById('player-title');
   const playerLevelEl = document.getElementById('player-level');
   const expBarFillEl = document.getElementById('exp-bar-fill');
   const expCurrentEl = document.getElementById('exp-current');
   const expNextEl = document.getElementById('exp-next');
   const goldValueEl = document.getElementById('gold-value');
+
+  const statPointsBarEl = document.getElementById('stat-points-bar');
+  const statPointsValEl = document.getElementById('stat-points-val');
   const statStrEl = document.getElementById('stat-str');
   const statStaEl = document.getElementById('stat-sta');
   const statAgiEl = document.getElementById('stat-agi');
+  const strMultEl = document.getElementById('str-mult');
+  const staMultEl = document.getElementById('sta-mult');
+  const agiCritEl = document.getElementById('agi-crit');
+  const btnAddStr = document.getElementById('btn-add-str');
+  const btnAddSta = document.getElementById('btn-add-sta');
+  const btnAddAgi = document.getElementById('btn-add-agi');
 
   const bossTierEl = document.getElementById('boss-tier');
   const bossAvatarEl = document.getElementById('boss-avatar');
@@ -143,6 +286,13 @@
   const simControls = document.getElementById('sim-controls');
   const questsListEl = document.getElementById('quests-list');
   const gameToastEl = document.getElementById('game-toast');
+
+  const careerDistanceEl = document.getElementById('career-distance');
+  const careerTimeEl = document.getElementById('career-time');
+  const careerBossesEl = document.getElementById('career-bosses');
+  const careerLongestEl = document.getElementById('career-longest');
+  const historyListEl = document.getElementById('history-list');
+  const historyCountEl = document.getElementById('history-count');
 
   // --- Haversine Distance (กิโลเมตร) ---
   function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -169,15 +319,18 @@
   // --- Player Progression ---
   function addExp(amount) {
     gameState.currentExp += amount;
+    let leveledUp = false;
     while (gameState.currentExp >= gameState.nextExp) {
       gameState.currentExp -= gameState.nextExp;
       gameState.level += 1;
       gameState.nextExp = Math.floor(gameState.nextExp * 1.35);
-      gameState.stats.str += 2;
-      gameState.stats.sta += 2;
-      gameState.stats.agi += 1;
+      gameState.statPoints = (gameState.statPoints || 0) + 3;
+      leveledUp = true;
       AudioEngine.sfxLevelUp();
-      showToast(`⭐ เลเวลอัป! ก้าวสู่อันดับ LV. ${gameState.level}`);
+      showToast(`⭐ เลเวลอัป! ก้าวสู่อันดับ LV. ${gameState.level} (ได้รับ +3 แต้มสเตตัส)`);
+    }
+    if (leveledUp) {
+      gameState.title = getTitleForLevel(gameState.level);
     }
     saveGame();
     renderUI();
@@ -192,17 +345,39 @@
       parseFloat((gameState.dailyQuests[0].current + distanceDeltaKm).toFixed(2))
     );
 
+    // คำนวณ STR Bonus: 1 STR เหนือ 10 เพิ่มดาเมจ +5%
+    const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05);
+
+    // คำนวณ AGI Bonus: โอกาสคริติคอล AGI * 0.5% (สูงสุด 50%) สร้างความเสียหาย x1.8
+    const critChance = Math.min(50, gameState.stats.agi * 0.5);
+    const isCrit = (Math.random() * 100) < critChance;
+    const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? 1.8 : 1.0);
+
+    if (isCrit) {
+      AudioEngine.sfxCrit();
+      showToast(`💥 CRITICAL! โจมตีทะลวง x1.8 เท่า`);
+    } else {
+      AudioEngine.sfxAttack();
+    }
+
     // หักเลือดบอส
     const currentBoss = BOSS_DATABASE[gameState.bossIndex];
-    gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - distanceDeltaKm);
-    AudioEngine.sfxAttack();
+    gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - effectiveDamage);
 
     if (gameState.bossHpRemain <= 0.001) {
       // โค่นบอสสำเร็จ
       AudioEngine.sfxBossDefeat();
-      showToast(`🏆 สยบ ${currentBoss.name}! ได้รับ +${currentBoss.rewardExp} EXP & +${currentBoss.rewardGold} เหรียญ`);
-      addExp(currentBoss.rewardExp);
-      gameState.gold += currentBoss.rewardGold;
+      sessionBossKills += 1;
+      gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
+
+      // คำนวณ STA Bonus: 1 STA เหนือ 10 มอบโบนัสทองและ EXP +2%
+      const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02);
+      const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier);
+      const rewardGold = Math.floor(currentBoss.rewardGold * staMultiplier);
+
+      showToast(`🏆 สยบ ${currentBoss.name}! ได้รับ +${rewardExp} EXP & +${rewardGold} เหรียญ`);
+      addExp(rewardExp);
+      gameState.gold += rewardGold;
 
       // อัปเดตเควสต์โค่นบอส
       gameState.dailyQuests[2].current = Math.min(gameState.dailyQuests[2].target, gameState.dailyQuests[2].current + 1);
@@ -220,6 +395,7 @@
   // --- UI Renderer ---
   function renderUI() {
     // ผู้เล่น
+    playerTitleEl.textContent = gameState.title || getTitleForLevel(gameState.level);
     playerLevelEl.textContent = `LV. ${gameState.level}`;
     const expPercent = Math.min(100, Math.round((gameState.currentExp / gameState.nextExp) * 100));
     expBarFillEl.style.width = `${expPercent}%`;
@@ -227,9 +403,22 @@
     expNextEl.textContent = gameState.nextExp;
     goldValueEl.textContent = gameState.gold;
 
+    // แต้มสเตตัสและการอัปเกรด
+    const hasPoints = (gameState.statPoints || 0) > 0;
+    statPointsBarEl.style.display = hasPoints ? 'block' : 'none';
+    statPointsValEl.textContent = gameState.statPoints || 0;
+
+    [btnAddStr, btnAddSta, btnAddAgi].forEach(btn => {
+      btn.classList.toggle('active', hasPoints);
+    });
+
     statStrEl.textContent = gameState.stats.str;
     statStaEl.textContent = gameState.stats.sta;
     statAgiEl.textContent = gameState.stats.agi;
+
+    strMultEl.textContent = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05)).toFixed(1);
+    staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2));
+    agiCritEl.textContent = Math.min(50, gameState.stats.agi * 0.5).toFixed(1);
 
     // บอส
     const boss = BOSS_DATABASE[gameState.bossIndex];
@@ -245,6 +434,12 @@
     // ตัววัดการวิ่ง
     distanceValEl.textContent = runDistanceKm.toFixed(2);
     calValEl.textContent = `${Math.floor(runDistanceKm * 65)} kcal`;
+
+    // สถิติสะสม (Career Stats)
+    careerDistanceEl.textContent = `${(gameState.career.totalDistanceKm || 0).toFixed(2)} กม.`;
+    careerTimeEl.textContent = formatTime(gameState.career.totalSeconds || 0);
+    careerBossesEl.textContent = `${gameState.career.totalBossDefeated || 0} ตัว`;
+    careerLongestEl.textContent = `${(gameState.career.longestRunKm || 0).toFixed(2)} กม.`;
 
     // เควสต์ประจำวัน
     questsListEl.innerHTML = '';
@@ -272,7 +467,7 @@
       questsListEl.appendChild(card);
     });
 
-    // ปุ่มรับรางวัล
+    // ปุ่มรับรางวัลเควสต์
     document.querySelectorAll('.btn-claim-quest').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const qid = e.target.getAttribute('data-qid');
@@ -286,6 +481,48 @@
           renderUI();
         }
       });
+    });
+  }
+
+  // --- Render Run History from IndexedDB ---
+  async function renderHistoryUI() {
+    const history = await DB.getAllRunHistory();
+    historyCountEl.textContent = `${history.length} บันทึก`;
+    historyListEl.innerHTML = '';
+
+    if (history.length === 0) {
+      historyListEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!</div>';
+      return;
+    }
+
+    history.slice(0, 10).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'history-card';
+      card.innerHTML = `
+        <div class="history-header">
+          <span class="history-date">${item.displayDate}</span>
+          ${item.bossKills > 0 ? `<span class="history-boss-tag">โค่นบอส ${item.bossKills} ตัว</span>` : ''}
+        </div>
+        <div class="history-metrics">
+          <div class="history-metric-item">
+            <span class="h-lbl">ระยะทาง</span>
+            <span class="h-val">${item.distanceKm.toFixed(2)} k</span>
+          </div>
+          <div class="history-metric-item">
+            <span class="h-lbl">เวลา</span>
+            <span class="h-val">${item.formattedTime}</span>
+          </div>
+          <div class="history-metric-item">
+            <span class="h-lbl">เพซ</span>
+            <span class="h-val">${item.pace}</span>
+          </div>
+          <div class="history-metric-item">
+            <span class="h-lbl">แคลอรี</span>
+            <span class="h-val">${item.calories}</span>
+          </div>
+        </div>
+      `;
+      historyListEl.appendChild(card);
     });
   }
 
@@ -373,25 +610,69 @@
     gpsStatusEl.textContent = 'GPS: หยุดชั่วคราว';
   }
 
-  function finishRunSession() {
+  async function finishRunSession() {
     pauseRunEngine();
     showToast(`🏁 จบการออกล่า! สะสมระยะทางได้ ${runDistanceKm.toFixed(2)} กม.`);
 
-    // EXP เพิ่มเติมจากการวิ่ง
-    const bonusExp = Math.floor(runDistanceKm * 800);
+    // EXP เพิ่มเติมจากการวิ่ง (STA มีผลคูณโบนัส)
+    const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02);
+    const bonusExp = Math.floor(runDistanceKm * 800 * staMultiplier);
     if (bonusExp > 0) {
       addExp(bonusExp);
     }
 
-    // รีเซ็ตเซสชันการวิ่ง
+    // อัปเดต Career Stats สะสม
+    gameState.career.totalRuns = (gameState.career.totalRuns || 0) + 1;
+    gameState.career.totalDistanceKm = parseFloat(((gameState.career.totalDistanceKm || 0) + runDistanceKm).toFixed(2));
+    gameState.career.totalSeconds = (gameState.career.totalSeconds || 0) + runSeconds;
+    if (runDistanceKm > (gameState.career.longestRunKm || 0)) {
+      gameState.career.longestRunKm = parseFloat(runDistanceKm.toFixed(2));
+    }
+
+    // บันทึกประวัติรอบนี้เข้าสู่ IndexedDB
+    const historyItem = {
+      timestamp: Date.now(),
+      displayDate: new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }),
+      distanceKm: runDistanceKm,
+      durationSeconds: runSeconds,
+      formattedTime: formatTime(runSeconds),
+      pace: paceValEl.textContent,
+      calories: Math.floor(runDistanceKm * 65),
+      bossKills: sessionBossKills,
+      expGained: bonusExp
+    };
+
+    await DB.addRunRecord(historyItem);
+
+    // รีเซ็ตตัวแปรเซสชัน
     runDistanceKm = 0.0;
     runSeconds = 0;
+    sessionBossKills = 0;
     timeValEl.textContent = '00:00:00';
     paceValEl.textContent = `--'--"`;
     btnRunText.textContent = 'เริ่มออกล่า';
     btnFinishRun.setAttribute('disabled', 'true');
+
+    saveGame();
     renderUI();
+    await renderHistoryUI();
   }
+
+  // --- Stat Allocation Handlers ---
+  function upgradeStat(statKey) {
+    if ((gameState.statPoints || 0) > 0) {
+      gameState.statPoints -= 1;
+      gameState.stats[statKey] += 1;
+      AudioEngine.sfxStart();
+      showToast(`💪 เสริมพลัง ${statKey.toUpperCase()} เป็น ${gameState.stats[statKey]}!`);
+      saveGame();
+      renderUI();
+    }
+  }
+
+  btnAddStr.addEventListener('click', () => upgradeStat('str'));
+  btnAddSta.addEventListener('click', () => upgradeStat('sta'));
+  btnAddAgi.addEventListener('click', () => upgradeStat('agi'));
 
   // --- Simulator Mode Handlers ---
   window.shadowStrider = {
@@ -417,7 +698,7 @@
   });
 
   btnFinishRun.addEventListener('click', () => {
-    if (confirm('คุณต้องการจบเซสชันการวิ่งและรับรางวัลสรุปผลหรือไม่?')) {
+    if (confirm('คุณต้องการจบเซสชันการวิ่งและบันทึกประวัติการล่าหรือไม่?')) {
       finishRunSession();
     }
   });
@@ -439,7 +720,9 @@
     });
   }
 
-  // Initial Run
+  // --- Initialize Application ---
+  await loadGameState();
   verifyDailyReset();
   renderUI();
+  await renderHistoryUI();
 })();

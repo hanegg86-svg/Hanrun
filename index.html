@@ -38,21 +38,35 @@
       </div>
     </header>
 
-    <!-- Stats Bar (STR, STA, AGI) -->
+    <!-- Stat Points Alert Bar -->
+    <div class="stat-points-bar" id="stat-points-bar" style="display: none;">
+      <span>✨ มีแต้มอัปเกรดคงเหลือ: <strong id="stat-points-val">0</strong> แต้ม</span>
+    </div>
+
+    <!-- Stats Bar (STR, STA, AGI) with Allocation Buttons -->
     <section class="stats-ribbon">
       <div class="stat-item">
-        <span class="stat-label">STR (ความเร็ว)</span>
-        <span class="stat-val" id="stat-str">10</span>
+        <span class="stat-label">STR (ดาเมจ x<span id="str-mult">1.0</span>)</span>
+        <div class="stat-val-row">
+          <span class="stat-val" id="stat-str">10</span>
+          <button class="btn-stat-add" id="btn-add-str" type="button" title="อัปเกรด STR">+</button>
+        </div>
       </div>
       <div class="stat-divider"></div>
       <div class="stat-item">
-        <span class="stat-label">STA (ความอึด)</span>
-        <span class="stat-val" id="stat-sta">10</span>
+        <span class="stat-label">STA (โบนัส +<span id="sta-mult">0</span>%)</span>
+        <div class="stat-val-row">
+          <span class="stat-val" id="stat-sta">10</span>
+          <button class="btn-stat-add" id="btn-add-sta" type="button" title="อัปเกรด STA">+</button>
+        </div>
       </div>
       <div class="stat-divider"></div>
       <div class="stat-item">
-        <span class="stat-label">AGI (ความสม่ำเสมอ)</span>
-        <span class="stat-val" id="stat-agi">10</span>
+        <span class="stat-label">AGI (คริติคอล <span id="agi-crit">5</span>%)</span>
+        <div class="stat-val-row">
+          <span class="stat-val" id="stat-agi">10</span>
+          <button class="btn-stat-add" id="btn-add-agi" type="button" title="อัปเกรด AGI">+</button>
+        </div>
       </div>
     </section>
 
@@ -134,6 +148,42 @@
       </div>
       <div class="quests-list" id="quests-list">
         <!-- รายการเควสต์จะเรนเดอร์ผ่าน JS -->
+      </div>
+    </section>
+
+    <!-- Career Stats Section -->
+    <section class="career-section">
+      <div class="section-title-row">
+        <h2 class="section-title">สถิติสะสมตลอดกาล (Career Stats)</h2>
+      </div>
+      <div class="career-grid">
+        <div class="career-box">
+          <span class="career-label">ระยะทางสะสม</span>
+          <span class="career-val" id="career-distance">0.00 กม.</span>
+        </div>
+        <div class="career-box">
+          <span class="career-label">เวลาสะสม</span>
+          <span class="career-val" id="career-time">00:00:00</span>
+        </div>
+        <div class="career-box">
+          <span class="career-label">บอสที่พิชิต</span>
+          <span class="career-val" id="career-bosses">0 ตัว</span>
+        </div>
+        <div class="career-box">
+          <span class="career-label">วิ่งไกลสุด/รอบ</span>
+          <span class="career-val" id="career-longest">0.00 กม.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Run History Section -->
+    <section class="history-section">
+      <div class="section-title-row">
+        <h2 class="section-title">ประวัติการออกล่า (Run History)</h2>
+        <span class="history-count" id="history-count">0 บันทึก</span>
+      </div>
+      <div class="history-list" id="history-list">
+        <!-- ประวัติการวิ่งจะโหลดจาก IndexedDB -->
       </div>
     </section>
 
