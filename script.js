@@ -538,8 +538,9 @@
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
+  // ปรับเกณฑ์ให้คำนวณเพซตั้งแต่ 10 เมตร (0.01 กม.) ขึ้นไป
   function calculatePace(totalSecs, distanceKm) {
-    if (distanceKm > 0.05 && totalSecs > 0) {
+    if (distanceKm >= 0.01 && totalSecs > 0) {
       const paceDec = (totalSecs / 60) / distanceKm;
       const paceMin = Math.floor(paceDec);
       const paceSec = Math.round((paceDec - paceMin) * 60);
@@ -685,7 +686,6 @@
   });
 
   // --- Pocket Mode Touch Shield Logic (แตะค้าง 1.5 วินาที เพื่อปลดล็อก) ---
-  let unlockTimer = null;
   let unlockProgress = 0;
   let unlockInterval = null;
 
