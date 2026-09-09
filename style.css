@@ -351,6 +351,22 @@ body {
   font-weight: 600;
 }
 
+.hud-status-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.pocket-btn {
+  background: #181722;
+  border: 1px solid var(--border-gold);
+  color: var(--gold-glow);
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
 .sim-toggle-btn {
   background: #1f1e29;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -641,7 +657,7 @@ body {
   font-family: monospace, -apple-system;
 }
 
-/* History Section */
+/* History & Daily Stats Section */
 .history-section {
   background: #111016;
   border: 1px solid var(--border-gold);
@@ -654,6 +670,141 @@ body {
   color: var(--text-muted);
 }
 
+/* Tab Control Switcher */
+.tab-control {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+  background: linear-gradient(180deg, #d4af37 0%, #8c6d1f 100%);
+  color: #0d0c11;
+  box-shadow: 0 2px 10px rgba(212, 175, 55, 0.35);
+}
+
+.tab-view {
+  width: 100%;
+}
+
+/* Daily Stats Card */
+.daily-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.daily-card {
+  background: #16151e;
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.daily-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.daily-date-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--gold-glow);
+  letter-spacing: 0.3px;
+}
+
+.daily-runs-tag {
+  font-size: 0.68rem;
+  color: var(--gold-primary);
+  background: rgba(212, 175, 55, 0.12);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  font-weight: 700;
+}
+
+.daily-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.daily-distance-big {
+  font-size: 2.1rem;
+  font-weight: 900;
+  color: #ffffff;
+  font-family: monospace, -apple-system;
+  line-height: 1;
+}
+
+.daily-distance-unit {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.daily-bosses-badge {
+  font-size: 0.72rem;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.daily-sub-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 8px;
+  border-radius: 10px;
+}
+
+.daily-grid-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.daily-grid-col .dg-lbl {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+}
+
+.daily-grid-col .dg-val {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  font-family: monospace, -apple-system;
+}
+
+/* History List */
 .history-list {
   display: flex;
   flex-direction: column;
@@ -723,6 +874,68 @@ body {
   font-size: 0.8rem;
   color: var(--text-muted);
   padding: 20px 0;
+}
+
+/* Pocket Mode Overlay (OLED Pure Black & Touch Lock) */
+.pocket-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000000;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.pocket-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.pocket-lock-icon {
+  font-size: 3rem;
+  opacity: 0.35;
+}
+
+.pocket-metric-val {
+  font-size: 3.2rem;
+  font-weight: 900;
+  color: #3f3f46;
+  font-family: monospace, -apple-system;
+  letter-spacing: 1px;
+}
+
+.pocket-metric-sub {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #27272a;
+  font-family: monospace, -apple-system;
+}
+
+.pocket-unlock-guide {
+  font-size: 0.8rem;
+  color: #52525b;
+  margin-top: 20px;
+}
+
+.pocket-progress-track {
+  width: 180px;
+  height: 6px;
+  background: #18181b;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid #27272a;
+}
+
+.pocket-progress-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--gold-primary);
+  transition: width 0.1s linear;
 }
 
 /* Toast */

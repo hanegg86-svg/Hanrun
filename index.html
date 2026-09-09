@@ -97,7 +97,10 @@
     <section class="run-hud">
       <div class="hud-status-row">
         <span class="gps-badge" id="gps-status">GPS: พร้อมใช้งาน</span>
-        <button class="sim-toggle-btn" id="sim-toggle-btn" type="button">โหมดจำลองวิ่ง: ปิด</button>
+        <div class="hud-status-actions">
+          <button class="pocket-btn" id="pocket-btn" type="button" title="โหมดกระเป๋า/ล็อกจอสีดำประหยัดแบต">🔒 โหมดพักจอ</button>
+          <button class="sim-toggle-btn" id="sim-toggle-btn" type="button">โหมดจำลองวิ่ง: ปิด</button>
+        </div>
       </div>
 
       <div class="hud-main-metric">
@@ -176,16 +179,46 @@
       </div>
     </section>
 
-    <!-- Run History Section -->
+    <!-- History & Daily Stats Section -->
     <section class="history-section">
       <div class="section-title-row">
-        <h2 class="section-title">ประวัติการออกล่า (Run History)</h2>
+        <h2 class="section-title">บันทึกสถิติการล่า</h2>
         <span class="history-count" id="history-count">0 บันทึก</span>
       </div>
-      <div class="history-list" id="history-list">
-        <!-- ประวัติการวิ่งจะโหลดจาก IndexedDB -->
+
+      <!-- Tab Navigation Switcher -->
+      <div class="tab-control">
+        <button class="tab-btn active" id="tab-btn-daily" type="button">📊 สถิติรายวัน (Daily)</button>
+        <button class="tab-btn" id="tab-btn-sessions" type="button">📜 ประวัติรายรอบ (Sessions)</button>
+      </div>
+
+      <!-- Tab View 1: สถิติรายวัน -->
+      <div class="tab-view" id="view-daily">
+        <div class="daily-list" id="daily-list">
+          <!-- สถิติสรุปรายวันจะโหลดจาก IndexedDB -->
+        </div>
+      </div>
+
+      <!-- Tab View 2: ประวัติการวิ่งแต่ละรอบ -->
+      <div class="tab-view" id="view-sessions" style="display: none;">
+        <div class="history-list" id="history-list">
+          <!-- รายการรอบวิ่งจะโหลดจาก IndexedDB -->
+        </div>
       </div>
     </section>
+
+    <!-- Pocket Mode / Screen Saver Overlay (OLED Pure Black & Touch Shield) -->
+    <div class="pocket-overlay" id="pocket-overlay" style="display: none;">
+      <div class="pocket-content">
+        <div class="pocket-lock-icon">🔒</div>
+        <div class="pocket-metric-val" id="pocket-dist-val">0.00 KM</div>
+        <div class="pocket-metric-sub" id="pocket-time-val">00:00:00</div>
+        <div class="pocket-unlock-guide">แตะค้างไว้ 1.5 วินาทีเพื่อปลดล็อก</div>
+        <div class="pocket-progress-track">
+          <div class="pocket-progress-fill" id="pocket-unlock-bar"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Notification Toast -->
     <div class="game-toast" id="game-toast"></div>

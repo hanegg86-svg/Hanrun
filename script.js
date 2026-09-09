@@ -74,13 +74,43 @@
         req.onsuccess = () => {
           const list = req.result || [];
           // จัดเรียงล่าสุดขึ้นก่อน
-          list.sort((a, b) => b.id - a.id);
+          list.sort((a, b) => b.timestamp - a.timestamp);
           resolve(list);
         };
         req.onerror = () => resolve([]);
       });
     }
   };
+
+  // --- Screen Wake Lock API Manager ---
+  let wakeLockSentinel = null;
+
+  async function acquireWakeLock() {
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLockSentinel = await navigator.wakeLock.request('screen');
+        wakeLockSentinel.addEventListener('release', () => {
+          wakeLockSentinel = null;
+        });
+      } catch (err) {
+        console.warn('Wake Lock request failed:', err);
+      }
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLockSentinel !== null) {
+      wakeLockSentinel.release().catch(() => {});
+      wakeLockSentinel = null;
+    }
+  }
+
+  // คืนสิทธิ์ Wake Lock เมื่อสลับกลับเข้ามาในแอปขณะกำลังวิ่ง
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && isRunning && wakeLockSentinel === null) {
+      await acquireWakeLock();
+    }
+  });
 
   // --- Web Audio Synthesizer (เสียงประกอบ RPG ในตัว ไม่ง้อไฟล์นอก) ---
   const AudioEngine = {
@@ -291,8 +321,20 @@
   const careerTimeEl = document.getElementById('career-time');
   const careerBossesEl = document.getElementById('career-bosses');
   const careerLongestEl = document.getElementById('career-longest');
+
   const historyListEl = document.getElementById('history-list');
+  const dailyListEl = document.getElementById('daily-list');
   const historyCountEl = document.getElementById('history-count');
+  const tabBtnDaily = document.getElementById('tab-btn-daily');
+  const tabBtnSessions = document.getElementById('tab-btn-sessions');
+  const viewDaily = document.getElementById('view-daily');
+  const viewSessions = document.getElementById('view-sessions');
+
+  const pocketBtn = document.getElementById('pocket-btn');
+  const pocketOverlay = document.getElementById('pocket-overlay');
+  const pocketDistVal = document.getElementById('pocket-dist-val');
+  const pocketTimeVal = document.getElementById('pocket-time-val');
+  const pocketUnlockBar = document.getElementById('pocket-unlock-bar');
 
   // --- Haversine Distance (กิโลเมตร) ---
   function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -435,6 +477,10 @@
     distanceValEl.textContent = runDistanceKm.toFixed(2);
     calValEl.textContent = `${Math.floor(runDistanceKm * 65)} kcal`;
 
+    // อัปเดตข้อมูลในหน้าจอพักจอ (Pocket Overlay)
+    pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
+    pocketTimeVal.textContent = timeValEl.textContent;
+
     // สถิติสะสม (Career Stats)
     careerDistanceEl.textContent = `${(gameState.career.totalDistanceKm || 0).toFixed(2)} กม.`;
     careerTimeEl.textContent = formatTime(gameState.career.totalSeconds || 0);
@@ -484,49 +530,7 @@
     });
   }
 
-  // --- Render Run History from IndexedDB ---
-  async function renderHistoryUI() {
-    const history = await DB.getAllRunHistory();
-    historyCountEl.textContent = `${history.length} บันทึก`;
-    historyListEl.innerHTML = '';
-
-    if (history.length === 0) {
-      historyListEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!</div>';
-      return;
-    }
-
-    history.slice(0, 10).forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'history-card';
-      card.innerHTML = `
-        <div class="history-header">
-          <span class="history-date">${item.displayDate}</span>
-          ${item.bossKills > 0 ? `<span class="history-boss-tag">โค่นบอส ${item.bossKills} ตัว</span>` : ''}
-        </div>
-        <div class="history-metrics">
-          <div class="history-metric-item">
-            <span class="h-lbl">ระยะทาง</span>
-            <span class="h-val">${item.distanceKm.toFixed(2)} k</span>
-          </div>
-          <div class="history-metric-item">
-            <span class="h-lbl">เวลา</span>
-            <span class="h-val">${item.formattedTime}</span>
-          </div>
-          <div class="history-metric-item">
-            <span class="h-lbl">เพซ</span>
-            <span class="h-val">${item.pace}</span>
-          </div>
-          <div class="history-metric-item">
-            <span class="h-lbl">แคลอรี</span>
-            <span class="h-val">${item.calories}</span>
-          </div>
-        </div>
-      `;
-      historyListEl.appendChild(card);
-    });
-  }
-
-  // --- Run Timers & Pace ---
+  // --- Run Timers & Pace Helpers ---
   function formatTime(totalSecs) {
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
@@ -534,28 +538,204 @@
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  function updatePace() {
-    if (runDistanceKm > 0.05 && runSeconds > 0) {
-      const paceDec = (runSeconds / 60) / runDistanceKm;
+  function calculatePace(totalSecs, distanceKm) {
+    if (distanceKm > 0.05 && totalSecs > 0) {
+      const paceDec = (totalSecs / 60) / distanceKm;
       const paceMin = Math.floor(paceDec);
       const paceSec = Math.round((paceDec - paceMin) * 60);
-      paceValEl.textContent = `${paceMin}'${paceSec.toString().padStart(2, '0')}"`;
-    } else {
-      paceValEl.textContent = `--'--"`;
+      return `${paceMin}'${paceSec.toString().padStart(2, '0')}"`;
     }
+    return `--'--"`;
   }
 
-  function startRunEngine() {
+  function updatePace() {
+    paceValEl.textContent = calculatePace(runSeconds, runDistanceKm);
+  }
+
+  // --- Render Run History & Daily Statistics from IndexedDB ---
+  async function renderHistoryAndDailyUI() {
+    const history = await DB.getAllRunHistory();
+    historyCountEl.textContent = `${history.length} รอบ`;
+
+    // 1. Render Sessions History List
+    historyListEl.innerHTML = '';
+    if (history.length === 0) {
+      historyListEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!</div>';
+    } else {
+      history.slice(0, 15).forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        card.innerHTML = `
+          <div class="history-header">
+            <span class="history-date">${item.displayDate}</span>
+            ${item.bossKills > 0 ? `<span class="history-boss-tag">โค่นบอส ${item.bossKills} ตัว</span>` : ''}
+          </div>
+          <div class="history-metrics">
+            <div class="history-metric-item">
+              <span class="h-lbl">ระยะทาง</span>
+              <span class="h-val">${item.distanceKm.toFixed(2)} k</span>
+            </div>
+            <div class="history-metric-item">
+              <span class="h-lbl">เวลา</span>
+              <span class="h-val">${item.formattedTime}</span>
+            </div>
+            <div class="history-metric-item">
+              <span class="h-lbl">เพซ</span>
+              <span class="h-val">${item.pace}</span>
+            </div>
+            <div class="history-metric-item">
+              <span class="h-lbl">แคลอรี</span>
+              <span class="h-val">${item.calories}</span>
+            </div>
+          </div>
+        `;
+        historyListEl.appendChild(card);
+      });
+    }
+
+    // 2. Aggregate and Render Daily Statistics
+    dailyListEl.innerHTML = '';
+    if (history.length === 0) {
+      dailyListEl.innerHTML = '<div class="history-empty">ยังไม่มีสถิติรายวัน เริ่มออกล่าเพื่อเก็บสถิติ!</div>';
+      return;
+    }
+
+    // Grouping records by local date string
+    const dailyMap = new Map();
+    history.forEach(item => {
+      const dateObj = new Date(item.timestamp);
+      const dateKey = dateObj.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        weekday: 'short'
+      });
+
+      if (!dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, {
+          dateStr: dateKey,
+          totalDistance: 0.0,
+          totalSeconds: 0,
+          totalCalories: 0,
+          totalBossKills: 0,
+          runsCount: 0,
+          latestTimestamp: item.timestamp
+        });
+      }
+
+      const dayRecord = dailyMap.get(dateKey);
+      dayRecord.totalDistance += item.distanceKm;
+      dayRecord.totalSeconds += item.durationSeconds;
+      dayRecord.totalCalories += item.calories;
+      dayRecord.totalBossKills += (item.bossKills || 0);
+      dayRecord.runsCount += 1;
+    });
+
+    // เรียงลำดับวันล่าสุดย้อนหลัง
+    const sortedDays = Array.from(dailyMap.values()).sort((a, b) => b.latestTimestamp - a.latestTimestamp);
+
+    sortedDays.forEach(day => {
+      const avgPace = calculatePace(day.totalSeconds, day.totalDistance);
+      const card = document.createElement('div');
+      card.className = 'daily-card';
+      card.innerHTML = `
+        <div class="daily-card-header">
+          <span class="daily-date-title">📅 ${day.dateStr}</span>
+          <span class="daily-runs-tag">${day.runsCount} รอบวิ่ง</span>
+        </div>
+        <div class="daily-summary-row">
+          <div>
+            <span class="daily-distance-big">${day.totalDistance.toFixed(2)}</span>
+            <span class="daily-distance-unit">กิโลเมตร</span>
+          </div>
+          ${day.totalBossKills > 0 ? `<span class="daily-bosses-badge">🏆 พิชิตบอส ${day.totalBossKills} ตัว</span>` : ''}
+        </div>
+        <div class="daily-sub-grid">
+          <div class="daily-grid-col">
+            <span class="dg-lbl">เวลารวม</span>
+            <span class="dg-val">${formatTime(day.totalSeconds)}</span>
+          </div>
+          <div class="daily-grid-col">
+            <span class="dg-lbl">เพซเฉลี่ย</span>
+            <span class="dg-val">${avgPace}</span>
+          </div>
+          <div class="daily-grid-col">
+            <span class="dg-lbl">แคลอรีรวม</span>
+            <span class="dg-val">${day.totalCalories} kcal</span>
+          </div>
+        </div>
+      `;
+      dailyListEl.appendChild(card);
+    });
+  }
+
+  // --- Tab Control Switcher ---
+  tabBtnDaily.addEventListener('click', () => {
+    tabBtnDaily.classList.add('active');
+    tabBtnSessions.classList.remove('active');
+    viewDaily.style.display = 'block';
+    viewSessions.style.display = 'none';
+  });
+
+  tabBtnSessions.addEventListener('click', () => {
+    tabBtnSessions.classList.add('active');
+    tabBtnDaily.classList.remove('active');
+    viewSessions.style.display = 'block';
+    viewDaily.style.display = 'none';
+  });
+
+  // --- Pocket Mode Touch Shield Logic (แตะค้าง 1.5 วินาที เพื่อปลดล็อก) ---
+  let unlockTimer = null;
+  let unlockProgress = 0;
+  let unlockInterval = null;
+
+  function startUnlockHold() {
+    unlockProgress = 0;
+    pocketUnlockBar.style.width = '0%';
+    unlockInterval = setInterval(() => {
+      unlockProgress += 10;
+      pocketUnlockBar.style.width = `${Math.min(100, unlockProgress)}%`;
+      if (unlockProgress >= 100) {
+        clearInterval(unlockInterval);
+        pocketOverlay.style.display = 'none';
+        showToast('🔓 ปลดล็อกหน้าจอเรียบร้อย');
+      }
+    }, 150);
+  }
+
+  function cancelUnlockHold() {
+    clearInterval(unlockInterval);
+    unlockProgress = 0;
+    pocketUnlockBar.style.width = '0%';
+  }
+
+  pocketOverlay.addEventListener('touchstart', startUnlockHold, { passive: true });
+  pocketOverlay.addEventListener('touchend', cancelUnlockHold);
+  pocketOverlay.addEventListener('mousedown', startUnlockHold);
+  pocketOverlay.addEventListener('mouseup', cancelUnlockHold);
+  pocketOverlay.addEventListener('mouseleave', cancelUnlockHold);
+
+  pocketBtn.addEventListener('click', () => {
+    pocketOverlay.style.display = 'flex';
+    showToast('🔒 เปิดโหมดพักจอ (แตะค้างเพื่อปลดล็อก)');
+  });
+
+  // --- Engine Control (Start / Pause / Finish) ---
+  async function startRunEngine() {
     AudioEngine.sfxStart();
     isRunning = true;
     btnToggleRun.classList.add('running');
     btnRunText.textContent = 'หยุดชั่วคราว';
     btnFinishRun.removeAttribute('disabled');
 
+    // ร้องขอ Screen Wake Lock ป้องกันหน้าจอดับ
+    await acquireWakeLock();
+
     // Timer
     runTimerInterval = setInterval(() => {
       runSeconds++;
       timeValEl.textContent = formatTime(runSeconds);
+      pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
 
       // เควสต์จับเวลาวิ่ง
@@ -608,10 +788,14 @@
     }
     lastCoord = null;
     gpsStatusEl.textContent = 'GPS: หยุดชั่วคราว';
+
+    // คืนสิทธิ์ Wake Lock
+    releaseWakeLock();
   }
 
   async function finishRunSession() {
     pauseRunEngine();
+    pocketOverlay.style.display = 'none';
     showToast(`🏁 จบการออกล่า! สะสมระยะทางได้ ${runDistanceKm.toFixed(2)} กม.`);
 
     // EXP เพิ่มเติมจากการวิ่ง (STA มีผลคูณโบนัส)
@@ -655,7 +839,7 @@
 
     saveGame();
     renderUI();
-    await renderHistoryUI();
+    await renderHistoryAndDailyUI();
   }
 
   // --- Stat Allocation Handlers ---
@@ -724,5 +908,5 @@
   await loadGameState();
   verifyDailyReset();
   renderUI();
-  await renderHistoryUI();
+  await renderHistoryAndDailyUI();
 })();
