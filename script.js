@@ -476,6 +476,7 @@
     // ตัววัดการวิ่ง
     distanceValEl.textContent = runDistanceKm.toFixed(2);
     calValEl.textContent = `${Math.floor(runDistanceKm * 65)} kcal`;
+    updatePace();
 
     // อัปเดตข้อมูลในหน้าจอพักจอ (Pocket Overlay)
     pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
@@ -538,12 +539,20 @@
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  // ปรับเกณฑ์ให้คำนวณเพซตั้งแต่ 10 เมตร (0.01 กม.) ขึ้นไป
+  // คำนวณเพซตั้งแต่ระยะ 20 เมตร (0.02 กม.) พร้อมระบบกรองเพซสุดโต่ง (Pace Clamping)
   function calculatePace(totalSecs, distanceKm) {
-    if (distanceKm >= 0.01 && totalSecs > 0) {
+    const displayDist = Math.round(distanceKm * 100) / 100;
+    if (displayDist >= 0.02 && totalSecs > 0) {
       const paceDec = (totalSecs / 60) / distanceKm;
+      // กรองเพซที่ช้ากว่า 30 นาที/กม. หรือเร็วกว่า 2 นาที/กม. ให้แสดงผลเป็น --'--"
+      if (paceDec > 30 || paceDec < 2) {
+        return `--'--"`;
+      }
       const paceMin = Math.floor(paceDec);
-      const paceSec = Math.round((paceDec - paceMin) * 60);
+      let paceSec = Math.round((paceDec - paceMin) * 60);
+      if (paceSec === 60) {
+        return `${paceMin + 1}'00"`;
+      }
       return `${paceMin}'${paceSec.toString().padStart(2, '0')}"`;
     }
     return `--'--"`;
