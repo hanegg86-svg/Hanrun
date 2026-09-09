@@ -126,16 +126,36 @@ body {
   color: var(--text-muted);
 }
 
+.nav-right-cluster {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.streak-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  padding: 5px 8px;
+  border-radius: 16px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fca5a5;
+}
+
 .gold-counter {
   display: flex;
   align-items: center;
   gap: 6px;
   background: rgba(212, 175, 55, 0.1);
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 20px;
   border: 1px solid var(--border-gold);
   font-weight: 700;
   color: var(--gold-glow);
+  font-size: 0.85rem;
 }
 
 /* Stat Points Alert */
@@ -325,6 +345,58 @@ body {
   font-weight: 600;
 }
 
+/* Chest Loot Drop Card */
+.chest-card {
+  background: linear-gradient(90deg, #2b1a0e 0%, #171109 100%);
+  border: 1px solid var(--gold-glow);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.25);
+  animation: chestPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes chestPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.015); box-shadow: 0 0 25px rgba(255, 215, 0, 0.4); }
+}
+
+.chest-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chest-icon-anim {
+  font-size: 2.2rem;
+}
+
+.chest-details {
+  flex: 1;
+}
+
+.chest-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--gold-glow);
+}
+
+.chest-desc {
+  font-size: 0.68rem;
+  color: #e4d5b7;
+  margin-top: 2px;
+}
+
+.btn-open-chest {
+  background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
+  border: 1px solid #fff;
+  border-radius: 8px;
+  color: #000;
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
 /* Run HUD */
 .run-hud {
   background: linear-gradient(180deg, #13121a 0%, #0d0c11 100%);
@@ -335,6 +407,27 @@ body {
   flex-direction: column;
   align-items: center;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
+  position: relative;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.run-hud.frenzy-active {
+  border-color: #ef4444;
+  box-shadow: 0 0 35px rgba(239, 68, 68, 0.6);
+}
+
+.frenzy-banner {
+  width: 100%;
+  background: linear-gradient(90deg, #ef4444, #b91c1c);
+  color: #fff;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  animation: pulse 1s infinite;
 }
 
 .hud-status-row {
@@ -523,6 +616,95 @@ body {
   cursor: pointer;
 }
 
+/* Shop Section */
+.shop-section {
+  background: #111016;
+  border: 1px solid var(--border-gold);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.shop-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.shop-item {
+  background: #16151e;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.item-header {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.item-icon {
+  font-size: 1.4rem;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.item-buff {
+  font-size: 0.64rem;
+  color: var(--gold-glow);
+  margin-top: 2px;
+}
+
+.item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 6px;
+}
+
+.item-price {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--gold-primary);
+}
+
+.btn-buy-item {
+  background: linear-gradient(180deg, #d4af37 0%, #8c6d1f 100%);
+  border: none;
+  color: #000;
+  font-weight: 800;
+  font-size: 0.68rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-buy-item:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
 /* Quests Section */
 .quests-section {
   background: #111016;
@@ -544,18 +726,18 @@ body {
   color: var(--gold-glow);
 }
 
-.quest-refresh-time {
+.quest-refresh-time, .achievements-counter {
   font-size: 0.7rem;
   color: var(--text-muted);
 }
 
-.quests-list {
+.quests-list, .achievements-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.quest-card {
+.quest-card, .achievement-card {
   background: #16151e;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
@@ -565,7 +747,7 @@ body {
   gap: 8px;
 }
 
-.quest-card.completed {
+.quest-card.completed, .achievement-card.completed {
   border-color: rgba(212, 175, 55, 0.4);
   background: rgba(212, 175, 55, 0.05);
 }
@@ -577,13 +759,13 @@ body {
 }
 
 .quest-name {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #fff;
 }
 
 .quest-reward {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--gold-glow);
   font-weight: 700;
 }
@@ -606,7 +788,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--text-muted);
 }
 
@@ -619,6 +801,14 @@ body {
   padding: 4px 10px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+/* Achievements Section */
+.achievements-section {
+  background: #111016;
+  border: 1px solid var(--border-gold);
+  border-radius: 16px;
+  padding: 16px;
 }
 
 /* Career Section */
@@ -876,7 +1066,7 @@ body {
   padding: 20px 0;
 }
 
-/* Pocket Mode Overlay (OLED Pure Black & Touch Lock) */
+/* Pocket Mode Overlay */
 .pocket-overlay {
   position: fixed;
   inset: 0;
@@ -938,7 +1128,7 @@ body {
   transition: width 0.1s linear;
 }
 
-/* Toast */
+/* Toast (ตัดการสั่นออก เงียบสนิท) */
 .game-toast {
   position: fixed;
   bottom: calc(var(--safe-bottom) + 30px);
@@ -956,6 +1146,7 @@ body {
   pointer-events: none;
   transition: transform 0.3s ease, opacity 0.3s ease;
   z-index: 9999;
+  text-align: center;
 }
 
 .game-toast.show {

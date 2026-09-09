@@ -62,7 +62,7 @@
         const store = tx.objectStore(STORE_HISTORY);
         const req = store.add(record);
         req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(e.target.error);
+        req.onerror = (e) => reject(e.target.error);
       });
     },
     async getAllRunHistory() {
@@ -73,7 +73,6 @@
         const req = store.getAll();
         req.onsuccess = () => {
           const list = req.result || [];
-          // จัดเรียงล่าสุดขึ้นก่อน
           list.sort((a, b) => b.timestamp - a.timestamp);
           resolve(list);
         };
@@ -112,67 +111,6 @@
     }
   });
 
-  // --- Web Audio Synthesizer (เสียงประกอบ RPG ในตัว ไม่ง้อไฟล์นอก) ---
-  const AudioEngine = {
-    ctx: null,
-    init() {
-      if (!this.ctx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        this.ctx = new AudioContext();
-      }
-      if (this.ctx.state === 'suspended') {
-        this.ctx.resume();
-      }
-    },
-    playTone(freq, type, duration, delay = 0) {
-      if (!this.ctx) return;
-      setTimeout(() => {
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = type;
-          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-          gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start();
-          osc.stop(this.ctx.currentTime + duration);
-        } catch (e) {
-          console.warn('Audio play error', e);
-        }
-      }, delay);
-    },
-    sfxStart() {
-      this.init();
-      this.playTone(220, 'triangle', 0.15, 0);
-      this.playTone(440, 'triangle', 0.25, 120);
-    },
-    sfxAttack() {
-      this.init();
-      this.playTone(180, 'sawtooth', 0.1, 0);
-      this.playTone(90, 'sawtooth', 0.15, 60);
-    },
-    sfxCrit() {
-      this.init();
-      this.playTone(587.3, 'sawtooth', 0.08, 0);
-      this.playTone(880.0, 'sawtooth', 0.15, 60);
-    },
-    sfxBossDefeat() {
-      this.init();
-      this.playTone(330, 'square', 0.15, 0);
-      this.playTone(440, 'square', 0.2, 120);
-      this.playTone(660, 'square', 0.35, 260);
-    },
-    sfxLevelUp() {
-      this.init();
-      this.playTone(261.6, 'sine', 0.1, 0);
-      this.playTone(329.6, 'sine', 0.1, 80);
-      this.playTone(392.0, 'sine', 0.1, 160);
-      this.playTone(523.2, 'sine', 0.35, 240);
-    }
-  };
-
   // --- Boss List Database ---
   const BOSS_DATABASE = [
     { tier: 'TIER I', name: 'Gargoyle of the Crypt', avatar: '👹', maxHpKm: 1.0, desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 1.00 กม. เพื่อทำลายมัน!', rewardExp: 1200, rewardGold: 150 },
@@ -190,6 +128,27 @@
     return 'Shadow Initiate';
   }
 
+  // --- Initial Daily Quests Generator ---
+  function generateDailyQuests() {
+    return [
+      { id: 'dq_dist', name: 'สำรวจเงามืด: สะสมระยะทาง 1.5 กม.', target: 1.5, current: 0.0, unit: 'กม.', rewardExp: 600, rewardGold: 60, claimed: false },
+      { id: 'dq_time', name: 'สมาธินักล่า: วิ่งต่อเนื่อง 12 นาที', target: 720, current: 0, unit: 'วินาที', rewardExp: 700, rewardGold: 70, claimed: false },
+      { id: 'dq_cal', name: 'ผลาญพลังเวท: เผาผลาญ 100 kcal', target: 100, current: 0, unit: 'kcal', rewardExp: 500, rewardGold: 50, claimed: false },
+      { id: 'dq_boss', name: 'ปราบบอส: โค่นบอส 1 ตัว', target: 1, current: 0, unit: 'ตัว', rewardExp: 900, rewardGold: 100, claimed: false },
+      { id: 'dq_crit', name: 'จุดตาย: โจมตีคริติคอล 5 ครั้ง', target: 5, current: 0, unit: 'ครั้ง', rewardExp: 750, rewardGold: 80, claimed: false }
+    ];
+  }
+
+  // --- Initial Achievements Generator ---
+  function generateAchievements() {
+    return [
+      { id: 'ach_first', name: 'First Blood (การล่าครั้งแรก)', desc: 'จบเซสชันการล่าสำเร็จ 1 รอบ', target: 1, current: 0, unit: 'รอบ', rewardExp: 1000, rewardGold: 200, claimed: false },
+      { id: 'ach_dist10', name: 'Shadow Nomad (เส้นทาง 10K)', desc: 'สะสมระยะทางรวมแตะ 10.0 กม.', target: 10.0, current: 0.0, unit: 'กม.', rewardExp: 3500, rewardGold: 600, claimed: false },
+      { id: 'ach_dist50', name: 'Abyssal Walker (นักเดินทาง 50K)', desc: 'สะสมระยะทางรวมแตะ 50.0 กม.', target: 50.0, current: 0.0, unit: 'กม.', rewardExp: 12000, rewardGold: 2500, claimed: false },
+      { id: 'ach_boss_dragon', name: 'Dragon Bane (ผู้สยบมังกร)', desc: 'โค่นมังกรกระดูก Ancient Bone Dragon (Tier III)', target: 1, current: 0, unit: 'ตัว', rewardExp: 6000, rewardGold: 1200, claimed: false }
+    ];
+  }
+
   // --- Game State Object ---
   const defaultState = {
     level: 1,
@@ -199,6 +158,9 @@
     gold: 0,
     statPoints: 0,
     stats: { str: 10, sta: 10, agi: 10 },
+    upgrades: { blade: 0, charm: 0, eye: 0 },
+    chestsAvailable: 0,
+    streak: { count: 1, lastDate: new Date().toDateString() },
     bossIndex: 0,
     bossHpRemain: 1.0,
     totalDistanceKm: 0.0,
@@ -210,11 +172,8 @@
       totalBossDefeated: 0,
       longestRunKm: 0.0
     },
-    dailyQuests: [
-      { id: 'q1', name: 'วอร์มอัพผจญภัย: สะสมระยะทาง 1.0 กม.', target: 1.0, current: 0.0, unit: 'กม.', rewardExp: 500, rewardGold: 50, claimed: false },
-      { id: 'q2', name: 'จู่โจมเงียบ: วิ่งต่อเนื่อง 10 นาที', target: 600, current: 0, unit: 'วินาที', rewardExp: 600, rewardGold: 80, claimed: false },
-      { id: 'q3', name: 'จอมพลัง: โค่นบอส 1 ตัว', target: 1, current: 0, unit: 'ตัว', rewardExp: 800, rewardGold: 120, claimed: false }
-    ]
+    dailyQuests: generateDailyQuests(),
+    achievements: generateAchievements()
   };
 
   let gameState = defaultState;
@@ -223,13 +182,11 @@
   async function loadGameState() {
     let saved = await DB.getPlayerState();
     if (!saved) {
-      // ตรวจสอบข้อมูลเก่าจาก localStorage เพื่อย้ายเข้าสู่ IndexedDB
       const legacySave = localStorage.getItem('shadow_strider_save');
       if (legacySave) {
         try {
           saved = JSON.parse(legacySave);
           localStorage.removeItem('shadow_strider_save');
-          console.log('ย้ายข้อมูลผู้เล่นเดิมจาก localStorage เข้าสู่ IndexedDB สำเร็จ');
         } catch (e) {
           console.warn('โหลด save เดิมไม่สำเร็จ', e);
         }
@@ -239,11 +196,16 @@
     if (saved) {
       gameState = Object.assign({}, defaultState, saved);
       gameState.stats = Object.assign({}, defaultState.stats, saved.stats || {});
+      gameState.upgrades = Object.assign({}, defaultState.upgrades, saved.upgrades || {});
+      gameState.streak = Object.assign({}, defaultState.streak, saved.streak || {});
       gameState.career = Object.assign({}, defaultState.career, saved.career || {});
-      gameState.dailyQuests = saved.dailyQuests || defaultState.dailyQuests;
+      gameState.dailyQuests = saved.dailyQuests || generateDailyQuests();
+      gameState.achievements = saved.achievements || generateAchievements();
     } else {
       gameState = defaultState;
     }
+
+    verifyDailyAndStreakReset();
     await DB.savePlayerState(gameState);
   }
 
@@ -251,16 +213,26 @@
     DB.savePlayerState(gameState).catch(err => console.error('Save error', err));
   }
 
-  // --- Daily Quest Reset Check ---
-  function verifyDailyReset() {
+  // --- Daily Quest & Streak Reset Check ---
+  function verifyDailyAndStreakReset() {
     const today = new Date().toDateString();
     if (gameState.lastDailyDate !== today) {
+      // ตรวจสอบวันต่อเนื่อง (Streak)
+      const lastDateObj = new Date(gameState.streak.lastDate);
+      const todayDateObj = new Date(today);
+      const diffTime = Math.abs(todayDateObj - lastDateObj);
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        gameState.streak.count += 1;
+        showToast(`🔥 วันล่าต่อเนื่องวันที่ ${gameState.streak.count}! ได้รับโบนัสทองคำเพิ่ม`);
+      } else if (diffDays > 1) {
+        gameState.streak.count = 1;
+      }
+      gameState.streak.lastDate = today;
+
       gameState.lastDailyDate = today;
-      gameState.dailyQuests = [
-        { id: 'q1', name: 'วอร์มอัพผจญภัย: สะสมระยะทาง 1.0 กม.', target: 1.0, current: 0.0, unit: 'กม.', rewardExp: 500, rewardGold: 50, claimed: false },
-        { id: 'q2', name: 'จู่โจมเงียบ: วิ่งต่อเนื่อง 10 นาที', target: 600, current: 0, unit: 'วินาที', rewardExp: 600, rewardGold: 80, claimed: false },
-        { id: 'q3', name: 'จอมพลัง: โค่นบอส 1 ตัว', target: 1, current: 0, unit: 'ตัว', rewardExp: 800, rewardGold: 120, claimed: false }
-      ];
+      gameState.dailyQuests = generateDailyQuests();
       saveGame();
     }
   }
@@ -275,6 +247,11 @@
   let lastCoord = null;
   let sessionBossKills = 0;
 
+  // Berserk / Frenzy variables
+  let isFrenzyActive = false;
+  let frenzyPaceStreakSec = 0;
+  let nextChestKmCheckpoint = 1.0;
+
   // --- DOM Elements ---
   const playerTitleEl = document.getElementById('player-title');
   const playerLevelEl = document.getElementById('player-level');
@@ -282,6 +259,7 @@
   const expCurrentEl = document.getElementById('exp-current');
   const expNextEl = document.getElementById('exp-next');
   const goldValueEl = document.getElementById('gold-value');
+  const streakValEl = document.getElementById('streak-val');
 
   const statPointsBarEl = document.getElementById('stat-points-bar');
   const statPointsValEl = document.getElementById('stat-points-val');
@@ -303,6 +281,12 @@
   const bossHpRemainEl = document.getElementById('boss-hp-remain');
   const bossHpMaxEl = document.getElementById('boss-hp-max');
 
+  const chestCardEl = document.getElementById('chest-card');
+  const chestCountEl = document.getElementById('chest-count');
+  const btnOpenChest = document.getElementById('btn-open-chest');
+
+  const runHudEl = document.getElementById('run-hud');
+  const frenzyBannerEl = document.getElementById('frenzy-banner');
   const distanceValEl = document.getElementById('distance-val');
   const timeValEl = document.getElementById('time-val');
   const paceValEl = document.getElementById('pace-val');
@@ -315,7 +299,25 @@
   const simToggleBtn = document.getElementById('sim-toggle-btn');
   const simControls = document.getElementById('sim-controls');
   const questsListEl = document.getElementById('quests-list');
+  const achievementsListEl = document.getElementById('achievements-list');
+  const achievementsCounterEl = document.getElementById('achievements-counter');
   const gameToastEl = document.getElementById('game-toast');
+
+  // Shop Elements
+  const priceElixirEl = document.getElementById('price-elixir');
+  const btnBuyElixir = document.getElementById('btn-buy-elixir');
+  const lvlBladeEl = document.getElementById('lvl-blade');
+  const bladeBonusEl = document.getElementById('blade-bonus');
+  const priceBladeEl = document.getElementById('price-blade');
+  const btnBuyBlade = document.getElementById('btn-buy-blade');
+  const lvlCharmEl = document.getElementById('lvl-charm');
+  const charmBonusEl = document.getElementById('charm-bonus');
+  const priceCharmEl = document.getElementById('price-charm');
+  const btnBuyCharm = document.getElementById('btn-buy-charm');
+  const lvlEyeEl = document.getElementById('lvl-eye');
+  const eyeBonusEl = document.getElementById('eye-bonus');
+  const priceEyeEl = document.getElementById('price-eye');
+  const btnBuyEye = document.getElementById('btn-buy-eye');
 
   const careerDistanceEl = document.getElementById('career-distance');
   const careerTimeEl = document.getElementById('career-time');
@@ -338,7 +340,7 @@
 
   // --- Haversine Distance (กิโลเมตร) ---
   function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // รัศมีโลกเป็นกิโลเมตร
+    const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
@@ -349,13 +351,24 @@
     return R * c;
   }
 
+  // --- Toast แจ้งเตือน (ตัดการสั่นออก เงียบสนิท) ---
   function showToast(msg) {
     gameToastEl.textContent = msg;
     gameToastEl.classList.add('show');
-    if (navigator.vibrate) navigator.vibrate(80);
     setTimeout(() => {
       gameToastEl.classList.remove('show');
     }, 2800);
+  }
+
+  // --- Shop Price Formulas ---
+  function getBladePrice() {
+    return 300 + (gameState.upgrades.blade * 150);
+  }
+  function getCharmPrice() {
+    return 250 + (gameState.upgrades.charm * 120);
+  }
+  function getEyePrice() {
+    return 350 + (gameState.upgrades.eye * 180);
   }
 
   // --- Player Progression ---
@@ -368,8 +381,7 @@
       gameState.nextExp = Math.floor(gameState.nextExp * 1.35);
       gameState.statPoints = (gameState.statPoints || 0) + 3;
       leveledUp = true;
-      AudioEngine.sfxLevelUp();
-      showToast(`⭐ เลเวลอัป! ก้าวสู่อันดับ LV. ${gameState.level} (ได้รับ +3 แต้มสเตตัส)`);
+      showToast(`⭐ เลเวลอัป! สู่ระดับ LV. ${gameState.level} (ได้รับ +3 แต้มสเตตัส)`);
     }
     if (leveledUp) {
       gameState.title = getTitleForLevel(gameState.level);
@@ -378,28 +390,41 @@
     renderUI();
   }
 
+  // --- Damage & Battle Calculations ---
   function applyDistanceDamage(distanceDeltaKm) {
     if (distanceDeltaKm <= 0) return;
 
     // เควสต์ระยะทาง
-    gameState.dailyQuests[0].current = Math.min(
-      gameState.dailyQuests[0].target,
-      parseFloat((gameState.dailyQuests[0].current + distanceDeltaKm).toFixed(2))
-    );
+    const questDist = gameState.dailyQuests.find(q => q.id === 'dq_dist');
+    if (questDist) {
+      questDist.current = Math.min(questDist.target, parseFloat((questDist.current + distanceDeltaKm).toFixed(2)));
+    }
 
-    // คำนวณ STR Bonus: 1 STR เหนือ 10 เพิ่มดาเมจ +5%
-    const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05);
+    // หีบสมบัติสุ่มดรอปทุกๆ 1.0 กม.
+    if (runDistanceKm >= nextChestKmCheckpoint) {
+      nextChestKmCheckpoint += 1.0;
+      if (Math.random() < 0.6) { // โอกาส 60% ดรอปหีบสมบัติ
+        gameState.chestsAvailable += 1;
+        showToast('📦 สัญชาตญาณเงาตรวจพบ: คุณค้นพบหีบสมบัติดันเจี้ยน!');
+      }
+    }
 
-    // คำนวณ AGI Bonus: โอกาสคริติคอล AGI * 0.5% (สูงสุด 50%) สร้างความเสียหาย x1.8
-    const critChance = Math.min(50, gameState.stats.agi * 0.5);
+    // คำนวณ STR Bonus + อาวุธจากร้านค้า
+    const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05);
+
+    // คำนวณ AGI Bonus + เนตรอเวจีจากร้านค้า + โหมด Berserk Frenzy
+    let critChance = Math.min(50, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2));
+    if (isFrenzyActive) {
+      critChance = 100; // Frenzy รับประกันคริติคอล 100%
+    }
+
     const isCrit = (Math.random() * 100) < critChance;
     const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? 1.8 : 1.0);
 
     if (isCrit) {
-      AudioEngine.sfxCrit();
-      showToast(`💥 CRITICAL! โจมตีทะลวง x1.8 เท่า`);
-    } else {
-      AudioEngine.sfxAttack();
+      const questCrit = gameState.dailyQuests.find(q => q.id === 'dq_crit');
+      if (questCrit) questCrit.current = Math.min(questCrit.target, questCrit.current + 1);
+      showToast(`💥 CRITICAL! ปลดปล่อยดาเมจ x1.8 เท่า`);
     }
 
     // หักเลือดบอส
@@ -408,23 +433,36 @@
 
     if (gameState.bossHpRemain <= 0.001) {
       // โค่นบอสสำเร็จ
-      AudioEngine.sfxBossDefeat();
       sessionBossKills += 1;
       gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
 
-      // คำนวณ STA Bonus: 1 STA เหนือ 10 มอบโบนัสทองและ EXP +2%
-      const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02);
-      const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier);
-      const rewardGold = Math.floor(currentBoss.rewardGold * staMultiplier);
+      // โค่นบอสได้รับหีบสมบัติแน่นอน 100%
+      gameState.chestsAvailable += 1;
 
-      showToast(`🏆 สยบ ${currentBoss.name}! ได้รับ +${rewardExp} EXP & +${rewardGold} เหรียญ`);
+      // คำนวณ STA + เครื่องรางร้านค้า + Streak Bonus
+      const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02);
+      const charmMultiplier = 1 + (gameState.upgrades.charm * 0.10);
+      const streakMultiplier = 1 + Math.min(0.20, (gameState.streak.count - 1) * 0.02); // สูงสุด +20%
+      const totalGoldMultiplier = staMultiplier * charmMultiplier * streakMultiplier;
+
+      const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier);
+      const rewardGold = Math.floor(currentBoss.rewardGold * totalGoldMultiplier);
+
+      showToast(`🏆 สยบ ${currentBoss.name}! ได้รับ +${rewardExp} EXP & +${rewardGold} เหรียญ & 📦 1 หีบ`);
       addExp(rewardExp);
       gameState.gold += rewardGold;
 
-      // อัปเดตเควสต์โค่นบอส
-      gameState.dailyQuests[2].current = Math.min(gameState.dailyQuests[2].target, gameState.dailyQuests[2].current + 1);
+      // อัปเดตเควสต์บอส
+      const questBoss = gameState.dailyQuests.find(q => q.id === 'dq_boss');
+      if (questBoss) questBoss.current = Math.min(questBoss.target, questBoss.current + 1);
 
-      // หมุนเวียนบอสตัวถัดไป
+      // ตรวจสอบ Achievement Dragon Bane
+      if (currentBoss.tier === 'TIER III') {
+        const achDragon = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
+        if (achDragon) achDragon.current = Math.min(achDragon.target, achDragon.current + 1);
+      }
+
+      // หมุนเวียนบอส
       gameState.bossIndex = (gameState.bossIndex + 1) % BOSS_DATABASE.length;
       const nextBoss = BOSS_DATABASE[gameState.bossIndex];
       gameState.bossHpRemain = nextBoss.maxHpKm;
@@ -433,6 +471,34 @@
     saveGame();
     renderUI();
   }
+
+  // --- Open Mystery Chest Logic ---
+  function openMysteryChest() {
+    if (gameState.chestsAvailable <= 0) return;
+    gameState.chestsAvailable -= 1;
+
+    const roll = Math.random();
+    if (roll < 0.45) {
+      // ได้ทองคำก้อนโต (100 - 300)
+      const goldDrop = Math.floor(100 + Math.random() * 200);
+      gameState.gold += goldDrop;
+      showToast(`🎁 เปิดหีบสำเร็จ! พบถุงทองโบราณ +${goldDrop} 🪙`);
+    } else if (roll < 0.85) {
+      // ได้ EXP ก้อนโต (800 - 1800)
+      const expDrop = Math.floor(800 + Math.random() * 1000);
+      showToast(`🎁 เปิดหีบสำเร็จ! ดูดซับผลึกวิญญาณ +${expDrop} EXP`);
+      addExp(expDrop);
+    } else {
+      // Jackpot: แต้มสเตตัส +1 แต้ม
+      gameState.statPoints = (gameState.statPoints || 0) + 1;
+      showToast(`🌟 JACKPOT! หีบสมบัติมอบ +1 แต้มสเตตัสอิสระ!`);
+    }
+
+    saveGame();
+    renderUI();
+  }
+
+  btnOpenChest.addEventListener('click', openMysteryChest);
 
   // --- UI Renderer ---
   function renderUI() {
@@ -444,8 +510,9 @@
     expCurrentEl.textContent = gameState.currentExp;
     expNextEl.textContent = gameState.nextExp;
     goldValueEl.textContent = gameState.gold;
+    streakValEl.textContent = gameState.streak.count || 1;
 
-    // แต้มสเตตัสและการอัปเกรด
+    // แต้มสเตตัส
     const hasPoints = (gameState.statPoints || 0) > 0;
     statPointsBarEl.style.display = hasPoints ? 'block' : 'none';
     statPointsValEl.textContent = gameState.statPoints || 0;
@@ -458,9 +525,16 @@
     statStaEl.textContent = gameState.stats.sta;
     statAgiEl.textContent = gameState.stats.agi;
 
-    strMultEl.textContent = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05)).toFixed(1);
+    const currentStrMult = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05)).toFixed(2);
+    strMultEl.textContent = currentStrMult;
     staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2));
-    agiCritEl.textContent = Math.min(50, gameState.stats.agi * 0.5).toFixed(1);
+    
+    let baseCrit = Math.min(50, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2)).toFixed(1);
+    if (isFrenzyActive) {
+      agiCritEl.textContent = '100 (FRENZY)';
+    } else {
+      agiCritEl.textContent = baseCrit;
+    }
 
     // บอส
     const boss = BOSS_DATABASE[gameState.bossIndex];
@@ -473,22 +547,49 @@
     const hpPercent = Math.max(0, Math.min(100, (gameState.bossHpRemain / boss.maxHpKm) * 100));
     bossHpBarEl.style.width = `${hpPercent}%`;
 
+    // หีบสมบัติ
+    if (gameState.chestsAvailable > 0) {
+      chestCardEl.style.display = 'block';
+      chestCountEl.textContent = gameState.chestsAvailable;
+    } else {
+      chestCardEl.style.display = 'none';
+    }
+
     // ตัววัดการวิ่ง
     distanceValEl.textContent = runDistanceKm.toFixed(2);
-    calValEl.textContent = `${Math.floor(runDistanceKm * 65)} kcal`;
+    const calValue = Math.floor(runDistanceKm * 65);
+    calValEl.textContent = `${calValue} kcal`;
     updatePace();
 
-    // อัปเดตข้อมูลในหน้าจอพักจอ (Pocket Overlay)
+    // อัปเดต Pocket Overlay
     pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
     pocketTimeVal.textContent = timeValEl.textContent;
 
-    // สถิติสะสม (Career Stats)
+    // ร้านค้า (Shop Items)
+    lvlBladeEl.textContent = gameState.upgrades.blade;
+    bladeBonusEl.textContent = gameState.upgrades.blade * 5;
+    priceBladeEl.textContent = getBladePrice();
+    btnBuyBlade.disabled = gameState.gold < getBladePrice();
+
+    lvlCharmEl.textContent = gameState.upgrades.charm;
+    charmBonusEl.textContent = gameState.upgrades.charm * 10;
+    priceCharmEl.textContent = getCharmPrice();
+    btnBuyCharm.disabled = gameState.gold < getCharmPrice();
+
+    lvlEyeEl.textContent = gameState.upgrades.eye;
+    eyeBonusEl.textContent = gameState.upgrades.eye * 2;
+    priceEyeEl.textContent = getEyePrice();
+    btnBuyEye.disabled = gameState.gold < getEyePrice();
+
+    btnBuyElixir.disabled = gameState.gold < 150;
+
+    // Career Stats
     careerDistanceEl.textContent = `${(gameState.career.totalDistanceKm || 0).toFixed(2)} กม.`;
     careerTimeEl.textContent = formatTime(gameState.career.totalSeconds || 0);
     careerBossesEl.textContent = `${gameState.career.totalBossDefeated || 0} ตัว`;
     careerLongestEl.textContent = `${(gameState.career.longestRunKm || 0).toFixed(2)} กม.`;
 
-    // เควสต์ประจำวัน
+    // เรนเดอร์เควสต์ประจำวัน
     questsListEl.innerHTML = '';
     gameState.dailyQuests.forEach((quest) => {
       const isDone = quest.current >= quest.target;
@@ -529,9 +630,101 @@
         }
       });
     });
+
+    // เรนเดอร์ Achievements
+    let claimedAchCount = 0;
+    achievementsListEl.innerHTML = '';
+    gameState.achievements.forEach(ach => {
+      if (ach.claimed) claimedAchCount++;
+      const isDone = ach.current >= ach.target;
+      const pct = Math.min(100, Math.round((ach.current / ach.target) * 100));
+
+      const card = document.createElement('div');
+      card.className = `achievement-card ${isDone ? 'completed' : ''}`;
+      card.innerHTML = `
+        <div class="quest-title-row">
+          <div>
+            <span class="quest-name">🏅 ${ach.name}</span>
+            <div style="font-size: 0.65rem; color: #a1a1aa; margin-top: 2px;">${ach.desc}</div>
+          </div>
+          <span class="quest-reward">+${ach.rewardExp} EXP / +${ach.rewardGold}G</span>
+        </div>
+        <div class="quest-progress-bar">
+          <div class="quest-progress-fill" style="width: ${pct}%;"></div>
+        </div>
+        <div class="quest-footer">
+          <span>ความคืบหน้า: ${ach.current}/${ach.target} ${ach.unit}</span>
+          ${isDone && !ach.claimed
+            ? `<button class="btn-claim-ach" data-aid="${ach.id}">รับรางวัลเกียรติยศ</button>`
+            : ach.claimed ? `<span>✓ ปลดล็อกแล้ว</span>` : `<span>ยังไม่ปลดล็อก</span>`}
+        </div>
+      `;
+      achievementsListEl.appendChild(card);
+    });
+    achievementsCounterEl.textContent = `${claimedAchCount}/${gameState.achievements.length} สำเร็จ`;
+
+    // ปุ่มรับรางวัลเกียรติยศ
+    document.querySelectorAll('.btn-claim-ach').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const aid = e.target.getAttribute('data-aid');
+        const a = gameState.achievements.find(item => item.id === aid);
+        if (a && !a.claimed) {
+          a.claimed = true;
+          gameState.gold += a.rewardGold;
+          addExp(a.rewardExp);
+          showToast(`🏆 ปลดล็อกเกียรติยศ! +${a.rewardGold} ทอง & EXP`);
+          saveGame();
+          renderUI();
+        }
+      });
+    });
   }
 
-  // --- Run Timers & Pace Helpers ---
+  // --- Shop Purchase Handlers ---
+  btnBuyElixir.addEventListener('click', () => {
+    if (gameState.gold >= 150) {
+      gameState.gold -= 150;
+      gameState.statPoints = (gameState.statPoints || 0) + 1;
+      showToast('🧪 ดื่มน้ำยาจิตวิญญาณ: ได้รับ +1 แต้มสเตตัส!');
+      saveGame();
+      renderUI();
+    }
+  });
+
+  btnBuyBlade.addEventListener('click', () => {
+    const cost = getBladePrice();
+    if (gameState.gold >= cost) {
+      gameState.gold -= cost;
+      gameState.upgrades.blade += 1;
+      showToast(`🗡️ ตีบวกดาบเงาเป็น Lv.${gameState.upgrades.blade} (+${gameState.upgrades.blade * 5}% ดาเมจ)!`);
+      saveGame();
+      renderUI();
+    }
+  });
+
+  btnBuyCharm.addEventListener('click', () => {
+    const cost = getCharmPrice();
+    if (gameState.gold >= cost) {
+      gameState.gold -= cost;
+      gameState.upgrades.charm += 1;
+      showToast(`🧿 เสริมพลังเครื่องรางเป็น Lv.${gameState.upgrades.charm} (+${gameState.upgrades.charm * 10}% ทอง)!`);
+      saveGame();
+      renderUI();
+    }
+  });
+
+  btnBuyEye.addEventListener('click', () => {
+    const cost = getEyePrice();
+    if (gameState.gold >= cost) {
+      gameState.gold -= cost;
+      gameState.upgrades.eye += 1;
+      showToast(`👁️ เบิกเนตรอเวจีเป็น Lv.${gameState.upgrades.eye} (+${gameState.upgrades.eye * 2}% คริติคอล)!`);
+      saveGame();
+      renderUI();
+    }
+  });
+
+  // --- Timers & Pace Helpers ---
   function formatTime(totalSecs) {
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
@@ -539,12 +732,10 @@
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  // คำนวณเพซตั้งแต่ระยะ 20 เมตร (0.02 กม.) พร้อมระบบกรองเพซสุดโต่ง (Pace Clamping)
   function calculatePace(totalSecs, distanceKm) {
     const displayDist = Math.round(distanceKm * 100) / 100;
     if (displayDist >= 0.02 && totalSecs > 0) {
       const paceDec = (totalSecs / 60) / distanceKm;
-      // กรองเพซที่ช้ากว่า 30 นาที/กม. หรือเร็วกว่า 2 นาที/กม. ให้แสดงผลเป็น --'--"
       if (paceDec > 30 || paceDec < 2) {
         return `--'--"`;
       }
@@ -567,7 +758,7 @@
     const history = await DB.getAllRunHistory();
     historyCountEl.textContent = `${history.length} รอบ`;
 
-    // 1. Render Sessions History List
+    // 1. Sessions History List
     historyListEl.innerHTML = '';
     if (history.length === 0) {
       historyListEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!</div>';
@@ -603,14 +794,13 @@
       });
     }
 
-    // 2. Aggregate and Render Daily Statistics
+    // 2. Daily Statistics
     dailyListEl.innerHTML = '';
     if (history.length === 0) {
       dailyListEl.innerHTML = '<div class="history-empty">ยังไม่มีสถิติรายวัน เริ่มออกล่าเพื่อเก็บสถิติ!</div>';
       return;
     }
 
-    // Grouping records by local date string
     const dailyMap = new Map();
     history.forEach(item => {
       const dateObj = new Date(item.timestamp);
@@ -641,7 +831,6 @@
       dayRecord.runsCount += 1;
     });
 
-    // เรียงลำดับวันล่าสุดย้อนหลัง
     const sortedDays = Array.from(dailyMap.values()).sort((a, b) => b.latestTimestamp - a.latestTimestamp);
 
     sortedDays.forEach(day => {
@@ -694,7 +883,7 @@
     viewDaily.style.display = 'none';
   });
 
-  // --- Pocket Mode Touch Shield Logic (แตะค้าง 1.5 วินาที เพื่อปลดล็อก) ---
+  // --- Pocket Mode Touch Shield Logic ---
   let unlockProgress = 0;
   let unlockInterval = null;
 
@@ -731,27 +920,51 @@
 
   // --- Engine Control (Start / Pause / Finish) ---
   async function startRunEngine() {
-    AudioEngine.sfxStart();
     isRunning = true;
     btnToggleRun.classList.add('running');
     btnRunText.textContent = 'หยุดชั่วคราว';
     btnFinishRun.removeAttribute('disabled');
 
-    // ร้องขอ Screen Wake Lock ป้องกันหน้าจอดับ
     await acquireWakeLock();
 
-    // Timer
     runTimerInterval = setInterval(() => {
       runSeconds++;
       timeValEl.textContent = formatTime(runSeconds);
       pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
 
-      // เควสต์จับเวลาวิ่ง
-      gameState.dailyQuests[1].current = Math.min(
-        gameState.dailyQuests[1].target,
-        gameState.dailyQuests[1].current + 1
-      );
+      // เควสต์เวลา
+      const questTime = gameState.dailyQuests.find(q => q.id === 'dq_time');
+      if (questTime) {
+        questTime.current = Math.min(questTime.target, questTime.current + 1);
+      }
+
+      // เควสต์แคลอรี
+      const questCal = gameState.dailyQuests.find(q => q.id === 'dq_cal');
+      if (questCal) {
+        questCal.current = Math.min(questCal.target, Math.floor(runDistanceKm * 65));
+      }
+
+      // ตรวจสอบสถานะ Berserk / Shadow Frenzy (เพซเร็วกว่า 6'30"/กม. ติดต่อกัน 15 วินาที)
+      if (runDistanceKm >= 0.05 && runSeconds > 10) {
+        const currentPaceDec = (runSeconds / 60) / runDistanceKm;
+        if (currentPaceDec <= 6.5 && currentPaceDec >= 2.0) {
+          frenzyPaceStreakSec++;
+          if (frenzyPaceStreakSec >= 15 && !isFrenzyActive) {
+            isFrenzyActive = true;
+            runHudEl.classList.add('frenzy-active');
+            frenzyBannerEl.style.display = 'block';
+            showToast('⚡ SHADOW FRENZY ปะทุ! พลังโจมตีติดคริติคอล 100%');
+          }
+        } else {
+          frenzyPaceStreakSec = 0;
+          if (isFrenzyActive) {
+            isFrenzyActive = false;
+            runHudEl.classList.remove('frenzy-active');
+            frenzyBannerEl.style.display = 'none';
+          }
+        }
+      }
     }, 1000);
 
     // Geolocation Watch
@@ -762,7 +975,7 @@
           gpsStatusEl.textContent = 'GPS: ล็อกพิกัดแล้ว 🟢';
           const { latitude, longitude, accuracy } = pos.coords;
 
-          if (accuracy > 30) return; // กรองสัญญาณกระตุก
+          if (accuracy > 30) return;
 
           const now = Date.now();
 
@@ -774,21 +987,17 @@
           const deltaKm = calculateDistance(lastCoord.latitude, lastCoord.longitude, latitude, longitude);
           const timeDeltaSec = (now - (lastCoord.time || now)) / 1000;
 
-          // สะสมระยะทางเมื่อขยับตั้งแต่ 2 เมตร (0.002 กม.) ขึ้นไป เพื่อไม่ให้ระยะทางตกหล่น
           if (deltaKm >= 0.002) {
             const speedKmh = timeDeltaSec > 0 ? (deltaKm / (timeDeltaSec / 3600)) : 0;
 
-            // กรองสปีดกระโดดที่เกินจริง (> 35 km/h) เช่น GPS วาร์ป หรือนั่งรถ
             if (speedKmh <= 35) {
               runDistanceKm += deltaKm;
               applyDistanceDamage(deltaKm);
               lastCoord = { latitude, longitude, time: now };
             } else {
-              // กรณีความเร็วกระโดดเกินจริง ให้รีเซ็ตจุดอ้างอิงเป็นจุดปัจจุบันโดยไม่บวกระยะทาง
               lastCoord = { latitude, longitude, time: now };
             }
           }
-          // หาก deltaKm ยังไม่ถึง 0.002 กม. จะไม่ทำการอัปเดต lastCoord เพื่อสะสมระยะทางต่อเนื่องในการส่งพิกัดครั้งถัดไป
 
           renderUI();
         },
@@ -815,7 +1024,10 @@
     lastCoord = null;
     gpsStatusEl.textContent = 'GPS: หยุดชั่วคราว';
 
-    // คืนสิทธิ์ Wake Lock
+    isFrenzyActive = false;
+    runHudEl.classList.remove('frenzy-active');
+    frenzyBannerEl.style.display = 'none';
+
     releaseWakeLock();
   }
 
@@ -824,7 +1036,7 @@
     pocketOverlay.style.display = 'none';
     showToast(`🏁 จบการออกล่า! สะสมระยะทางได้ ${runDistanceKm.toFixed(2)} กม.`);
 
-    // EXP เพิ่มเติมจากการวิ่ง (STA มีผลคูณโบนัส)
+    // EXP โบนัสจากการวิ่ง
     const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02);
     const bonusExp = Math.floor(runDistanceKm * 800 * staMultiplier);
     if (bonusExp > 0) {
@@ -839,7 +1051,17 @@
       gameState.career.longestRunKm = parseFloat(runDistanceKm.toFixed(2));
     }
 
-    // บันทึกประวัติรอบนี้เข้าสู่ IndexedDB
+    // อัปเดต Achievement
+    const achFirst = gameState.achievements.find(a => a.id === 'ach_first');
+    if (achFirst) achFirst.current = Math.min(achFirst.target, achFirst.current + 1);
+
+    const ach10 = gameState.achievements.find(a => a.id === 'ach_dist10');
+    if (ach10) ach10.current = Math.min(ach10.target, gameState.career.totalDistanceKm);
+
+    const ach50 = gameState.achievements.find(a => a.id === 'ach_dist50');
+    if (ach50) ach50.current = Math.min(ach50.target, gameState.career.totalDistanceKm);
+
+    // บันทึกประวัติเข้าสู่ IndexedDB
     const historyItem = {
       timestamp: Date.now(),
       displayDate: new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }),
@@ -858,6 +1080,8 @@
     runDistanceKm = 0.0;
     runSeconds = 0;
     sessionBossKills = 0;
+    nextChestKmCheckpoint = 1.0;
+    frenzyPaceStreakSec = 0;
     timeValEl.textContent = '00:00:00';
     paceValEl.textContent = `--'--"`;
     btnRunText.textContent = 'เริ่มออกล่า';
@@ -873,7 +1097,6 @@
     if ((gameState.statPoints || 0) > 0) {
       gameState.statPoints -= 1;
       gameState.stats[statKey] += 1;
-      AudioEngine.sfxStart();
       showToast(`💪 เสริมพลัง ${statKey.toUpperCase()} เป็น ${gameState.stats[statKey]}!`);
       saveGame();
       renderUI();
@@ -932,7 +1155,6 @@
 
   // --- Initialize Application ---
   await loadGameState();
-  verifyDailyReset();
   renderUI();
   await renderHistoryAndDailyUI();
 })();

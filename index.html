@@ -13,7 +13,7 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Top Bar: Player Stats Summary -->
+    <!-- Top Bar: Player Stats & Streak -->
     <header class="top-nav">
       <div class="player-badge">
         <div class="avatar-frame">
@@ -32,9 +32,15 @@
           </div>
         </div>
       </div>
-      <div class="gold-counter">
-        <span class="gold-icon">🪙</span>
-        <span id="gold-value">0</span>
+      <div class="nav-right-cluster">
+        <div class="streak-badge" id="streak-badge" title="วันล่าต่อเนื่อง">
+          <span class="streak-icon">🔥</span>
+          <span id="streak-val">1</span> วัน
+        </div>
+        <div class="gold-counter">
+          <span class="gold-icon">🪙</span>
+          <span id="gold-value">0</span>
+        </div>
       </div>
     </header>
 
@@ -93,8 +99,25 @@
       </div>
     </section>
 
+    <!-- Mystery Chest Loot Drop Notification Card -->
+    <section class="chest-card" id="chest-card" style="display: none;">
+      <div class="chest-content">
+        <div class="chest-icon-anim">📦</div>
+        <div class="chest-details">
+          <h4 class="chest-title">พบหีบสมบัติดันเจี้ยน! (<span id="chest-count">0</span> หีบ)</h4>
+          <p class="chest-desc">สุ่มรับเหรียญทองก้อนโต, แต้มสเตตัส หรือ EXP มหาศาล</p>
+        </div>
+        <button class="btn-open-chest" id="btn-open-chest" type="button">เปิดหีบ</button>
+      </div>
+    </section>
+
     <!-- Run Tracker HUD -->
-    <section class="run-hud">
+    <section class="run-hud" id="run-hud">
+      <!-- Berserk Frenzy Banner -->
+      <div class="frenzy-banner" id="frenzy-banner" style="display: none;">
+        ⚡ SHADOW FRENZY: เพซติดสปีด! คริติคอล 100% ⚡
+      </div>
+
       <div class="hud-status-row">
         <span class="gps-badge" id="gps-status">GPS: พร้อมใช้งาน</span>
         <div class="hud-status-actions">
@@ -123,7 +146,7 @@
         </div>
       </div>
 
-      <!-- Action Buttons (Large Touch Target) -->
+      <!-- Action Buttons -->
       <div class="hud-controls">
         <button class="btn-primary-action" id="btn-toggle-run" type="button">
           <span class="btn-icon">⚡</span>
@@ -134,12 +157,81 @@
         </button>
       </div>
 
-      <!-- Simulation Controller (สำหรับเทสต์ในบ้าน) -->
+      <!-- Simulation Controller -->
       <div class="sim-controls" id="sim-controls" style="display: none;">
         <span class="sim-hint">กดเพื่อเพิ่มระยะทดสอบ:</span>
         <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.2)">+200 ม.</button>
         <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.5)">+500 ม.</button>
         <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(1.0)">+1.0 กม.</button>
+      </div>
+    </section>
+
+    <!-- Shadow Armory (Shop System) -->
+    <section class="shop-section">
+      <div class="section-title-row">
+        <h2 class="section-title">คลังสรรพาวุธเงา (Shadow Armory)</h2>
+        <span class="shop-hint">อัปเกรดพลังด้วยเหรียญทอง</span>
+      </div>
+      <div class="shop-grid">
+        <!-- Item 1: Spirit Elixir -->
+        <div class="shop-item">
+          <div class="item-header">
+            <span class="item-icon">🧪</span>
+            <div class="item-info">
+              <span class="item-name">น้ำยาจิตวิญญาณ</span>
+              <span class="item-buff">+1 แต้มสเตตัสอิสระ</span>
+            </div>
+          </div>
+          <div class="item-footer">
+            <span class="item-price">🪙 <span id="price-elixir">150</span></span>
+            <button class="btn-buy-item" id="btn-buy-elixir" type="button">ซื้อ</button>
+          </div>
+        </div>
+
+        <!-- Item 2: Shadow Blade -->
+        <div class="shop-item">
+          <div class="item-header">
+            <span class="item-icon">🗡️</span>
+            <div class="item-info">
+              <span class="item-name">ดาบเงาพิฆาต (Lv.<span id="lvl-blade">0</span>)</span>
+              <span class="item-buff">ดาเมจพื้นฐาน +<span id="blade-bonus">0</span>%</span>
+            </div>
+          </div>
+          <div class="item-footer">
+            <span class="item-price">🪙 <span id="price-blade">300</span></span>
+            <button class="btn-buy-item" id="btn-buy-blade" type="button">อัปเกรด</button>
+          </div>
+        </div>
+
+        <!-- Item 3: Bloodhunter Charm -->
+        <div class="shop-item">
+          <div class="item-header">
+            <span class="item-icon">🧿</span>
+            <div class="item-info">
+              <span class="item-name">เครื่องรางล่าโลหิต (Lv.<span id="lvl-charm">0</span>)</span>
+              <span class="item-buff">โบนัสเหรียญทอง +<span id="charm-bonus">0</span>%</span>
+            </div>
+          </div>
+          <div class="item-footer">
+            <span class="item-price">🪙 <span id="price-charm">250</span></span>
+            <button class="btn-buy-item" id="btn-buy-charm" type="button">อัปเกรด</button>
+          </div>
+        </div>
+
+        <!-- Item 4: Abyssal Eye -->
+        <div class="shop-item">
+          <div class="item-header">
+            <span class="item-icon">👁️</span>
+            <div class="item-info">
+              <span class="item-name">เนตรอเวจี (Lv.<span id="lvl-eye">0</span>)</span>
+              <span class="item-buff">โอกาสคริติคอล +<span id="eye-bonus">0</span>%</span>
+            </div>
+          </div>
+          <div class="item-footer">
+            <span class="item-price">🪙 <span id="price-eye">350</span></span>
+            <button class="btn-buy-item" id="btn-buy-eye" type="button">อัปเกรด</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -150,7 +242,18 @@
         <span class="quest-refresh-time" id="quest-date">วันนี้</span>
       </div>
       <div class="quests-list" id="quests-list">
-        <!-- รายการเควสต์จะเรนเดอร์ผ่าน JS -->
+        <!-- รายการเควสต์เรนเดอร์ผ่าน JS -->
+      </div>
+    </section>
+
+    <!-- Achievements / Milestones Section -->
+    <section class="achievements-section">
+      <div class="section-title-row">
+        <h2 class="section-title">เกียรติยศแห่งเงา (Milestones)</h2>
+        <span class="achievements-counter" id="achievements-counter">0/4 สำเร็จ</span>
+      </div>
+      <div class="achievements-list" id="achievements-list">
+        <!-- รายการ Achievement เรนเดอร์ผ่าน JS -->
       </div>
     </section>
 
@@ -195,19 +298,19 @@
       <!-- Tab View 1: สถิติรายวัน -->
       <div class="tab-view" id="view-daily">
         <div class="daily-list" id="daily-list">
-          <!-- สถิติสรุปรายวันจะโหลดจาก IndexedDB -->
+          <!-- สถิติรายวันโหลดจาก IndexedDB -->
         </div>
       </div>
 
-      <!-- Tab View 2: ประวัติการวิ่งแต่ละรอบ -->
+      <!-- Tab View 2: ประวัติรายรอบ -->
       <div class="tab-view" id="view-sessions" style="display: none;">
         <div class="history-list" id="history-list">
-          <!-- รายการรอบวิ่งจะโหลดจาก IndexedDB -->
+          <!-- ประวัติโหลดจาก IndexedDB -->
         </div>
       </div>
     </section>
 
-    <!-- Pocket Mode / Screen Saver Overlay (OLED Pure Black & Touch Shield) -->
+    <!-- Pocket Mode / Screen Saver Overlay -->
     <div class="pocket-overlay" id="pocket-overlay" style="display: none;">
       <div class="pocket-content">
         <div class="pocket-lock-icon">🔒</div>
