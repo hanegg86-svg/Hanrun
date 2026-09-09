@@ -1,43 +1,146 @@
-const CACHE_NAME = 'shadowstrider-v1';
-const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './style.css',
-  './script.js',
-  './manifest.json',
-  './icon.png'
-];
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#09090b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>ShadowStrider: Dark Run RPG</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Bar: Player Stats Summary -->
+    <header class="top-nav">
+      <div class="player-badge">
+        <div class="avatar-frame">
+          <span class="avatar-icon">⚔️</span>
+        </div>
+        <div class="player-info">
+          <div class="name-row">
+            <span class="player-title" id="player-title">Abyss Stalker</span>
+            <span class="badge-level" id="player-level">LV. 1</span>
+          </div>
+          <div class="exp-bar-container">
+            <div class="exp-bar-fill" id="exp-bar-fill" style="width: 0%;"></div>
+          </div>
+          <div class="exp-text">
+            <span id="exp-current">0</span> / <span id="exp-next">1000</span> EXP
+          </div>
+        </div>
+      </div>
+      <div class="gold-counter">
+        <span class="gold-icon">🪙</span>
+        <span id="gold-value">0</span>
+      </div>
+    </header>
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
-  self.skipWaiting();
-});
+    <!-- Stats Bar (STR, STA, AGI) -->
+    <section class="stats-ribbon">
+      <div class="stat-item">
+        <span class="stat-label">STR (ความเร็ว)</span>
+        <span class="stat-val" id="stat-str">10</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-label">STA (ความอึด)</span>
+        <span class="stat-val" id="stat-sta">10</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span class="stat-label">AGI (ความสม่ำเสมอ)</span>
+        <span class="stat-val" id="stat-agi">10</span>
+      </div>
+    </section>
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    })
-  );
-  self.clients.claim();
-});
+    <!-- Boss Encounter Card -->
+    <section class="boss-card">
+      <div class="boss-header">
+        <span class="boss-tag">⚠️ ดันเจี้ยนบอส</span>
+        <span class="boss-tier" id="boss-tier">TIER I</span>
+      </div>
+      <div class="boss-body">
+        <div class="boss-visual">
+          <div class="boss-avatar" id="boss-avatar">👹</div>
+        </div>
+        <div class="boss-details">
+          <h3 class="boss-name" id="boss-name">Gargoyle of the Crypt</h3>
+          <p class="boss-desc" id="boss-desc">อสูรศิลาทมิฬที่ตื่นขึ้น จงวิ่งพิชิตระยะทางเพื่อทำลายผนึกหิน!</p>
+          <div class="boss-hp-container">
+            <div class="boss-hp-bar" id="boss-hp-bar" style="width: 100%;"></div>
+          </div>
+          <div class="boss-hp-text">
+            พลังชีวิตบอส: <span id="boss-hp-remain">1.50</span> / <span id="boss-hp-max">1.50</span> กม.
+          </div>
+        </div>
+      </div>
+    </section>
 
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(() => {
-        return caches.match('./index.html');
-      });
-    })
-  );
-});
+    <!-- Run Tracker HUD -->
+    <section class="run-hud">
+      <div class="hud-status-row">
+        <span class="gps-badge" id="gps-status">GPS: พร้อมใช้งาน</span>
+        <button class="sim-toggle-btn" id="sim-toggle-btn" type="button">โหมดจำลองวิ่ง: ปิด</button>
+      </div>
+
+      <div class="hud-main-metric">
+        <div class="metric-value-huge" id="distance-val">0.00</div>
+        <div class="metric-unit">กิโลเมตร (KM)</div>
+      </div>
+
+      <div class="hud-sub-metrics">
+        <div class="sub-metric-box">
+          <span class="sub-label">เวลาที่ใช้</span>
+          <span class="sub-val" id="time-val">00:00:00</span>
+        </div>
+        <div class="sub-metric-box">
+          <span class="sub-label">เพซเฉลี่ย</span>
+          <span class="sub-val" id="pace-val">--'--"</span>
+        </div>
+        <div class="sub-metric-box">
+          <span class="sub-label">แคลอรี</span>
+          <span class="sub-val" id="cal-val">0 kcal</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons (Large Touch Target) -->
+      <div class="hud-controls">
+        <button class="btn-primary-action" id="btn-toggle-run" type="button">
+          <span class="btn-icon">⚡</span>
+          <span class="btn-text" id="btn-run-text">เริ่มออกล่า</span>
+        </button>
+        <button class="btn-secondary-action" id="btn-finish-run" type="button" disabled>
+          <span class="btn-text">สรุปผลการวิ่ง</span>
+        </button>
+      </div>
+
+      <!-- Simulation Controller (สำหรับเทสต์ในบ้าน) -->
+      <div class="sim-controls" id="sim-controls" style="display: none;">
+        <span class="sim-hint">กดเพื่อเพิ่มระยะทดสอบ:</span>
+        <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.2)">+200 ม.</button>
+        <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.5)">+500 ม.</button>
+        <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(1.0)">+1.0 กม.</button>
+      </div>
+    </section>
+
+    <!-- Daily Quests Section -->
+    <section class="quests-section">
+      <div class="section-title-row">
+        <h2 class="section-title">ภารกิจประจำวัน (Daily Quests)</h2>
+        <span class="quest-refresh-time" id="quest-date">วันนี้</span>
+      </div>
+      <div class="quests-list" id="quests-list">
+        <!-- รายการเควสต์จะเรนเดอร์ผ่าน JS -->
+      </div>
+    </section>
+
+    <!-- Notification Toast -->
+    <div class="game-toast" id="game-toast"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
