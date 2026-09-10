@@ -105,7 +105,7 @@
         <div class="chest-icon-anim">📦</div>
         <div class="chest-details">
           <h4 class="chest-title">พบหีบสมบัติดันเจี้ยน! (<span id="chest-count">0</span> หีบ)</h4>
-          <p class="chest-desc">สุ่มรับเหรียญทองก้อนโต, แต้มสเตตัส หรือ EXP มหาศาล</p>
+          <p class="chest-desc">ลุ้นรับอุปกรณ์สวมใส่หายาก, เหรียญทอง, หรือ EXP มหาศาล</p>
         </div>
         <button class="btn-open-chest" id="btn-open-chest" type="button">เปิดหีบ</button>
       </div>
@@ -113,7 +113,6 @@
 
     <!-- Run Tracker HUD -->
     <section class="run-hud" id="run-hud">
-      <!-- Berserk Frenzy Banner -->
       <div class="frenzy-banner" id="frenzy-banner" style="display: none;">
         ⚡ SHADOW FRENZY: เพซติดสปีด! คริติคอล 100% ⚡
       </div>
@@ -166,6 +165,60 @@
       </div>
     </section>
 
+    <!-- Equipment & Inventory Section (NEW: ระบบอุปกรณ์สวมใส่) -->
+    <section class="equipment-section">
+      <div class="section-title-row">
+        <h2 class="section-title">อุปกรณ์สวมใส่ (Equipment)</h2>
+        <span class="equip-summary" id="equip-summary">โบนัส: ดาเมจ +0%</span>
+      </div>
+
+      <!-- 4 Active Slots -->
+      <div class="equip-slots-grid">
+        <div class="slot-box" id="slot-weapon" data-slottype="weapon">
+          <span class="slot-label">อาวุธ</span>
+          <div class="slot-item-icon" id="icon-slot-weapon">🗡️</div>
+          <span class="slot-item-name" id="name-slot-weapon">ว่างเปล่า</span>
+        </div>
+        <div class="slot-box" id="slot-armor" data-slottype="armor">
+          <span class="slot-label">เกราะอก</span>
+          <div class="slot-item-icon" id="icon-slot-armor">🛡️</div>
+          <span class="slot-item-name" id="name-slot-armor">ว่างเปล่า</span>
+        </div>
+        <div class="slot-box" id="slot-boots" data-slottype="boots">
+          <span class="slot-label">รองเท้าเงา</span>
+          <div class="slot-item-icon" id="icon-slot-boots">🥾</div>
+          <span class="slot-item-name" id="name-slot-boots">ว่างเปล่า</span>
+        </div>
+        <div class="slot-box" id="slot-relic" data-slottype="relic">
+          <span class="slot-label">เครื่องราง</span>
+          <div class="slot-item-icon" id="icon-slot-relic">🧿</div>
+          <span class="slot-item-name" id="name-slot-relic">ว่างเปล่า</span>
+        </div>
+      </div>
+
+      <!-- Inventory Storage Grid -->
+      <div class="inventory-container">
+        <div class="inv-header">
+          <span class="inv-title">คลังไอเทมในกระเป๋า (<span id="inv-count">0</span>/20)</span>
+          <span class="inv-hint">แตะไอเทมเพื่อสวมใส่หรือย่อยสลาย</span>
+        </div>
+        <div class="inventory-grid" id="inventory-grid">
+          <!-- เรนเดอร์ไอเทมกระเป๋าผ่าน JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Monster Codex / Bestiary (NEW: สมุดภาพมอนสเตอร์) -->
+    <section class="codex-section">
+      <div class="section-title-row">
+        <h2 class="section-title">สมุดภาพมอนสเตอร์ (Bestiary Codex)</h2>
+        <span class="codex-counter" id="codex-counter">บันทึก 3 อสูร</span>
+      </div>
+      <div class="codex-list" id="codex-list">
+        <!-- เรนเดอร์ข้อมูลบอสที่เคยสยบ -->
+      </div>
+    </section>
+
     <!-- Shadow Armory (Shop System) -->
     <section class="shop-section">
       <div class="section-title-row">
@@ -173,7 +226,6 @@
         <span class="shop-hint">อัปเกรดพลังด้วยเหรียญทอง</span>
       </div>
       <div class="shop-grid">
-        <!-- Item 1: Spirit Elixir -->
         <div class="shop-item">
           <div class="item-header">
             <span class="item-icon">🧪</span>
@@ -188,7 +240,6 @@
           </div>
         </div>
 
-        <!-- Item 2: Shadow Blade -->
         <div class="shop-item">
           <div class="item-header">
             <span class="item-icon">🗡️</span>
@@ -203,7 +254,6 @@
           </div>
         </div>
 
-        <!-- Item 3: Bloodhunter Charm -->
         <div class="shop-item">
           <div class="item-header">
             <span class="item-icon">🧿</span>
@@ -218,7 +268,6 @@
           </div>
         </div>
 
-        <!-- Item 4: Abyssal Eye -->
         <div class="shop-item">
           <div class="item-header">
             <span class="item-icon">👁️</span>
@@ -241,9 +290,7 @@
         <h2 class="section-title">ภารกิจประจำวัน (Daily Quests)</h2>
         <span class="quest-refresh-time" id="quest-date">วันนี้</span>
       </div>
-      <div class="quests-list" id="quests-list">
-        <!-- รายการเควสต์เรนเดอร์ผ่าน JS -->
-      </div>
+      <div class="quests-list" id="quests-list"></div>
     </section>
 
     <!-- Achievements / Milestones Section -->
@@ -252,9 +299,7 @@
         <h2 class="section-title">เกียรติยศแห่งเงา (Milestones)</h2>
         <span class="achievements-counter" id="achievements-counter">0/4 สำเร็จ</span>
       </div>
-      <div class="achievements-list" id="achievements-list">
-        <!-- รายการ Achievement เรนเดอร์ผ่าน JS -->
-      </div>
+      <div class="achievements-list" id="achievements-list"></div>
     </section>
 
     <!-- Career Stats Section -->
@@ -297,16 +342,27 @@
 
       <!-- Tab View 1: สถิติรายวัน -->
       <div class="tab-view" id="view-daily">
-        <div class="daily-list" id="daily-list">
-          <!-- สถิติรายวันโหลดจาก IndexedDB -->
-        </div>
+        <div class="daily-list" id="daily-list"></div>
       </div>
 
       <!-- Tab View 2: ประวัติรายรอบ -->
       <div class="tab-view" id="view-sessions" style="display: none;">
-        <div class="history-list" id="history-list">
-          <!-- ประวัติโหลดจาก IndexedDB -->
-        </div>
+        <div class="history-list" id="history-list"></div>
+      </div>
+    </section>
+
+    <!-- Runner Utility & Data Management (NEW: สำรองข้อมูล JSON) -->
+    <section class="utility-section">
+      <div class="section-title-row">
+        <h2 class="section-title">การจัดการข้อมูล & สำรอง (Data Backup)</h2>
+      </div>
+      <p class="utility-desc">สำรองข้อมูลทั้งหมดใน IndexedDB เป็นไฟล์ JSON เพื่อย้ายเครื่อง หรือกู้คืนข้อมูล</p>
+      <div class="utility-actions">
+        <button class="btn-utility" id="btn-export-backup" type="button">📥 ส่งออกไฟล์สำรอง (Backup JSON)</button>
+        <label class="btn-utility btn-utility-import">
+          📤 กู้คืนข้อมูล (Restore JSON)
+          <input type="file" id="input-import-backup" accept=".json" style="display: none;">
+        </label>
       </div>
     </section>
 
@@ -319,6 +375,28 @@
         <div class="pocket-unlock-guide">แตะค้างไว้ 1.5 วินาทีเพื่อปลดล็อก</div>
         <div class="pocket-progress-track">
           <div class="pocket-progress-fill" id="pocket-unlock-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Item Action Modal -->
+    <div class="modal-overlay" id="item-modal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-item-icon" id="modal-item-icon">🗡️</span>
+          <div>
+            <h3 class="modal-item-name" id="modal-item-name">ดาบ</h3>
+            <span class="modal-item-rarity" id="modal-item-rarity">Common</span>
+          </div>
+        </div>
+        <div class="modal-body">
+          <p class="modal-stat-line" id="modal-main-stat">+10% ดาเมจ</p>
+          <p class="modal-stat-line modal-sub" id="modal-sub-stat">+3% คริติคอล</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-action btn-equip" id="btn-modal-equip" type="button">สวมใส่</button>
+          <button class="btn-modal-action btn-salvage" id="btn-modal-salvage" type="button">ย่อยเป็นทอง</button>
+          <button class="btn-modal-action btn-cancel" id="btn-modal-cancel" type="button">ปิด</button>
         </div>
       </div>
     </div>

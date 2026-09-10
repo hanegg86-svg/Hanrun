@@ -26,7 +26,6 @@
         };
         req.onsuccess = (e) => {
           this.db = e.target.result;
-          // ขอสิทธิ์ Persistent Storage เพื่อป้องกัน OS เคลียร์ข้อมูลทิ้ง
           if (navigator.storage && navigator.storage.persist) {
             navigator.storage.persist().catch(() => {});
           }
@@ -78,6 +77,26 @@
         };
         req.onerror = () => resolve([]);
       });
+    },
+    async clearAndRestoreAll(playerData, historyData) {
+      const db = await this.init();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_PLAYER, STORE_HISTORY], 'readwrite');
+        const pStore = tx.objectStore(STORE_PLAYER);
+        const hStore = tx.objectStore(STORE_HISTORY);
+
+        pStore.clear();
+        hStore.clear();
+
+        pStore.put({ key: 'current', data: playerData, updatedAt: Date.now() });
+        historyData.forEach(item => {
+          delete item.id;
+          hStore.add(item);
+        });
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = (e) => reject(e.target.error);
+      });
     }
   };
 
@@ -104,21 +123,19 @@
     }
   }
 
-  // คืนสิทธิ์ Wake Lock เมื่อสลับกลับเข้ามาในแอปขณะกำลังวิ่ง
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'visible' && isRunning && wakeLockSentinel === null) {
       await acquireWakeLock();
     }
   });
 
-  // --- Boss List Database ---
+  // --- Boss List Database & Lore ---
   const BOSS_DATABASE = [
-    { tier: 'TIER I', name: 'Gargoyle of the Crypt', avatar: '👹', maxHpKm: 1.0, desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 1.00 กม. เพื่อทำลายมัน!', rewardExp: 1200, rewardGold: 150 },
-    { tier: 'TIER II', name: 'Abyssal Blood Knight', avatar: '🤺', maxHpKm: 2.5, desc: 'อัศวินเกราะดำกระหายการต่อสู้ วิ่ง 2.50 กม. เพื่อสยบดาบโลหิต!', rewardExp: 3200, rewardGold: 350 },
-    { tier: 'TIER III', name: 'Ancient Bone Dragon', avatar: '🐉', maxHpKm: 5.0, desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 5.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!', rewardExp: 7500, rewardGold: 800 }
+    { id: 'boss_1', tier: 'TIER I', name: 'Gargoyle of the Crypt', avatar: '👹', maxHpKm: 1.0, desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 1.00 กม. เพื่อทำลายมัน!', rewardExp: 1200, rewardGold: 150 },
+    { id: 'boss_2', tier: 'TIER II', name: 'Abyssal Blood Knight', avatar: '🤺', maxHpKm: 2.5, desc: 'อัศวินเกราะดำกระหายการต่อสู้ วิ่ง 2.50 กม. เพื่อสยบดาบโลหิต!', rewardExp: 3200, rewardGold: 350 },
+    { id: 'boss_3', tier: 'TIER III', name: 'Ancient Bone Dragon', avatar: '🐉', maxHpKm: 5.0, desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 5.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!', rewardExp: 7500, rewardGold: 800 }
   ];
 
-  // --- Dynamic Title System ---
   function getTitleForLevel(level) {
     if (level >= 25) return 'Shadow Sovereign';
     if (level >= 20) return 'Dread Champion';
@@ -128,7 +145,6 @@
     return 'Shadow Initiate';
   }
 
-  // --- Initial Daily Quests Generator ---
   function generateDailyQuests() {
     return [
       { id: 'dq_dist', name: 'สำรวจเงามืด: สะสมระยะทาง 1.5 กม.', target: 1.5, current: 0.0, unit: 'กม.', rewardExp: 600, rewardGold: 60, claimed: false },
@@ -139,7 +155,6 @@
     ];
   }
 
-  // --- Initial Achievements Generator ---
   function generateAchievements() {
     return [
       { id: 'ach_first', name: 'First Blood (การล่าครั้งแรก)', desc: 'จบเซสชันการล่าสำเร็จ 1 รอบ', target: 1, current: 0, unit: 'รอบ', rewardExp: 1000, rewardGold: 200, claimed: false },
@@ -159,6 +174,13 @@
     statPoints: 0,
     stats: { str: 10, sta: 10, agi: 10 },
     upgrades: { blade: 0, charm: 0, eye: 0 },
+    equipment: { weapon: null, armor: null, boots: null, relic: null },
+    inventory: [],
+    bestiary: {
+      boss_1: { kills: 0, name: 'Gargoyle of the Crypt' },
+      boss_2: { kills: 0, name: 'Abyssal Blood Knight' },
+      boss_3: { kills: 0, name: 'Ancient Bone Dragon' }
+    },
     chestsAvailable: 0,
     streak: { count: 1, lastDate: new Date().toDateString() },
     bossIndex: 0,
@@ -197,6 +219,9 @@
       gameState = Object.assign({}, defaultState, saved);
       gameState.stats = Object.assign({}, defaultState.stats, saved.stats || {});
       gameState.upgrades = Object.assign({}, defaultState.upgrades, saved.upgrades || {});
+      gameState.equipment = Object.assign({}, defaultState.equipment, saved.equipment || {});
+      gameState.inventory = saved.inventory || [];
+      gameState.bestiary = Object.assign({}, defaultState.bestiary, saved.bestiary || {});
       gameState.streak = Object.assign({}, defaultState.streak, saved.streak || {});
       gameState.career = Object.assign({}, defaultState.career, saved.career || {});
       gameState.dailyQuests = saved.dailyQuests || generateDailyQuests();
@@ -213,7 +238,6 @@
     DB.savePlayerState(gameState).catch(err => console.error('Save error', err));
   }
 
-  // --- Daily Quest & Streak Reset Check ---
   function verifyDailyAndStreakReset() {
     const today = new Date().toDateString();
     if (gameState.lastDailyDate !== today) {
@@ -245,12 +269,90 @@
   let watchId = null;
   let lastCoord = null;
   let sessionBossKills = 0;
+  let currentGpxTrack = []; // สำหรับเก็บ Trackpoints สกัดลง GPX
 
   // Berserk / Frenzy rolling samples
   let isFrenzyActive = false;
   let frenzyPaceStreakSec = 0;
   let nextChestKmCheckpoint = 1.0;
-  let paceSamples = []; // [{ time: number, dist: number }]
+  let paceSamples = [];
+
+  // --- Item Rarity & Generator (NEW: ระบบอุปกรณ์สวมใส่) ---
+  const ITEM_NAMES = {
+    weapon: ['ดาบสั้นเงา', 'ดาบใหญ่ทมิฬ', 'เคียวมรณะ', 'ดาบโบราณ'],
+    armor: ['เสื้อเกราะหนังเงา', 'เกราะเหล็กอสูร', 'ผ้าคลุมวิญญาณ', 'เกราะเพลทอเวจี'],
+    boots: ['รองเท้าก้าวมัจจุราช', 'รองเท้าเกราะทมิฬ', 'รองเท้าลมกรดเงา', 'สนับแข้งแห่งสายลม'],
+    relic: ['แหวนวิญญาณบาป', 'จี้หยดโลหิต', 'เครื่องรางตาเหยี่ยว', 'หินมนตราโบราณ']
+  };
+
+  function rollRandomItem() {
+    const types = ['weapon', 'armor', 'boots', 'relic'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const roll = Math.random();
+
+    let rarity = 'common';
+    let mainStatVal = 5;
+    let subStatVal = 0;
+
+    if (roll < 0.05) {
+      rarity = 'legendary';
+      mainStatVal = 25;
+      subStatVal = 10;
+    } else if (roll < 0.20) {
+      rarity = 'epic';
+      mainStatVal = 18;
+      subStatVal = 6;
+    } else if (roll < 0.50) {
+      rarity = 'rare';
+      mainStatVal = 12;
+      subStatVal = 3;
+    } else {
+      rarity = 'common';
+      mainStatVal = 6;
+    }
+
+    const nameList = ITEM_NAMES[type];
+    const name = nameList[Math.floor(Math.random() * nameList.length)];
+    const icons = { weapon: '🗡️', armor: '🛡️', boots: '🥾', relic: '🧿' };
+
+    return {
+      id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      name: `${name} [${rarity.toUpperCase()}]`,
+      type,
+      rarity,
+      mainStatVal,
+      subStatVal,
+      icon: icons[type],
+      goldValue: rarity === 'legendary' ? 400 : rarity === 'epic' ? 180 : rarity === 'rare' ? 80 : 30
+    };
+  }
+
+  function calculateEquipmentBonuses() {
+    let bonusDmg = 0;
+    let bonusSta = 0;
+    let bonusCrit = 0;
+    let bonusGold = 0;
+
+    const eq = gameState.equipment;
+    if (eq.weapon) {
+      bonusDmg += eq.weapon.mainStatVal;
+      if (eq.weapon.subStatVal) bonusCrit += eq.weapon.subStatVal;
+    }
+    if (eq.armor) {
+      bonusSta += eq.armor.mainStatVal;
+      if (eq.armor.subStatVal) bonusDmg += eq.armor.subStatVal;
+    }
+    if (eq.boots) {
+      bonusDmg += eq.boots.mainStatVal;
+      if (eq.boots.subStatVal) bonusCrit += eq.boots.subStatVal;
+    }
+    if (eq.relic) {
+      bonusGold += eq.relic.mainStatVal;
+      if (eq.relic.subStatVal) bonusSta += eq.relic.subStatVal;
+    }
+
+    return { bonusDmg, bonusSta, bonusCrit, bonusGold };
+  }
 
   // --- DOM Elements ---
   const playerTitleEl = document.getElementById('player-title');
@@ -338,7 +440,31 @@
   const pocketTimeVal = document.getElementById('pocket-time-val');
   const pocketUnlockBar = document.getElementById('pocket-unlock-bar');
 
-  // --- Haversine Distance (กิโลเมตร) ---
+  // Equipment & Modal Elements
+  const equipSummaryEl = document.getElementById('equip-summary');
+  const inventoryGridEl = document.getElementById('inventory-grid');
+  const invCountEl = document.getElementById('inv-count');
+  const itemModalEl = document.getElementById('item-modal');
+  const modalItemIconEl = document.getElementById('modal-item-icon');
+  const modalItemNameEl = document.getElementById('modal-item-name');
+  const modalItemRarityEl = document.getElementById('modal-item-rarity');
+  const modalMainStatEl = document.getElementById('modal-main-stat');
+  const modalSubStatEl = document.getElementById('modal-sub-stat');
+  const btnModalEquip = document.getElementById('btn-modal-equip');
+  const btnModalSalvage = document.getElementById('btn-modal-salvage');
+  const btnModalCancel = document.getElementById('btn-modal-cancel');
+
+  // Codex Elements
+  const codexListEl = document.getElementById('codex-list');
+  const codexCounterEl = document.getElementById('codex-counter');
+
+  // Utility Elements
+  const btnExportBackup = document.getElementById('btn-export-backup');
+  const inputImportBackup = document.getElementById('input-import-backup');
+
+  let selectedInventoryItem = null;
+
+  // --- Haversine Distance ---
   function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -351,7 +477,6 @@
     return R * c;
   }
 
-  // --- Toast แจ้งเตือน ---
   function showToast(msg) {
     gameToastEl.textContent = msg;
     gameToastEl.classList.add('show');
@@ -360,7 +485,6 @@
     }, 2800);
   }
 
-  // --- Shop Price Formulas ---
   function getBladePrice() {
     return 300 + (gameState.upgrades.blade * 150);
   }
@@ -371,7 +495,6 @@
     return 350 + (gameState.upgrades.eye * 180);
   }
 
-  // --- Player Progression ---
   function addExp(amount) {
     gameState.currentExp += amount;
     let leveledUp = false;
@@ -390,10 +513,9 @@
     renderUI();
   }
 
-  // --- Rolling Pace Calculations for Frenzy ---
   function recordPaceSample(timestamp, distKm) {
     paceSamples.push({ time: timestamp, dist: distKm });
-    const cutoff = timestamp - 20000; // เก็บเฉพาะ 20 วินาทีล่าสุด
+    const cutoff = timestamp - 20000;
     paceSamples = paceSamples.filter(s => s.time >= cutoff);
   }
 
@@ -409,35 +531,35 @@
     const dTimeSec = (newest.time - oldest.time) / 1000;
 
     if (dDist >= 0.015 && dTimeSec >= 5) {
-      return (dTimeSec / 60) / dDist; // Pace in minutes per km
+      return (dTimeSec / 60) / dDist;
     }
     return null;
   }
 
-  // --- Damage & Battle Calculations ---
+  // --- Battle Damage Calculation (เชื่อมโยง Equipment & Upgrades) ---
   function applyDistanceDamage(distanceDeltaKm) {
     if (distanceDeltaKm <= 0) return;
 
-    // เควสต์ระยะทาง
     const questDist = gameState.dailyQuests.find(q => q.id === 'dq_dist');
     if (questDist) {
       questDist.current = Math.min(questDist.target, parseFloat((questDist.current + distanceDeltaKm).toFixed(2)));
     }
 
-    // หีบสมบัติสุ่มดรอปทุกๆ 1.0 กม.
     if (runDistanceKm >= nextChestKmCheckpoint) {
       nextChestKmCheckpoint += 1.0;
-      if (Math.random() < 0.6) {
+      if (Math.random() < 0.65) {
         gameState.chestsAvailable += 1;
         showToast('📦 สัญชาตญาณเงาตรวจพบ: คุณค้นพบหีบสมบัติดันเจี้ยน!');
       }
     }
 
-    // คำนวณ STR Bonus + อาวุธจากร้านค้า
-    const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05);
+    const eqBonus = calculateEquipmentBonuses();
 
-    // คำนวณ AGI Bonus + เนตรอเวจีจากร้านค้า + โหมด Berserk Frenzy
-    let critChance = Math.min(50, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2));
+    // ดาเมจ = STR + อัปเกรดดาบ + ไอเทมสวมใส่
+    const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01);
+
+    // คริติคอล = AGI + เนตรอเวจี + ไอเทมสวมใส่ + Frenzy
+    let critChance = Math.min(65, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit);
     if (isFrenzyActive) {
       critChance = 100;
     }
@@ -451,7 +573,6 @@
       showToast(`💥 CRITICAL! ปลดปล่อยดาเมจ x1.8 เท่า`);
     }
 
-    // หักเลือดบอส
     const currentBoss = BOSS_DATABASE[gameState.bossIndex];
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - effectiveDamage);
 
@@ -460,15 +581,21 @@
       gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
       gameState.chestsAvailable += 1;
 
-      const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02);
-      const charmMultiplier = 1 + (gameState.upgrades.charm * 0.10);
+      // บันทึกลง Codex
+      if (!gameState.bestiary[currentBoss.id]) {
+        gameState.bestiary[currentBoss.id] = { kills: 0, name: currentBoss.name };
+      }
+      gameState.bestiary[currentBoss.id].kills += 1;
+
+      const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01);
+      const charmMultiplier = 1 + (gameState.upgrades.charm * 0.10) + (eqBonus.bonusGold * 0.01);
       const streakMultiplier = 1 + Math.min(0.20, (gameState.streak.count - 1) * 0.02);
       const totalGoldMultiplier = staMultiplier * charmMultiplier * streakMultiplier;
 
       const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier);
       const rewardGold = Math.floor(currentBoss.rewardGold * totalGoldMultiplier);
 
-      showToast(`🏆 สยบ ${currentBoss.name}! ได้รับ +${rewardExp} EXP & +${rewardGold} เหรียญ & 📦 1 หีบ`);
+      showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} เหรียญ & 📦 1 หีบ`);
       addExp(rewardExp);
       gameState.gold += rewardGold;
 
@@ -489,17 +616,22 @@
     renderHUD();
   }
 
-  // --- Open Mystery Chest Logic ---
+  // --- Open Mystery Chest Logic (ดรอปไอเทมสวมใส่) ---
   function openMysteryChest() {
     if (gameState.chestsAvailable <= 0) return;
     gameState.chestsAvailable -= 1;
 
     const roll = Math.random();
-    if (roll < 0.45) {
-      const goldDrop = Math.floor(100 + Math.random() * 200);
+    if (roll < 0.35 && gameState.inventory.length < 20) {
+      // ดรอปไอเทมสวมใส่หายาก!
+      const newItem = rollRandomItem();
+      gameState.inventory.push(newItem);
+      showToast(`🎁 เปิดหีบพบ: [${newItem.rarity.toUpperCase()}] ${newItem.name}!`);
+    } else if (roll < 0.70) {
+      const goldDrop = Math.floor(120 + Math.random() * 220);
       gameState.gold += goldDrop;
       showToast(`🎁 เปิดหีบสำเร็จ! พบถุงทองโบราณ +${goldDrop} 🪙`);
-    } else if (roll < 0.85) {
+    } else if (roll < 0.92) {
       const expDrop = Math.floor(800 + Math.random() * 1000);
       showToast(`🎁 เปิดหีบสำเร็จ! ดูดซับผลึกวิญญาณ +${expDrop} EXP`);
       addExp(expDrop);
@@ -514,9 +646,342 @@
 
   btnOpenChest.addEventListener('click', openMysteryChest);
 
-  // --- Modular UI Renderers (แก้ปัญหา DOM Thrashing & แบตไหล) ---
+  // --- Equipment & Inventory UI Renderer ---
+  function renderEquipmentAndInventory() {
+    const eq = gameState.equipment;
+    const eqBonus = calculateEquipmentBonuses();
+    equipSummaryEl.textContent = `โบนัส: ดาเมจ +${eqBonus.bonusDmg}% | STA +${eqBonus.bonusSta}% | คริ +${eqBonus.bonusCrit}%`;
+
+    const slots = ['weapon', 'armor', 'boots', 'relic'];
+    slots.forEach(slotType => {
+      const slotBox = document.getElementById(`slot-${slotType}`);
+      const iconEl = document.getElementById(`icon-slot-${slotType}`);
+      const nameEl = document.getElementById(`name-slot-${slotType}`);
+      const equippedItem = eq[slotType];
+
+      if (equippedItem) {
+        slotBox.classList.add('equipped');
+        iconEl.textContent = equippedItem.icon;
+        nameEl.textContent = equippedItem.name;
+      } else {
+        slotBox.classList.remove('equipped');
+        const defaultIcons = { weapon: '🗡️', armor: '🛡️', boots: '🥾', relic: '🧿' };
+        iconEl.textContent = defaultIcons[slotType];
+        nameEl.textContent = 'ว่างเปล่า';
+      }
+    });
+
+    // Inventory List
+    invCountEl.textContent = gameState.inventory.length;
+    inventoryGridEl.innerHTML = '';
+    if (gameState.inventory.length === 0) {
+      inventoryGridEl.innerHTML = '<div style="grid-column: span 4; font-size: 0.68rem; color: #71717a; text-align: center; padding: 15px 0;">กระเป๋าว่างเปล่า ออกล่าเพื่อหาไอเทมจากหีบสมบัติ</div>';
+    } else {
+      gameState.inventory.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `inv-item-card rarity-${item.rarity}`;
+        card.innerHTML = `
+          <span class="inv-item-icon">${item.icon}</span>
+          <span class="inv-item-name">${item.name}</span>
+        `;
+        card.addEventListener('click', () => openItemModal(item));
+        inventoryGridEl.appendChild(card);
+      });
+    }
+  }
+
+  // --- Item Modal Handlers ---
+  function openItemModal(item) {
+    selectedInventoryItem = item;
+    modalItemIconEl.textContent = item.icon;
+    modalItemNameEl.textContent = item.name;
+    modalItemRarityEl.textContent = `ระดับ: ${item.rarity.toUpperCase()}`;
+    modalItemRarityEl.style.color = `var(--rarity-${item.rarity})`;
+    modalMainStatEl.textContent = `ค่าพลังหลัก: +${item.mainStatVal}% (ตามประเภทชิ้นส่วน)`;
+    modalSubStatEl.textContent = item.subStatVal ? `ออปชันเสริม: +${item.subStatVal}% คริติคอล/ดาเมจ` : 'ไม่มีออปชันเสริม';
+    btnModalSalvage.textContent = `ย่อยเป็น +${item.goldValue} 🪙`;
+
+    itemModalEl.style.display = 'flex';
+  }
+
+  function closeItemModal() {
+    itemModalEl.style.display = 'none';
+    selectedInventoryItem = null;
+  }
+
+  btnModalCancel.addEventListener('click', closeItemModal);
+
+  btnModalEquip.addEventListener('click', () => {
+    if (!selectedInventoryItem) return;
+    const type = selectedInventoryItem.type;
+    const currentEquipped = gameState.equipment[type];
+
+    // สลับไอเทม
+    gameState.inventory = gameState.inventory.filter(i => i.id !== selectedInventoryItem.id);
+    if (currentEquipped) {
+      gameState.inventory.push(currentEquipped);
+    }
+    gameState.equipment[type] = selectedInventoryItem;
+
+    showToast(`⚔️ สวมใส่ ${selectedInventoryItem.name} เรียบร้อย!`);
+    closeItemModal();
+    saveGame();
+    renderUI();
+  });
+
+  btnModalSalvage.addEventListener('click', () => {
+    if (!selectedInventoryItem) return;
+    gameState.inventory = gameState.inventory.filter(i => i.id !== selectedInventoryItem.id);
+    gameState.gold += selectedInventoryItem.goldValue;
+    showToast(`♻️ ย่อยสลายไอเทม ได้รับ +${selectedInventoryItem.goldValue} 🪙`);
+    closeItemModal();
+    saveGame();
+    renderUI();
+  });
+
+  // ถอดไอเทมเมื่อกดที่ Slot สวมใส่
+  document.querySelectorAll('.slot-box').forEach(slot => {
+    slot.addEventListener('click', () => {
+      const type = slot.getAttribute('data-slottype');
+      const item = gameState.equipment[type];
+      if (item) {
+        if (gameState.inventory.length >= 20) {
+          showToast('กระเป๋าเต็ม ไม่สามารถถอดอุปกรณ์ได้');
+          return;
+        }
+        gameState.inventory.push(item);
+        gameState.equipment[type] = null;
+        showToast(`ถอด ${item.name} เก็บเข้ากระเป๋า`);
+        saveGame();
+        renderUI();
+      }
+    });
+  });
+
+  // --- Render Monster Codex (Bestiary) ---
+  function renderMonsterCodex() {
+    codexListEl.innerHTML = '';
+    BOSS_DATABASE.forEach(boss => {
+      const bInfo = gameState.bestiary[boss.id] || { kills: 0 };
+      const card = document.createElement('div');
+      card.className = 'codex-item';
+      card.innerHTML = `
+        <div class="codex-avatar">${boss.avatar}</div>
+        <div class="codex-info">
+          <div class="codex-name">${boss.name}</div>
+          <div class="codex-tier">${boss.tier} | เลือดฐาน ${boss.maxHpKm.toFixed(1)} กม.</div>
+        </div>
+        <div class="codex-kills">สยบแล้ว: ${bInfo.kills} ตัว</div>
+      `;
+      codexListEl.appendChild(card);
+    });
+  }
+
+  // --- JSON Backup & Restore ---
+  btnExportBackup.addEventListener('click', async () => {
+    const history = await DB.getAllRunHistory();
+    const backupData = {
+      app: 'ShadowStrider',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      playerState: gameState,
+      history
+    };
+
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ShadowStrider_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📥 ส่งออกไฟล์สำรอง JSON สำเร็จ');
+  });
+
+  inputImportBackup.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        if (imported.playerState && Array.isArray(imported.history)) {
+          await DB.clearAndRestoreAll(imported.playerState, imported.history);
+          gameState = imported.playerState;
+          showToast('📤 กู้คืนข้อมูลสำเร็จ! กำลังรีเฟรชหน้าจอ...');
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          showToast('❌ ไฟล์สำรองไม่ถูกต้องตามรูปแบบ');
+        }
+      } catch (err) {
+        showToast('❌ เกิดข้อผิดพลาดในการอ่านไฟล์');
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // --- GPX Generator (สำหรับอัปโหลด Strava/Garmin) ---
+  window.downloadRunGPX = async function (runTimestamp) {
+    const history = await DB.getAllRunHistory();
+    const run = history.find(r => r.timestamp === runTimestamp);
+    if (!run || !run.gpxTrack || run.gpxTrack.length === 0) {
+      showToast('⚠️ รอบนี้ไม่มีข้อมูลพิกัด GPS บันทึกไว้');
+      return;
+    }
+
+    let gpxXml = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="ShadowStrider Dark Run RPG" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>ShadowStrider Hunt - ${run.displayDate}</name>
+    <time>${new Date(run.timestamp).toISOString()}</time>
+  </metadata>
+  <trk>
+    <name>ShadowStrider Hunt (${run.distanceKm.toFixed(2)} km)</name>
+    <type>9</type>
+    <trkseg>
+`;
+
+    run.gpxTrack.forEach(pt => {
+      gpxXml += `      <trkpt lat="${pt.lat}" lon="${pt.lon}">
+        <time>${new Date(pt.time).toISOString()}</time>
+      </trkpt>\n`;
+    });
+
+    gpxXml += `    </trkseg>
+  </trk>
+</gpx>`;
+
+    const blob = new Blob([gpxXml], { type: 'application/gpx+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ShadowStrider_${run.timestamp}.gpx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('🗺️ ส่งออกไฟล์ GPX สำเร็จ! สามารถนำเข้า Strava ได้');
+  };
+
+  // --- Render Run History & Sessions ---
+  async function renderHistoryAndDailyUI() {
+    const history = await DB.getAllRunHistory();
+    historyCountEl.textContent = `${history.length} รอบ`;
+
+    historyListEl.innerHTML = '';
+    if (history.length === 0) {
+      historyListEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!</div>';
+    } else {
+      history.slice(0, 15).forEach(item => {
+        const hasGpx = item.gpxTrack && item.gpxTrack.length > 0;
+        const card = document.createElement('div');
+        card.className = 'history-card';
+        card.innerHTML = `
+          <div class="history-header">
+            <span class="history-date">${item.displayDate}</span>
+            <div class="history-header-actions">
+              ${hasGpx ? `<button class="btn-gpx-export" onclick="window.downloadRunGPX(${item.timestamp})">GPX 🗺️</button>` : ''}
+              ${item.bossKills > 0 ? `<span class="history-boss-tag">โค่นบอส ${item.bossKills} ตัว</span>` : ''}
+            </div>
+          </div>
+          <div class="history-metrics">
+            <div class="history-metric-item">
+              <span class="h-lbl">ระยะทาง</span>
+              <span class="h-val">${item.distanceKm.toFixed(2)} กม.</span>
+            </div>
+            <div class="history-metric-item">
+              <span class="h-lbl">เวลา</span>
+              <span class="h-val">${item.formattedTime}</span>
+            </div>
+            <div class="history-metric-item">
+              <span class="h-lbl">เพซ</span>
+              <span class="h-val">${item.pace}</span>
+            </div>
+            <div class="history-metric-item">
+              <span class="h-lbl">แคลอรี</span>
+              <span class="h-val">${item.calories}</span>
+            </div>
+          </div>
+        `;
+        historyListEl.appendChild(card);
+      });
+    }
+
+    // Daily Statistics
+    dailyListEl.innerHTML = '';
+    if (history.length === 0) {
+      dailyListEl.innerHTML = '<div class="history-empty">ยังไม่มีสถิติรายวัน เริ่มออกล่าเพื่อเก็บสถิติ!</div>';
+      return;
+    }
+
+    const dailyMap = new Map();
+    history.forEach(item => {
+      const dateObj = new Date(item.timestamp);
+      const dateKey = dateObj.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        weekday: 'short'
+      });
+
+      if (!dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, {
+          dateStr: dateKey,
+          totalDistance: 0.0,
+          totalSeconds: 0,
+          totalCalories: 0,
+          totalBossKills: 0,
+          runsCount: 0,
+          latestTimestamp: item.timestamp
+        });
+      }
+
+      const dayRecord = dailyMap.get(dateKey);
+      dayRecord.totalDistance += item.distanceKm;
+      dayRecord.totalSeconds += item.durationSeconds;
+      dayRecord.totalCalories += item.calories;
+      dayRecord.totalBossKills += (item.bossKills || 0);
+      dayRecord.runsCount += 1;
+    });
+
+    const sortedDays = Array.from(dailyMap.values()).sort((a, b) => b.latestTimestamp - a.latestTimestamp);
+
+    sortedDays.forEach(day => {
+      const avgPace = calculatePace(day.totalSeconds, day.totalDistance);
+      const card = document.createElement('div');
+      card.className = 'daily-card';
+      card.innerHTML = `
+        <div class="daily-card-header">
+          <span class="daily-date-title">📅 ${day.dateStr}</span>
+          <span class="daily-runs-tag">${day.runsCount} รอบวิ่ง</span>
+        </div>
+        <div class="daily-summary-row">
+          <div>
+            <span class="daily-distance-big">${day.totalDistance.toFixed(2)}</span>
+            <span class="daily-distance-unit">กิโลเมตร</span>
+          </div>
+          ${day.totalBossKills > 0 ? `<span class="daily-bosses-badge">🏆 พิชิตบอส ${day.totalBossKills} ตัว</span>` : ''}
+        </div>
+        <div class="daily-sub-grid">
+          <div class="daily-grid-col">
+            <span class="dg-lbl">เวลารวม</span>
+            <span class="dg-val">${formatTime(day.totalSeconds)}</span>
+          </div>
+          <div class="daily-grid-col">
+            <span class="dg-lbl">เพซเฉลี่ย</span>
+            <span class="dg-val">${avgPace}</span>
+          </div>
+          <div class="daily-grid-col">
+            <span class="dg-lbl">แคลอรีรวม</span>
+            <span class="dg-val">${day.totalCalories} kcal</span>
+          </div>
+        </div>
+      `;
+      dailyListEl.appendChild(card);
+    });
+  }
+
+  // --- Modular UI Renderers ---
   function renderHUD() {
-    // ผู้เล่น & สเตตัส
     playerTitleEl.textContent = gameState.title || getTitleForLevel(gameState.level);
     playerLevelEl.textContent = `LV. ${gameState.level}`;
     const expPercent = Math.min(100, Math.round((gameState.currentExp / gameState.nextExp) * 100));
@@ -538,18 +1003,18 @@
     statStaEl.textContent = gameState.stats.sta;
     statAgiEl.textContent = gameState.stats.agi;
 
-    const currentStrMult = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05)).toFixed(2);
+    const eqBonus = calculateEquipmentBonuses();
+    const currentStrMult = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01)).toFixed(2);
     strMultEl.textContent = currentStrMult;
-    staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2));
+    staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2) + eqBonus.bonusSta);
     
-    let baseCrit = Math.min(50, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2)).toFixed(1);
+    let baseCrit = Math.min(65, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit).toFixed(1);
     if (isFrenzyActive) {
       agiCritEl.textContent = '100 (FRENZY)';
     } else {
       agiCritEl.textContent = baseCrit;
     }
 
-    // บอส
     const boss = BOSS_DATABASE[gameState.bossIndex];
     bossTierEl.textContent = boss.tier;
     bossAvatarEl.textContent = boss.avatar;
@@ -560,7 +1025,6 @@
     const hpPercent = Math.max(0, Math.min(100, (gameState.bossHpRemain / boss.maxHpKm) * 100));
     bossHpBarEl.style.width = `${hpPercent}%`;
 
-    // หีบสมบัติ
     if (gameState.chestsAvailable > 0) {
       chestCardEl.style.display = 'block';
       chestCountEl.textContent = gameState.chestsAvailable;
@@ -568,17 +1032,14 @@
       chestCardEl.style.display = 'none';
     }
 
-    // ตัววัดการวิ่ง
     distanceValEl.textContent = runDistanceKm.toFixed(2);
     const calValue = Math.floor(runDistanceKm * 65);
     calValEl.textContent = `${calValue} kcal`;
     updatePace();
 
-    // อัปเดต Pocket Overlay
     pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
     pocketTimeVal.textContent = timeValEl.textContent;
 
-    // ตรวจสอบสถานะปุ่มซื้อในร้าน
     btnBuyBlade.disabled = gameState.gold < getBladePrice();
     btnBuyCharm.disabled = gameState.gold < getCharmPrice();
     btnBuyEye.disabled = gameState.gold < getEyePrice();
@@ -698,6 +1159,8 @@
 
   function renderUI() {
     renderHUD();
+    renderEquipmentAndInventory();
+    renderMonsterCodex();
     renderShop();
     renderQuestsList();
     renderAchievementsList();
@@ -777,121 +1240,6 @@
     paceValEl.textContent = calculatePace(runSeconds, runDistanceKm);
   }
 
-  // --- Render Run History & Daily Statistics from IndexedDB ---
-  async function renderHistoryAndDailyUI() {
-    const history = await DB.getAllRunHistory();
-    historyCountEl.textContent = `${history.length} รอบ`;
-
-    // 1. Sessions History List
-    historyListEl.innerHTML = '';
-    if (history.length === 0) {
-      historyListEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!</div>';
-    } else {
-      history.slice(0, 15).forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'history-card';
-        card.innerHTML = `
-          <div class="history-header">
-            <span class="history-date">${item.displayDate}</span>
-            ${item.bossKills > 0 ? `<span class="history-boss-tag">โค่นบอส ${item.bossKills} ตัว</span>` : ''}
-          </div>
-          <div class="history-metrics">
-            <div class="history-metric-item">
-              <span class="h-lbl">ระยะทาง</span>
-              <span class="h-val">${item.distanceKm.toFixed(2)} กม.</span>
-            </div>
-            <div class="history-metric-item">
-              <span class="h-lbl">เวลา</span>
-              <span class="h-val">${item.formattedTime}</span>
-            </div>
-            <div class="history-metric-item">
-              <span class="h-lbl">เพซ</span>
-              <span class="h-val">${item.pace}</span>
-            </div>
-            <div class="history-metric-item">
-              <span class="h-lbl">แคลอรี</span>
-              <span class="h-val">${item.calories}</span>
-            </div>
-          </div>
-        `;
-        historyListEl.appendChild(card);
-      });
-    }
-
-    // 2. Daily Statistics
-    dailyListEl.innerHTML = '';
-    if (history.length === 0) {
-      dailyListEl.innerHTML = '<div class="history-empty">ยังไม่มีสถิติรายวัน เริ่มออกล่าเพื่อเก็บสถิติ!</div>';
-      return;
-    }
-
-    const dailyMap = new Map();
-    history.forEach(item => {
-      const dateObj = new Date(item.timestamp);
-      const dateKey = dateObj.toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        weekday: 'short'
-      });
-
-      if (!dailyMap.has(dateKey)) {
-        dailyMap.set(dateKey, {
-          dateStr: dateKey,
-          totalDistance: 0.0,
-          totalSeconds: 0,
-          totalCalories: 0,
-          totalBossKills: 0,
-          runsCount: 0,
-          latestTimestamp: item.timestamp
-        });
-      }
-
-      const dayRecord = dailyMap.get(dateKey);
-      dayRecord.totalDistance += item.distanceKm;
-      dayRecord.totalSeconds += item.durationSeconds;
-      dayRecord.totalCalories += item.calories;
-      dayRecord.totalBossKills += (item.bossKills || 0);
-      dayRecord.runsCount += 1;
-    });
-
-    const sortedDays = Array.from(dailyMap.values()).sort((a, b) => b.latestTimestamp - a.latestTimestamp);
-
-    sortedDays.forEach(day => {
-      const avgPace = calculatePace(day.totalSeconds, day.totalDistance);
-      const card = document.createElement('div');
-      card.className = 'daily-card';
-      card.innerHTML = `
-        <div class="daily-card-header">
-          <span class="daily-date-title">📅 ${day.dateStr}</span>
-          <span class="daily-runs-tag">${day.runsCount} รอบวิ่ง</span>
-        </div>
-        <div class="daily-summary-row">
-          <div>
-            <span class="daily-distance-big">${day.totalDistance.toFixed(2)}</span>
-            <span class="daily-distance-unit">กิโลเมตร</span>
-          </div>
-          ${day.totalBossKills > 0 ? `<span class="daily-bosses-badge">🏆 พิชิตบอส ${day.totalBossKills} ตัว</span>` : ''}
-        </div>
-        <div class="daily-sub-grid">
-          <div class="daily-grid-col">
-            <span class="dg-lbl">เวลารวม</span>
-            <span class="dg-val">${formatTime(day.totalSeconds)}</span>
-          </div>
-          <div class="daily-grid-col">
-            <span class="dg-lbl">เพซเฉลี่ย</span>
-            <span class="dg-val">${avgPace}</span>
-          </div>
-          <div class="daily-grid-col">
-            <span class="dg-lbl">แคลอรีรวม</span>
-            <span class="dg-val">${day.totalCalories} kcal</span>
-          </div>
-        </div>
-      `;
-      dailyListEl.appendChild(card);
-    });
-  }
-
   // --- Tab Control Switcher ---
   tabBtnDaily.addEventListener('click', () => {
     tabBtnDaily.classList.add('active');
@@ -907,7 +1255,7 @@
     viewDaily.style.display = 'none';
   });
 
-  // --- Pocket Mode Touch Shield Logic (แก้ไข Bug Zombie Interval & Lock Stalling) ---
+  // --- Pocket Mode Touch Shield Logic ---
   let unlockProgress = 0;
   let unlockInterval = null;
 
@@ -922,7 +1270,7 @@
 
   function startUnlockHold(e) {
     if (e) e.preventDefault();
-    cancelUnlockHold(); // เคลียร์ Interval และความคืบหน้าเดิมทิ้งก่อนเสมอ ป้องกัน Zombie Interval
+    cancelUnlockHold();
 
     unlockInterval = setInterval(() => {
       unlockProgress += 10;
@@ -935,14 +1283,13 @@
     }, 150);
   }
 
-  // ใช้ Pointer Events ชุดเดียว รองรับทั้งสัมผัสและเมาส์โดยไม่ยิง Event ชนกัน
   pocketOverlay.addEventListener('pointerdown', startUnlockHold);
   pocketOverlay.addEventListener('pointerup', cancelUnlockHold);
   pocketOverlay.addEventListener('pointercancel', cancelUnlockHold);
   pocketOverlay.addEventListener('pointerleave', cancelUnlockHold);
 
   pocketBtn.addEventListener('click', () => {
-    cancelUnlockHold(); // ล้าง Timer และ Reset หลอดปลดล็อกให้หมดจด
+    cancelUnlockHold();
     pocketOverlay.style.display = 'flex';
     showToast('🔒 เปิดโหมดพักจอ (แตะค้างเพื่อปลดล็อก)');
   });
@@ -962,19 +1309,16 @@
       pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
 
-      // เควสต์เวลา
       const questTime = gameState.dailyQuests.find(q => q.id === 'dq_time');
       if (questTime) {
         questTime.current = Math.min(questTime.target, questTime.current + 1);
       }
 
-      // เควสต์แคลอรี
       const questCal = gameState.dailyQuests.find(q => q.id === 'dq_cal');
       if (questCal) {
         questCal.current = Math.min(questCal.target, Math.floor(runDistanceKm * 65));
       }
 
-      // คำนวณสถานะ Berserk / Shadow Frenzy ด้วย Recent Rolling Pace (20 วิ ล่าสุด)
       if (runDistanceKm >= 0.05 && runSeconds > 10) {
         const rollingPace = getRecentRollingPace();
         if (rollingPace !== null && rollingPace <= 6.5 && rollingPace >= 2.0) {
@@ -996,38 +1340,35 @@
       }
     }, 1000);
 
-    // Geolocation Watch
     if (!isSimMode && 'geolocation' in navigator) {
       gpsStatusEl.textContent = 'GPS: กำลังเชื่อมสัญญาณ...';
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           gpsStatusEl.textContent = 'GPS: ล็อกพิกัดแล้ว 🟢';
-          const { latitude, longitude, accuracy } = pos.coords;
+          const { latitude, longitude, accuracy, altitude } = pos.coords;
 
-          // กรองพิกัดที่ความแม่นยำต่ำ
           if (accuracy > 25) return;
 
           const now = Date.now();
           if (!lastCoord) {
             lastCoord = { latitude, longitude, time: now };
+            currentGpxTrack.push({ lat: latitude, lon: longitude, ele: altitude || 0, time: now });
             return;
           }
 
           const deltaKm = calculateDistance(lastCoord.latitude, lastCoord.longitude, latitude, longitude);
           const timeDeltaSec = (now - (lastCoord.time || now)) / 1000;
 
-          // กรอง GPS Drift: ต้องเคลื่อนที่มากกว่า 3 เมตร และเวลาห่างเกิน 1 วินาที
           if (deltaKm >= 0.003 && timeDeltaSec >= 1) {
             const speedKmh = deltaKm / (timeDeltaSec / 3600);
 
-            // กรองความเร็วให้อยู่ในสปีดการวิ่งจริง (1.5 - 35 กม./ชม.)
             if (speedKmh >= 1.5 && speedKmh <= 35) {
               runDistanceKm += deltaKm;
               recordPaceSample(now, runDistanceKm);
+              currentGpxTrack.push({ lat: latitude, lon: longitude, ele: altitude || 0, time: now });
               applyDistanceDamage(deltaKm);
               lastCoord = { latitude, longitude, time: now };
             } else if (speedKmh > 35) {
-              // ความเร็วเกิน (เช่น นั่งรถ) รีเซ็ตพิกัดโดยไม่นับระยะ
               lastCoord = { latitude, longitude, time: now };
             }
           }
@@ -1065,7 +1406,6 @@
   }
 
   async function finishRunSession() {
-    // ป้องกันการบันทึก Empty Session (ระยะทางน้อยกว่า 50 เมตร)
     if (runDistanceKm < 0.05) {
       const confirmDiscard = confirm('ระยะทางวิ่งน้อยกว่า 0.05 กม. (50 เมตร) คุณต้องการยกเลิกรอบนี้โดยไม่บันทึกประวัติหรือไม่?');
       if (confirmDiscard) {
@@ -1075,6 +1415,7 @@
         runDistanceKm = 0.0;
         runSeconds = 0;
         sessionBossKills = 0;
+        currentGpxTrack = [];
         paceSamples = [];
         timeValEl.textContent = '00:00:00';
         paceValEl.textContent = `--'--"`;
@@ -1091,14 +1432,12 @@
     pocketOverlay.style.display = 'none';
     showToast(`🏁 จบการออกล่า! สะสมระยะทางได้ ${runDistanceKm.toFixed(2)} กม.`);
 
-    // EXP โบนัสจากการวิ่ง
     const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02);
     const bonusExp = Math.floor(runDistanceKm * 800 * staMultiplier);
     if (bonusExp > 0) {
       addExp(bonusExp);
     }
 
-    // อัปเดต Career Stats สะสม
     gameState.career.totalRuns = (gameState.career.totalRuns || 0) + 1;
     gameState.career.totalDistanceKm = parseFloat(((gameState.career.totalDistanceKm || 0) + runDistanceKm).toFixed(2));
     gameState.career.totalSeconds = (gameState.career.totalSeconds || 0) + runSeconds;
@@ -1106,7 +1445,6 @@
       gameState.career.longestRunKm = parseFloat(runDistanceKm.toFixed(2));
     }
 
-    // อัปเดต Achievement
     const achFirst = gameState.achievements.find(a => a.id === 'ach_first');
     if (achFirst) achFirst.current = Math.min(achFirst.target, achFirst.current + 1);
 
@@ -1116,7 +1454,7 @@
     const ach50 = gameState.achievements.find(a => a.id === 'ach_dist50');
     if (ach50) ach50.current = Math.min(ach50.target, gameState.career.totalDistanceKm);
 
-    // บันทึกประวัติเข้าสู่ IndexedDB
+    // บันทึกประวัติและ Trackpoints GPX เข้า IndexedDB
     const historyItem = {
       timestamp: Date.now(),
       displayDate: new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }),
@@ -1126,17 +1464,18 @@
       pace: paceValEl.textContent,
       calories: Math.floor(runDistanceKm * 65),
       bossKills: sessionBossKills,
-      expGained: bonusExp
+      expGained: bonusExp,
+      gpxTrack: [...currentGpxTrack]
     };
 
     await DB.addRunRecord(historyItem);
 
-    // รีเซ็ตตัวแปรเซสชัน
     runDistanceKm = 0.0;
     runSeconds = 0;
     sessionBossKills = 0;
     nextChestKmCheckpoint = 1.0;
     frenzyPaceStreakSec = 0;
+    currentGpxTrack = [];
     paceSamples = [];
     timeValEl.textContent = '00:00:00';
     paceValEl.textContent = `--'--"`;
@@ -1171,14 +1510,21 @@
         return;
       }
       runDistanceKm += km;
-      recordPaceSample(Date.now(), runDistanceKm);
+      const now = Date.now();
+      recordPaceSample(now, runDistanceKm);
+      // พิกัดจำลองในสวนลุมพินี
+      currentGpxTrack.push({
+        lat: 13.7314 + (Math.random() * 0.002),
+        lon: 100.5414 + (Math.random() * 0.002),
+        ele: 3,
+        time: now
+      });
       applyDistanceDamage(km);
       renderHUD();
       showToast(`⚡ จำลองวิ่งก้าวหน้า +${(km * 1000).toFixed(0)} เมตร!`);
     }
   };
 
-  // --- Event Listeners ---
   btnToggleRun.addEventListener('click', () => {
     if (!isRunning) {
       startRunEngine();
