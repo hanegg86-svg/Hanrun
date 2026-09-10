@@ -217,7 +217,6 @@
   function verifyDailyAndStreakReset() {
     const today = new Date().toDateString();
     if (gameState.lastDailyDate !== today) {
-      // ตรวจสอบวันต่อเนื่อง (Streak)
       const lastDateObj = new Date(gameState.streak.lastDate);
       const todayDateObj = new Date(today);
       const diffTime = Math.abs(todayDateObj - lastDateObj);
@@ -247,10 +246,11 @@
   let lastCoord = null;
   let sessionBossKills = 0;
 
-  // Berserk / Frenzy variables
+  // Berserk / Frenzy rolling samples
   let isFrenzyActive = false;
   let frenzyPaceStreakSec = 0;
   let nextChestKmCheckpoint = 1.0;
+  let paceSamples = []; // [{ time: number, dist: number }]
 
   // --- DOM Elements ---
   const playerTitleEl = document.getElementById('player-title');
@@ -351,7 +351,7 @@
     return R * c;
   }
 
-  // --- Toast แจ้งเตือน (ตัดการสั่นออก เงียบสนิท) ---
+  // --- Toast แจ้งเตือน ---
   function showToast(msg) {
     gameToastEl.textContent = msg;
     gameToastEl.classList.add('show');
@@ -390,6 +390,30 @@
     renderUI();
   }
 
+  // --- Rolling Pace Calculations for Frenzy ---
+  function recordPaceSample(timestamp, distKm) {
+    paceSamples.push({ time: timestamp, dist: distKm });
+    const cutoff = timestamp - 20000; // เก็บเฉพาะ 20 วินาทีล่าสุด
+    paceSamples = paceSamples.filter(s => s.time >= cutoff);
+  }
+
+  function getRecentRollingPace() {
+    const now = Date.now();
+    const cutoff = now - 20000;
+    paceSamples = paceSamples.filter(s => s.time >= cutoff);
+    if (paceSamples.length < 2) return null;
+
+    const oldest = paceSamples[0];
+    const newest = paceSamples[paceSamples.length - 1];
+    const dDist = newest.dist - oldest.dist;
+    const dTimeSec = (newest.time - oldest.time) / 1000;
+
+    if (dDist >= 0.015 && dTimeSec >= 5) {
+      return (dTimeSec / 60) / dDist; // Pace in minutes per km
+    }
+    return null;
+  }
+
   // --- Damage & Battle Calculations ---
   function applyDistanceDamage(distanceDeltaKm) {
     if (distanceDeltaKm <= 0) return;
@@ -403,7 +427,7 @@
     // หีบสมบัติสุ่มดรอปทุกๆ 1.0 กม.
     if (runDistanceKm >= nextChestKmCheckpoint) {
       nextChestKmCheckpoint += 1.0;
-      if (Math.random() < 0.6) { // โอกาส 60% ดรอปหีบสมบัติ
+      if (Math.random() < 0.6) {
         gameState.chestsAvailable += 1;
         showToast('📦 สัญชาตญาณเงาตรวจพบ: คุณค้นพบหีบสมบัติดันเจี้ยน!');
       }
@@ -415,7 +439,7 @@
     // คำนวณ AGI Bonus + เนตรอเวจีจากร้านค้า + โหมด Berserk Frenzy
     let critChance = Math.min(50, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2));
     if (isFrenzyActive) {
-      critChance = 100; // Frenzy รับประกันคริติคอล 100%
+      critChance = 100;
     }
 
     const isCrit = (Math.random() * 100) < critChance;
@@ -432,17 +456,13 @@
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - effectiveDamage);
 
     if (gameState.bossHpRemain <= 0.001) {
-      // โค่นบอสสำเร็จ
       sessionBossKills += 1;
       gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
-
-      // โค่นบอสได้รับหีบสมบัติแน่นอน 100%
       gameState.chestsAvailable += 1;
 
-      // คำนวณ STA + เครื่องรางร้านค้า + Streak Bonus
       const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02);
       const charmMultiplier = 1 + (gameState.upgrades.charm * 0.10);
-      const streakMultiplier = 1 + Math.min(0.20, (gameState.streak.count - 1) * 0.02); // สูงสุด +20%
+      const streakMultiplier = 1 + Math.min(0.20, (gameState.streak.count - 1) * 0.02);
       const totalGoldMultiplier = staMultiplier * charmMultiplier * streakMultiplier;
 
       const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier);
@@ -452,24 +472,21 @@
       addExp(rewardExp);
       gameState.gold += rewardGold;
 
-      // อัปเดตเควสต์บอส
       const questBoss = gameState.dailyQuests.find(q => q.id === 'dq_boss');
       if (questBoss) questBoss.current = Math.min(questBoss.target, questBoss.current + 1);
 
-      // ตรวจสอบ Achievement Dragon Bane
       if (currentBoss.tier === 'TIER III') {
         const achDragon = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
         if (achDragon) achDragon.current = Math.min(achDragon.target, achDragon.current + 1);
       }
 
-      // หมุนเวียนบอส
       gameState.bossIndex = (gameState.bossIndex + 1) % BOSS_DATABASE.length;
       const nextBoss = BOSS_DATABASE[gameState.bossIndex];
       gameState.bossHpRemain = nextBoss.maxHpKm;
     }
 
     saveGame();
-    renderUI();
+    renderHUD();
   }
 
   // --- Open Mystery Chest Logic ---
@@ -479,17 +496,14 @@
 
     const roll = Math.random();
     if (roll < 0.45) {
-      // ได้ทองคำก้อนโต (100 - 300)
       const goldDrop = Math.floor(100 + Math.random() * 200);
       gameState.gold += goldDrop;
       showToast(`🎁 เปิดหีบสำเร็จ! พบถุงทองโบราณ +${goldDrop} 🪙`);
     } else if (roll < 0.85) {
-      // ได้ EXP ก้อนโต (800 - 1800)
       const expDrop = Math.floor(800 + Math.random() * 1000);
       showToast(`🎁 เปิดหีบสำเร็จ! ดูดซับผลึกวิญญาณ +${expDrop} EXP`);
       addExp(expDrop);
     } else {
-      // Jackpot: แต้มสเตตัส +1 แต้ม
       gameState.statPoints = (gameState.statPoints || 0) + 1;
       showToast(`🌟 JACKPOT! หีบสมบัติมอบ +1 แต้มสเตตัสอิสระ!`);
     }
@@ -500,9 +514,9 @@
 
   btnOpenChest.addEventListener('click', openMysteryChest);
 
-  // --- UI Renderer ---
-  function renderUI() {
-    // ผู้เล่น
+  // --- Modular UI Renderers (แก้ปัญหา DOM Thrashing & แบตไหล) ---
+  function renderHUD() {
+    // ผู้เล่น & สเตตัส
     playerTitleEl.textContent = gameState.title || getTitleForLevel(gameState.level);
     playerLevelEl.textContent = `LV. ${gameState.level}`;
     const expPercent = Math.min(100, Math.round((gameState.currentExp / gameState.nextExp) * 100));
@@ -512,7 +526,6 @@
     goldValueEl.textContent = gameState.gold;
     streakValEl.textContent = gameState.streak.count || 1;
 
-    // แต้มสเตตัส
     const hasPoints = (gameState.statPoints || 0) > 0;
     statPointsBarEl.style.display = hasPoints ? 'block' : 'none';
     statPointsValEl.textContent = gameState.statPoints || 0;
@@ -565,31 +578,28 @@
     pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
     pocketTimeVal.textContent = timeValEl.textContent;
 
-    // ร้านค้า (Shop Items)
+    // ตรวจสอบสถานะปุ่มซื้อในร้าน
+    btnBuyBlade.disabled = gameState.gold < getBladePrice();
+    btnBuyCharm.disabled = gameState.gold < getCharmPrice();
+    btnBuyEye.disabled = gameState.gold < getEyePrice();
+    btnBuyElixir.disabled = gameState.gold < 150;
+  }
+
+  function renderShop() {
     lvlBladeEl.textContent = gameState.upgrades.blade;
     bladeBonusEl.textContent = gameState.upgrades.blade * 5;
     priceBladeEl.textContent = getBladePrice();
-    btnBuyBlade.disabled = gameState.gold < getBladePrice();
 
     lvlCharmEl.textContent = gameState.upgrades.charm;
     charmBonusEl.textContent = gameState.upgrades.charm * 10;
     priceCharmEl.textContent = getCharmPrice();
-    btnBuyCharm.disabled = gameState.gold < getCharmPrice();
 
     lvlEyeEl.textContent = gameState.upgrades.eye;
     eyeBonusEl.textContent = gameState.upgrades.eye * 2;
     priceEyeEl.textContent = getEyePrice();
-    btnBuyEye.disabled = gameState.gold < getEyePrice();
+  }
 
-    btnBuyElixir.disabled = gameState.gold < 150;
-
-    // Career Stats
-    careerDistanceEl.textContent = `${(gameState.career.totalDistanceKm || 0).toFixed(2)} กม.`;
-    careerTimeEl.textContent = formatTime(gameState.career.totalSeconds || 0);
-    careerBossesEl.textContent = `${gameState.career.totalBossDefeated || 0} ตัว`;
-    careerLongestEl.textContent = `${(gameState.career.longestRunKm || 0).toFixed(2)} กม.`;
-
-    // เรนเดอร์เควสต์ประจำวัน
+  function renderQuestsList() {
     questsListEl.innerHTML = '';
     gameState.dailyQuests.forEach((quest) => {
       const isDone = quest.current >= quest.target;
@@ -615,7 +625,6 @@
       questsListEl.appendChild(card);
     });
 
-    // ปุ่มรับรางวัลเควสต์
     document.querySelectorAll('.btn-claim-quest').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const qid = e.target.getAttribute('data-qid');
@@ -630,8 +639,9 @@
         }
       });
     });
+  }
 
-    // เรนเดอร์ Achievements
+  function renderAchievementsList() {
     let claimedAchCount = 0;
     achievementsListEl.innerHTML = '';
     gameState.achievements.forEach(ach => {
@@ -663,7 +673,6 @@
     });
     achievementsCounterEl.textContent = `${claimedAchCount}/${gameState.achievements.length} สำเร็จ`;
 
-    // ปุ่มรับรางวัลเกียรติยศ
     document.querySelectorAll('.btn-claim-ach').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const aid = e.target.getAttribute('data-aid');
@@ -678,6 +687,21 @@
         }
       });
     });
+  }
+
+  function renderCareerUI() {
+    careerDistanceEl.textContent = `${(gameState.career.totalDistanceKm || 0).toFixed(2)} กม.`;
+    careerTimeEl.textContent = formatTime(gameState.career.totalSeconds || 0);
+    careerBossesEl.textContent = `${gameState.career.totalBossDefeated || 0} ตัว`;
+    careerLongestEl.textContent = `${(gameState.career.longestRunKm || 0).toFixed(2)} กม.`;
+  }
+
+  function renderUI() {
+    renderHUD();
+    renderShop();
+    renderQuestsList();
+    renderAchievementsList();
+    renderCareerUI();
   }
 
   // --- Shop Purchase Handlers ---
@@ -774,7 +798,7 @@
           <div class="history-metrics">
             <div class="history-metric-item">
               <span class="h-lbl">ระยะทาง</span>
-              <span class="h-val">${item.distanceKm.toFixed(2)} k</span>
+              <span class="h-val">${item.distanceKm.toFixed(2)} กม.</span>
             </div>
             <div class="history-metric-item">
               <span class="h-lbl">เวลา</span>
@@ -883,37 +907,42 @@
     viewDaily.style.display = 'none';
   });
 
-  // --- Pocket Mode Touch Shield Logic ---
+  // --- Pocket Mode Touch Shield Logic (แก้ไข Bug Zombie Interval & Lock Stalling) ---
   let unlockProgress = 0;
   let unlockInterval = null;
 
-  function startUnlockHold() {
+  function cancelUnlockHold() {
+    if (unlockInterval !== null) {
+      clearInterval(unlockInterval);
+      unlockInterval = null;
+    }
     unlockProgress = 0;
     pocketUnlockBar.style.width = '0%';
+  }
+
+  function startUnlockHold(e) {
+    if (e) e.preventDefault();
+    cancelUnlockHold(); // เคลียร์ Interval และความคืบหน้าเดิมทิ้งก่อนเสมอ ป้องกัน Zombie Interval
+
     unlockInterval = setInterval(() => {
       unlockProgress += 10;
       pocketUnlockBar.style.width = `${Math.min(100, unlockProgress)}%`;
       if (unlockProgress >= 100) {
-        clearInterval(unlockInterval);
+        cancelUnlockHold();
         pocketOverlay.style.display = 'none';
         showToast('🔓 ปลดล็อกหน้าจอเรียบร้อย');
       }
     }, 150);
   }
 
-  function cancelUnlockHold() {
-    clearInterval(unlockInterval);
-    unlockProgress = 0;
-    pocketUnlockBar.style.width = '0%';
-  }
-
-  pocketOverlay.addEventListener('touchstart', startUnlockHold, { passive: true });
-  pocketOverlay.addEventListener('touchend', cancelUnlockHold);
-  pocketOverlay.addEventListener('mousedown', startUnlockHold);
-  pocketOverlay.addEventListener('mouseup', cancelUnlockHold);
-  pocketOverlay.addEventListener('mouseleave', cancelUnlockHold);
+  // ใช้ Pointer Events ชุดเดียว รองรับทั้งสัมผัสและเมาส์โดยไม่ยิง Event ชนกัน
+  pocketOverlay.addEventListener('pointerdown', startUnlockHold);
+  pocketOverlay.addEventListener('pointerup', cancelUnlockHold);
+  pocketOverlay.addEventListener('pointercancel', cancelUnlockHold);
+  pocketOverlay.addEventListener('pointerleave', cancelUnlockHold);
 
   pocketBtn.addEventListener('click', () => {
+    cancelUnlockHold(); // ล้าง Timer และ Reset หลอดปลดล็อกให้หมดจด
     pocketOverlay.style.display = 'flex';
     showToast('🔒 เปิดโหมดพักจอ (แตะค้างเพื่อปลดล็อก)');
   });
@@ -945,18 +974,18 @@
         questCal.current = Math.min(questCal.target, Math.floor(runDistanceKm * 65));
       }
 
-      // ตรวจสอบสถานะ Berserk / Shadow Frenzy (เพซเร็วกว่า 6'30"/กม. ติดต่อกัน 15 วินาที)
+      // คำนวณสถานะ Berserk / Shadow Frenzy ด้วย Recent Rolling Pace (20 วิ ล่าสุด)
       if (runDistanceKm >= 0.05 && runSeconds > 10) {
-        const currentPaceDec = (runSeconds / 60) / runDistanceKm;
-        if (currentPaceDec <= 6.5 && currentPaceDec >= 2.0) {
+        const rollingPace = getRecentRollingPace();
+        if (rollingPace !== null && rollingPace <= 6.5 && rollingPace >= 2.0) {
           frenzyPaceStreakSec++;
-          if (frenzyPaceStreakSec >= 15 && !isFrenzyActive) {
+          if (frenzyPaceStreakSec >= 10 && !isFrenzyActive) {
             isFrenzyActive = true;
             runHudEl.classList.add('frenzy-active');
             frenzyBannerEl.style.display = 'block';
             showToast('⚡ SHADOW FRENZY ปะทุ! พลังโจมตีติดคริติคอล 100%');
           }
-        } else {
+        } else if (rollingPace !== null && rollingPace > 6.5) {
           frenzyPaceStreakSec = 0;
           if (isFrenzyActive) {
             isFrenzyActive = false;
@@ -975,10 +1004,10 @@
           gpsStatusEl.textContent = 'GPS: ล็อกพิกัดแล้ว 🟢';
           const { latitude, longitude, accuracy } = pos.coords;
 
-          if (accuracy > 30) return;
+          // กรองพิกัดที่ความแม่นยำต่ำ
+          if (accuracy > 25) return;
 
           const now = Date.now();
-
           if (!lastCoord) {
             lastCoord = { latitude, longitude, time: now };
             return;
@@ -987,19 +1016,23 @@
           const deltaKm = calculateDistance(lastCoord.latitude, lastCoord.longitude, latitude, longitude);
           const timeDeltaSec = (now - (lastCoord.time || now)) / 1000;
 
-          if (deltaKm >= 0.002) {
-            const speedKmh = timeDeltaSec > 0 ? (deltaKm / (timeDeltaSec / 3600)) : 0;
+          // กรอง GPS Drift: ต้องเคลื่อนที่มากกว่า 3 เมตร และเวลาห่างเกิน 1 วินาที
+          if (deltaKm >= 0.003 && timeDeltaSec >= 1) {
+            const speedKmh = deltaKm / (timeDeltaSec / 3600);
 
-            if (speedKmh <= 35) {
+            // กรองความเร็วให้อยู่ในสปีดการวิ่งจริง (1.5 - 35 กม./ชม.)
+            if (speedKmh >= 1.5 && speedKmh <= 35) {
               runDistanceKm += deltaKm;
+              recordPaceSample(now, runDistanceKm);
               applyDistanceDamage(deltaKm);
               lastCoord = { latitude, longitude, time: now };
-            } else {
+            } else if (speedKmh > 35) {
+              // ความเร็วเกิน (เช่น นั่งรถ) รีเซ็ตพิกัดโดยไม่นับระยะ
               lastCoord = { latitude, longitude, time: now };
             }
           }
 
-          renderUI();
+          renderHUD();
         },
         (err) => {
           gpsStatusEl.textContent = 'GPS: ไม่พบสัญญาณ ⚠️';
@@ -1032,7 +1065,29 @@
   }
 
   async function finishRunSession() {
+    // ป้องกันการบันทึก Empty Session (ระยะทางน้อยกว่า 50 เมตร)
+    if (runDistanceKm < 0.05) {
+      const confirmDiscard = confirm('ระยะทางวิ่งน้อยกว่า 0.05 กม. (50 เมตร) คุณต้องการยกเลิกรอบนี้โดยไม่บันทึกประวัติหรือไม่?');
+      if (confirmDiscard) {
+        pauseRunEngine();
+        cancelUnlockHold();
+        pocketOverlay.style.display = 'none';
+        runDistanceKm = 0.0;
+        runSeconds = 0;
+        sessionBossKills = 0;
+        paceSamples = [];
+        timeValEl.textContent = '00:00:00';
+        paceValEl.textContent = `--'--"`;
+        btnRunText.textContent = 'เริ่มออกล่า';
+        btnFinishRun.setAttribute('disabled', 'true');
+        renderUI();
+        showToast('ยกเลิกรอบการล่าเรียบร้อย');
+      }
+      return;
+    }
+
     pauseRunEngine();
+    cancelUnlockHold();
     pocketOverlay.style.display = 'none';
     showToast(`🏁 จบการออกล่า! สะสมระยะทางได้ ${runDistanceKm.toFixed(2)} กม.`);
 
@@ -1082,6 +1137,7 @@
     sessionBossKills = 0;
     nextChestKmCheckpoint = 1.0;
     frenzyPaceStreakSec = 0;
+    paceSamples = [];
     timeValEl.textContent = '00:00:00';
     paceValEl.textContent = `--'--"`;
     btnRunText.textContent = 'เริ่มออกล่า';
@@ -1115,8 +1171,9 @@
         return;
       }
       runDistanceKm += km;
+      recordPaceSample(Date.now(), runDistanceKm);
       applyDistanceDamage(km);
-      renderUI();
+      renderHUD();
       showToast(`⚡ จำลองวิ่งก้าวหน้า +${(km * 1000).toFixed(0)} เมตร!`);
     }
   };
@@ -1131,9 +1188,7 @@
   });
 
   btnFinishRun.addEventListener('click', () => {
-    if (confirm('คุณต้องการจบเซสชันการวิ่งและบันทึกประวัติการล่าหรือไม่?')) {
-      finishRunSession();
-    }
+    finishRunSession();
   });
 
   simToggleBtn.addEventListener('click', () => {
