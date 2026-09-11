@@ -201,7 +201,7 @@
     bossIndex: 0,
     bossHpRemain: 1.0,
     totalDistanceKm: 0.0,
-    maxHr: 178, // ค่ามาตรฐาน Max HR (220 - 42)
+    maxHr: 178,
     lastDailyDate: new Date().toDateString(),
     career: {
       totalRuns: 0,
@@ -580,7 +580,6 @@
     const zone = calculateHrZone(bpm, gameState.maxHr || 178);
     currentHrZone = zone;
 
-    // อัปเดต UI Zone Badge
     hrZoneBadgeEl.className = `hr-zone-badge zone-${zone}`;
     const zoneNames = {
       0: 'ไม่พบสัญญาณ',
@@ -592,7 +591,6 @@
     };
     hrZoneBadgeEl.textContent = zoneNames[zone] || `Zone ${zone}`;
 
-    // ตรวจสอบการเปลี่ยนโซนเพื่อส่งเสียงพากย์
     if (zone !== previousHrZone && isRunning) {
       if (zone === 3) {
         speakVoice('เข้าสู่โซนสาม สภาวะเบอร์เซิร์กปะทุ! พลังโจมตีติดคริติคอลร้อยเปอร์เซ็นต์', true);
@@ -608,14 +606,12 @@
       previousHrZone = zone;
     }
 
-    // กำหนดสถานะ Frenzy: บังคับให้อยู่แค่ Zone 3 เท่านั้น
     evaluateFrenzyState();
     renderHUD();
   }
 
   function evaluateFrenzyState() {
     if (isBleConnected) {
-      // เมื่อต่อสายวัดหัวใจ: Berserk ทำงานเฉพาะใน Zone 3
       if (currentHrZone === 3) {
         if (!isFrenzyActive) {
           isFrenzyActive = true;
@@ -630,7 +626,6 @@
         }
       }
     } else {
-      // Fallback: ถ้าไม่ได้ต่อสายวัดหัวใจ ใช้เพซแบบ Tempo (Zone 3 เทียบเท่า 5'45" - 6'30"/กม.)
       if (runDistanceKm >= 0.05 && runSeconds > 10) {
         const rollingPace = getRecentRollingPace();
         if (rollingPace !== null && rollingPace <= 6.5 && rollingPace >= 5.5) {
@@ -651,7 +646,7 @@
     }
   }
 
-  // --- Web Bluetooth Heart Rate Connection ---
+  // --- Web Bluetooth Heart Rate Connection (รองรับ Smartwatch และ Huawei Watch D2) ---
   async function connectBluetoothHeartRate() {
     if (!('bluetooth' in navigator)) {
       alert('เบราว์เซอร์นี้ยังไม่รองรับ Web Bluetooth (แนะนำ Google Chrome บน Android หรือ Bluefy บน iOS)');
@@ -661,7 +656,8 @@
     try {
       showToast('กำลังค้นหาอุปกรณ์วัดชีพจร Bluetooth...');
       bluetoothDevice = await navigator.bluetooth.requestDevice({
-        filters: [{ services: ['heart_rate'] }]
+        acceptAllDevices: true,
+        optionalServices: ['heart_rate']
       });
 
       bluetoothDevice.addEventListener('gattserverdisconnected', onBluetoothDisconnected);
@@ -675,7 +671,7 @@
 
       isBleConnected = true;
       btnBleConnect.classList.add('connected');
-      btnBleConnect.textContent = `เชื่อมต่อแล้ว: ${bluetoothDevice.name || 'สายคาดอก'}`;
+      btnBleConnect.textContent = `เชื่อมต่อแล้ว: ${bluetoothDevice.name || 'อุปกรณ์วัดชีพจร'}`;
       showToast('🔗 เชื่อมต่อเซนเซอร์วัดชีพจรสำเร็จ!');
       speakVoice('เชื่อมต่อสายวัดหัวใจเรียบร้อย ระบบพร้อมตรวจจับโซน');
     } catch (err) {
@@ -716,7 +712,6 @@
     }
   });
 
-  // ปุ่มสลับเปิด/ปิดเสียงพากย์
   voiceToggleBtn.addEventListener('click', () => {
     isVoiceEnabled = !isVoiceEnabled;
     voiceToggleBtn.classList.toggle('muted', !isVoiceEnabled);
@@ -747,7 +742,6 @@
       }
     }
 
-    // เสียงรายงานระยะทางทุก 1 กิโลเมตร
     if (runDistanceKm >= nextKmAnnounceCheckpoint) {
       const currentPace = calculatePace(runSeconds, runDistanceKm);
       const boss = BOSS_DATABASE[gameState.bossIndex];
@@ -758,11 +752,9 @@
 
     const eqBonus = calculateEquipmentBonuses();
 
-    // ดาเมจ = STR + อัปเกรดดาบ + ไอเทมสวมใส่ + (Berserk Zone 3 มอบ x1.5 ดาเมจ)
     const frenzyDmgBonus = isFrenzyActive ? 1.5 : 1.0;
     const strMultiplier = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01)) * frenzyDmgBonus;
 
-    // คริติคอล: ถ้า Berserk ใน Zone 3 รับประกัน 100% ทันที
     let critChance = Math.min(65, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit);
     if (isFrenzyActive) {
       critChance = 100;
@@ -790,7 +782,6 @@
       }
       gameState.bestiary[currentBoss.id].kills += 1;
 
-      // โบนัส Zone 2 (Shadow Focus) มอบ EXP เพิ่มอีก 50%
       const zone2ExpBonus = currentHrZone === 2 ? 1.5 : 1.0;
 
       const staMultiplier = (1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01)) * zone2ExpBonus;
