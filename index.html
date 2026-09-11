@@ -118,6 +118,11 @@
         ⚡ BERSERK FRENZY: ชีพจร Zone 3 ล็อกเป้า! คริติคอล 100% ดาเมจ x1.5 ⚡
       </div>
 
+      <!-- Overdrive Active Banner -->
+      <div class="overdrive-banner" id="overdrive-banner" style="display: none;">
+        🔥 OVERDRIVE SURGE: โบนัสทองคำ x2 & ดูดซับ EXP เร่งด่วน (<span id="overdrive-time-left">45</span>s) 🔥
+      </div>
+
       <div class="hud-status-row">
         <span class="gps-badge" id="gps-status">GPS: พร้อมใช้งาน</span>
         <div class="hud-status-actions">
@@ -151,11 +156,26 @@
         <div class="sub-metric-box">
           <span class="sub-label">เพซเฉลี่ย</span>
           <span class="sub-val" id="pace-val">--'--"</span>
+          <span class="flow-badge" id="flow-badge" style="display: none;">🌊 FLOW STATE</span>
         </div>
         <div class="sub-metric-box">
           <span class="sub-label">แคลอรี</span>
           <span class="sub-val" id="cal-val">0 kcal</span>
         </div>
+      </div>
+
+      <!-- Ultimate Gauge & Action Button Container -->
+      <div class="ultimate-container">
+        <div class="ultimate-header">
+          <span class="ult-label">⚡ เกจไม้ตาย: SHADOW SLASH</span>
+          <span class="ult-pct" id="ult-pct-val">0%</span>
+        </div>
+        <div class="ultimate-bar-track">
+          <div class="ultimate-bar-fill" id="ult-bar-fill" style="width: 0%;"></div>
+        </div>
+        <button class="btn-cast-ultimate" id="btn-cast-ultimate" type="button" disabled>
+          🗡️ ปลดปล่อยคมดาบอเวจี (SHADOW SLASH)
+        </button>
       </div>
 
       <!-- Action Buttons -->

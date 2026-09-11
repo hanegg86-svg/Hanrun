@@ -187,6 +187,7 @@
     nextExp: 1000,
     gold: 0,
     statPoints: 0,
+    ultimateCharge: 0, // Adrenaline Gauge (0 - 100%)
     stats: { str: 10, sta: 10, agi: 10 },
     upgrades: { blade: 0, charm: 0, eye: 0 },
     equipment: { weapon: null, armor: null, boots: null, relic: null },
@@ -242,6 +243,7 @@
       gameState.career = Object.assign({}, defaultState.career, saved.career || {});
       gameState.dailyQuests = saved.dailyQuests || generateDailyQuests();
       gameState.achievements = saved.achievements || generateAchievements();
+      gameState.ultimateCharge = typeof saved.ultimateCharge === 'number' ? saved.ultimateCharge : 0;
     } else {
       gameState = defaultState;
     }
@@ -300,6 +302,13 @@
   let nextChestKmCheckpoint = 1.0;
   let nextKmAnnounceCheckpoint = 1.0;
   let paceSamples = [];
+
+  // --- New: Ultimate & Flow State Variables ---
+  let isOverdriveActive = false;
+  let overdriveSecondsRemaining = 0;
+  let isFlowStateActive = false;
+  let rhythmBaselinePace = null;
+  let rhythmConsistentDistance = 0.0;
 
   // --- Item Generator ---
   const ITEM_NAMES = {
@@ -413,11 +422,19 @@
 
   const runHudEl = document.getElementById('run-hud');
   const frenzyBannerEl = document.getElementById('frenzy-banner');
+  const overdriveBannerEl = document.getElementById('overdrive-banner');
+  const overdriveTimeLeftEl = document.getElementById('overdrive-time-left');
   const distanceValEl = document.getElementById('distance-val');
   const timeValEl = document.getElementById('time-val');
   const paceValEl = document.getElementById('pace-val');
+  const flowBadgeEl = document.getElementById('flow-badge');
   const calValEl = document.getElementById('cal-val');
   const gpsStatusEl = document.getElementById('gps-status');
+
+  // Ultimate Skill Elements
+  const ultPctValEl = document.getElementById('ult-pct-val');
+  const ultBarFillEl = document.getElementById('ult-bar-fill');
+  const btnCastUltimate = document.getElementById('btn-cast-ultimate');
 
   const btnToggleRun = document.getElementById('btn-toggle-run');
   const btnRunText = document.getElementById('btn-run-text');
@@ -539,6 +556,16 @@
     }
     saveGame();
     renderUI();
+  }
+
+  function addUltimateCharge(amount) {
+    const prevCharge = gameState.ultimateCharge;
+    gameState.ultimateCharge = Math.min(100, Math.max(0, gameState.ultimateCharge + amount));
+    if (prevCharge < 100 && gameState.ultimateCharge >= 100) {
+      speakVoice('เกจท่าไม้ตายเต็มเปี่ยม ปลดปล่อยคมดาบอเวจีได้แล้ว!', true);
+      showToast('⚡ ท่าไม้ตายพร้อมใช้งาน! กด SHADOW SLASH เพื่อสังหาร');
+    }
+    renderHUD();
   }
 
   function recordPaceSample(timestamp, distKm) {
@@ -782,6 +809,37 @@
   function applyDistanceDamage(distanceDeltaKm) {
     if (distanceDeltaKm <= 0) return;
 
+    // 1. เพิ่มเกจไม้ตายตามระยะทาง (+2% ต่อ 100 เมตร, และ x2 เมื่ออยู่ใน Flow State)
+    const ultBonusMult = isFlowStateActive ? 2 : 1;
+    addUltimateCharge((distanceDeltaKm / 0.1) * 2 * ultBonusMult);
+
+    // 2. ตรวจสอบการควบคุมเพซสม่ำเสมอ (Pace Rhythm Combo / Flow State)
+    const rollingPace = getRecentRollingPace();
+    if (rollingPace !== null) {
+      if (rhythmBaselinePace === null) {
+        rhythmBaselinePace = rollingPace;
+        rhythmConsistentDistance = 0.0;
+      } else {
+        const paceDiff = Math.abs(rollingPace - rhythmBaselinePace);
+        if (paceDiff <= 0.25) { // เบี่ยงเบนไม่เกิน 15 วินาที/กม. (0.25 นาที)
+          rhythmConsistentDistance += distanceDeltaKm;
+          if (rhythmConsistentDistance >= 0.4 && !isFlowStateActive) {
+            isFlowStateActive = true;
+            showToast('🌊 เข้าสู่สภาวะ FLOW STATE! โบนัส EXP +50% & เกจไม้ตายชาร์จไว x2');
+            speakVoice('เข้าสู่สภาวะโฟลว์สเตท คุมจังหวะยอดเยี่ยม');
+          }
+        } else {
+          // หากเพซแกว่งเกินเกณฑ์ ให้รีเซ็ตจังหวะใหม่
+          rhythmBaselinePace = rollingPace;
+          rhythmConsistentDistance = 0.0;
+          if (isFlowStateActive) {
+            isFlowStateActive = false;
+            showToast('หลุดจากสภาวะ Flow State');
+          }
+        }
+      }
+    }
+
     const questDist = gameState.dailyQuests.find(q => q.id === 'dq_dist');
     if (questDist) {
       questDist.current = Math.min(questDist.target, parseFloat((questDist.current + distanceDeltaKm).toFixed(2)));
@@ -818,6 +876,7 @@
     const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? 1.8 : 1.0);
 
     if (isCrit) {
+      addUltimateCharge(3); // ติดคริติคอลได้รับเกจไม้ตาย +3%
       const questCrit = gameState.dailyQuests.find(q => q.id === 'dq_crit');
       if (questCrit) questCrit.current = Math.min(questCrit.target, questCrit.current + 1);
       showToast(`💥 CRITICAL! ปลดปล่อยดาเมจ x1.8 เท่า`);
@@ -837,11 +896,13 @@
       gameState.bestiary[currentBoss.id].kills += 1;
 
       const zone2ExpBonus = currentHrZone === 2 ? 1.5 : 1.0;
+      const flowExpBonus = isFlowStateActive ? 1.5 : 1.0;
 
-      const staMultiplier = (1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01)) * zone2ExpBonus;
+      const staMultiplier = (1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01)) * zone2ExpBonus * flowExpBonus;
       const charmMultiplier = 1 + (gameState.upgrades.charm * 0.10) + (eqBonus.bonusGold * 0.01);
       const streakMultiplier = 1 + Math.min(0.20, (gameState.streak.count - 1) * 0.02);
-      const totalGoldMultiplier = staMultiplier * charmMultiplier * streakMultiplier;
+      const overdriveGoldMult = isOverdriveActive ? 2.0 : 1.0;
+      const totalGoldMultiplier = staMultiplier * charmMultiplier * streakMultiplier * overdriveGoldMult;
 
       const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier);
       const rewardGold = Math.floor(currentBoss.rewardGold * totalGoldMultiplier);
@@ -867,6 +928,60 @@
     saveGame();
     renderHUD();
   }
+
+  // --- Ultimate Skill Execution: Shadow Slash ---
+  function activateUltimateSkill() {
+    if (gameState.ultimateCharge < 100 || !isRunning) {
+      if (!isRunning) showToast('กรุณากดเริ่มออกล่าก่อนใช้ท่าไม้ตาย');
+      return;
+    }
+
+    gameState.ultimateCharge = 0;
+    const eqBonus = calculateEquipmentBonuses();
+    const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01);
+    
+    // สร้างความเสียหายฉับพลัน 0.35 กม. x ตัวคูณ STR
+    const burstDamageKm = 0.35 * strMultiplier;
+    const currentBoss = BOSS_DATABASE[gameState.bossIndex];
+
+    gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - burstDamageKm);
+    showToast(`🗡️ SHADOW SLASH! ปลดปล่อยดาบอเวจีฟันบอสลึก ${burstDamageKm.toFixed(2)} กม.!`);
+    speakVoice('ปลดปล่อยคมดาบอเวจี! เข้าสู่สภาวะโอเวอร์ไดรฟ์', true);
+
+    // เปิดใช้งานสถานะ Overdrive Surge นาน 45 วินาที
+    isOverdriveActive = true;
+    overdriveSecondsRemaining = 45;
+    runHudEl.classList.add('overdrive-active');
+    overdriveBannerEl.style.display = 'block';
+    overdriveTimeLeftEl.textContent = overdriveSecondsRemaining;
+
+    if (gameState.bossHpRemain <= 0.001) {
+      sessionBossKills += 1;
+      gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
+      gameState.chestsAvailable += 1;
+
+      if (!gameState.bestiary[currentBoss.id]) {
+        gameState.bestiary[currentBoss.id] = { kills: 0, name: currentBoss.name };
+      }
+      gameState.bestiary[currentBoss.id].kills += 1;
+
+      const rewardExp = Math.floor(currentBoss.rewardExp * 1.5);
+      const rewardGold = Math.floor(currentBoss.rewardGold * 2.0); // โบนัสทองสองเท่าทันที
+
+      showToast(`🏆 ฟันสังหาร ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} เหรียญ`);
+      addExp(rewardExp);
+      gameState.gold += rewardGold;
+
+      gameState.bossIndex = (gameState.bossIndex + 1) % BOSS_DATABASE.length;
+      const nextBoss = BOSS_DATABASE[gameState.bossIndex];
+      gameState.bossHpRemain = nextBoss.maxHpKm;
+    }
+
+    saveGame();
+    renderUI();
+  }
+
+  btnCastUltimate.addEventListener('click', activateUltimateSkill);
 
   // --- Open Mystery Chest Logic ---
   function openMysteryChest() {
@@ -1286,6 +1401,24 @@
     calValEl.textContent = `${calValue} kcal`;
     updatePace();
 
+    // Ultimate Gauge UI update
+    const ultPercent = Math.min(100, Math.floor(gameState.ultimateCharge));
+    ultPctValEl.textContent = `${ultPercent}%`;
+    ultBarFillEl.style.width = `${ultPercent}%`;
+
+    if (ultPercent >= 100 && isRunning) {
+      btnCastUltimate.removeAttribute('disabled');
+      btnCastUltimate.classList.add('ready');
+      btnCastUltimate.textContent = '🗡️ ปลดปล่อยคมดาบอเวจี (READY)';
+    } else {
+      btnCastUltimate.setAttribute('disabled', 'true');
+      btnCastUltimate.classList.remove('ready');
+      btnCastUltimate.textContent = ultPercent >= 100 ? '🗡️ ท่าไม้ตายพร้อม (รอออกล่า)' : '🗡️ ปลดปล่อยคมดาบอเวจี (กำลังชาร์จ)';
+    }
+
+    // Flow state badge toggle
+    flowBadgeEl.style.display = isFlowStateActive ? 'inline-block' : 'none';
+
     pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
     pocketTimeVal.textContent = timeValEl.textContent;
 
@@ -1569,6 +1702,25 @@
       pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
 
+      // ชาร์จเกจไม้ตายอัตโนมัติเมื่ออยู่ในสภาวะ Zone 3 (+0.5%/วินาที หรือ +1.0% หากอยู่ใน Flow State)
+      if (isFrenzyActive || currentHrZone === 3) {
+        const ultTimeRate = isFlowStateActive ? 1.0 : 0.5;
+        addUltimateCharge(ultTimeRate);
+      }
+
+      // นับเวลาถอยหลังสถานะ Overdrive Surge
+      if (isOverdriveActive) {
+        overdriveSecondsRemaining--;
+        overdriveTimeLeftEl.textContent = overdriveSecondsRemaining;
+        if (overdriveSecondsRemaining <= 0) {
+          isOverdriveActive = false;
+          runHudEl.classList.remove('overdrive-active');
+          overdriveBannerEl.style.display = 'none';
+          speakVoice('สถานะโอเวอร์ไดรฟ์หมดเวลาลงแล้ว');
+          showToast('สถานะ Overdrive สิ้นสุดลง');
+        }
+      }
+
       const questTime = gameState.dailyQuests.find(q => q.id === 'dq_time');
       if (questTime) {
         questTime.current = Math.min(questTime.target, questTime.current + 1);
@@ -1643,6 +1795,11 @@
     isFrenzyActive = false;
     runHudEl.classList.remove('frenzy-active');
     frenzyBannerEl.style.display = 'none';
+
+    isFlowStateActive = false;
+    rhythmBaselinePace = null;
+    rhythmConsistentDistance = 0.0;
+    flowBadgeEl.style.display = 'none';
 
     speakVoice('หยุดการล่าชั่วคราว');
     releaseWakeLock();

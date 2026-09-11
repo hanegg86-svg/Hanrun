@@ -26,6 +26,11 @@
   --zone-3: #eab308;
   --zone-4: #f97316;
   --zone-5: #ef4444;
+
+  /* Ultimate & Flow State Colors */
+  --flow-blue: #38bdf8;
+  --ult-purple: #c084fc;
+  --ult-glow: #a855f7;
 }
 
 * {
@@ -429,6 +434,11 @@ body {
   box-shadow: 0 0 35px rgba(239, 68, 68, 0.6);
 }
 
+.run-hud.overdrive-active {
+  border-color: #eab308;
+  box-shadow: 0 0 40px rgba(234, 179, 8, 0.7);
+}
+
 .frenzy-banner {
   width: 100%;
   background: linear-gradient(90deg, #ef4444, #b91c1c);
@@ -439,8 +449,23 @@ body {
   letter-spacing: 0.5px;
   padding: 5px 8px;
   border-radius: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   animation: pulse 1s infinite;
+}
+
+.overdrive-banner {
+  width: 100%;
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+  color: #fff;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+  animation: pulse 1.2s infinite;
 }
 
 .hud-status-row {
@@ -610,7 +635,7 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  margin: 14px 0;
+  margin: 14px 0 10px 0;
 }
 
 .sub-metric-box {
@@ -621,6 +646,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  position: relative;
 }
 
 .sub-label {
@@ -634,6 +660,100 @@ body {
   font-weight: 700;
   color: #ffffff;
   font-family: monospace, -apple-system;
+}
+
+/* Pace Flow Rhythm Badge */
+.flow-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid #38bdf8;
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin-top: 3px;
+  animation: flowPulse 1.5s infinite alternate;
+}
+
+@keyframes flowPulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 4px rgba(56, 189, 248, 0.4); }
+  100% { transform: scale(1.05); box-shadow: 0 0 10px rgba(56, 189, 248, 0.8); }
+}
+
+/* Ultimate Gauge Container */
+.ultimate-container {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(192, 132, 252, 0.3);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ultimate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ult-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #e9d5ff;
+  letter-spacing: 0.5px;
+}
+
+.ult-pct {
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: var(--ult-purple);
+  font-family: monospace, -apple-system;
+}
+
+.ultimate-bar-track {
+  width: 100%;
+  height: 8px;
+  background: #1e1b2e;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+}
+
+.ultimate-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9333ea, #c084fc, #f472b6);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
+  transition: width 0.3s ease;
+}
+
+.btn-cast-ultimate {
+  width: 100%;
+  min-height: 42px;
+  background: #201c2b;
+  border: 1px solid rgba(192, 132, 252, 0.3);
+  color: #71717a;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: not-allowed;
+  transition: all 0.2s ease;
+}
+
+.btn-cast-ultimate.ready {
+  background: linear-gradient(180deg, #c084fc 0%, #7e22ce 100%);
+  border: 1px solid #f3e8ff;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.7);
+  animation: ultButtonPulse 1.2s infinite;
+}
+
+@keyframes ultButtonPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.02); filter: brightness(1.2); }
 }
 
 /* Big Control Buttons */
