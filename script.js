@@ -647,7 +647,7 @@
     }
   }
 
-  // --- Web Bluetooth Engine with Device Memory & Auto-Reconnect ---
+  // --- Web Bluetooth Engine with Targeted Filter & Auto-Reconnect ---
   async function setupGattConnection(device) {
     bluetoothDevice = device;
     bluetoothDevice.addEventListener('gattserverdisconnected', onBluetoothDisconnected);
@@ -682,7 +682,7 @@
     }
 
     try {
-      // 1. ตรวจสอบอุปกรณ์ที่เคยจับคู่ผ่าน getDevices() เพื่อเชื่อมต่อด่วนโดยไม่ต้องเลือกซ้ำ
+      // 1. ตรวจสอบอุปกรณ์ที่เคยจับคู่ผ่าน getDevices() เพื่อเชื่อมต่อด่วน
       if (!forceNew && 'getDevices' in navigator.bluetooth) {
         const pairedDevices = await navigator.bluetooth.getDevices();
         if (pairedDevices.length > 0) {
@@ -699,10 +699,26 @@
         }
       }
 
-      // 2. ถ้ายังไม่เคยจับคู่หรือเชื่อมต่อตัวเดิมไม่สำเร็จ ให้เปิดหน้าต่างค้นหา
-      showToast('กำลังค้นหาอุปกรณ์วัดชีพจร Bluetooth...');
+      // 2. ค้นหาเฉพาะกลุ่ม Smartwatch (Huawei, Garmin, Polar) และสายคาดอกวัดชีพจร (ตัดอุปกรณ์ไม่เกี่ยวออก)
+      showToast('กำลังค้นหาเฉพาะ Smartwatch & สายวัดชีพจร...');
       const device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
+        filters: [
+          { services: ['heart_rate'] },
+          { namePrefix: 'HUAWEI' },
+          { namePrefix: 'Huawei' },
+          { namePrefix: 'huawei' },
+          { namePrefix: 'Watch' },
+          { namePrefix: 'WATCH' },
+          { namePrefix: 'Band' },
+          { namePrefix: 'BAND' },
+          { namePrefix: 'Garmin' },
+          { namePrefix: 'GARMIN' },
+          { namePrefix: 'Polar' },
+          { namePrefix: 'POLAR' },
+          { namePrefix: 'Magene' },
+          { namePrefix: 'CooSpo' },
+          { namePrefix: 'Coros' }
+        ],
         optionalServices: ['heart_rate']
       });
 
@@ -1273,7 +1289,6 @@
     pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
     pocketTimeVal.textContent = timeValEl.textContent;
 
-    // อัปเดตข้อความปุ่มบลูทูธถ้ายังไม่ได้เชื่อมต่อ
     if (!isBleConnected) {
       btnBleConnect.textContent = gameState.lastBleDeviceName ? `🔗 เชื่อมต่อ: ${gameState.lastBleDeviceName}` : '🔗 เชื่อมต่อสายคาดอก BLE';
     }
