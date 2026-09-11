@@ -202,6 +202,7 @@
     bossHpRemain: 1.0,
     totalDistanceKm: 0.0,
     maxHr: 178,
+    lastBleDeviceName: null,
     lastDailyDate: new Date().toDateString(),
     career: {
       totalRuns: 0,
@@ -567,11 +568,11 @@
   function calculateHrZone(bpm, maxHr) {
     if (bpm <= 0) return 0;
     const pct = (bpm / maxHr) * 100;
-    if (pct < 60) return 1;       // Zone 1 (<60%)
-    if (pct < 70) return 2;       // Zone 2 (60-70%) Shadow Focus
-    if (pct < 80) return 3;       // Zone 3 (70-80%) BERSERK FRENZY!
-    if (pct < 90) return 4;       // Zone 4 (80-90%) Threshold
-    return 5;                     // Zone 5 (>=90%) Danger Alert
+    if (pct < 60) return 1;
+    if (pct < 70) return 2;
+    if (pct < 80) return 3;
+    if (pct < 90) return 4;
+    return 5;
   }
 
   function updateHeartRate(bpm) {
@@ -646,34 +647,66 @@
     }
   }
 
-  // --- Web Bluetooth Heart Rate Connection (รองรับ Smartwatch และ Huawei Watch D2) ---
-  async function connectBluetoothHeartRate() {
+  // --- Web Bluetooth Engine with Device Memory & Auto-Reconnect ---
+  async function setupGattConnection(device) {
+    bluetoothDevice = device;
+    bluetoothDevice.addEventListener('gattserverdisconnected', onBluetoothDisconnected);
+
+    const server = await bluetoothDevice.gatt.connect();
+    const service = await server.getPrimaryService('heart_rate');
+    hrCharacteristic = await service.getCharacteristic('heart_rate_measurement');
+
+    await hrCharacteristic.startNotifications();
+    hrCharacteristic.addEventListener('characteristicvaluechanged', handleHeartRateNotification);
+
+    isBleConnected = true;
+    const devName = bluetoothDevice.name || 'อุปกรณ์วัดชีพจร';
+    gameState.lastBleDeviceName = devName;
+    saveGame();
+
+    btnBleConnect.classList.add('connected');
+    btnBleConnect.textContent = `เชื่อมต่อแล้ว: ${devName}`;
+    showToast(`🔗 เชื่อมต่อ ${devName} สำเร็จ!`);
+    speakVoice('เชื่อมต่อสายวัดหัวใจเรียบร้อย ระบบพร้อมตรวจจับโซน');
+  }
+
+  async function connectBluetoothHeartRate(forceNew = false) {
     if (!('bluetooth' in navigator)) {
       alert('เบราว์เซอร์นี้ยังไม่รองรับ Web Bluetooth (แนะนำ Google Chrome บน Android หรือ Bluefy บน iOS)');
       return;
     }
 
+    if (isBleConnected && bluetoothDevice && bluetoothDevice.gatt.connected) {
+      bluetoothDevice.gatt.disconnect();
+      return;
+    }
+
     try {
+      // 1. ตรวจสอบอุปกรณ์ที่เคยจับคู่ผ่าน getDevices() เพื่อเชื่อมต่อด่วนโดยไม่ต้องเลือกซ้ำ
+      if (!forceNew && 'getDevices' in navigator.bluetooth) {
+        const pairedDevices = await navigator.bluetooth.getDevices();
+        if (pairedDevices.length > 0) {
+          const matchedDevice = pairedDevices.find(d => d.name === gameState.lastBleDeviceName) || pairedDevices[0];
+          if (matchedDevice) {
+            showToast(`⚡ กำลังเชื่อมต่อด่วนกับ ${matchedDevice.name || 'อุปกรณ์ที่เคยผูกไว้'}...`);
+            try {
+              await setupGattConnection(matchedDevice);
+              return;
+            } catch (reconnectErr) {
+              console.warn('เชื่อมต่อตัวเดิมไม่สำเร็จ จะเปิดหน้าต่างค้นหาใหม่:', reconnectErr);
+            }
+          }
+        }
+      }
+
+      // 2. ถ้ายังไม่เคยจับคู่หรือเชื่อมต่อตัวเดิมไม่สำเร็จ ให้เปิดหน้าต่างค้นหา
       showToast('กำลังค้นหาอุปกรณ์วัดชีพจร Bluetooth...');
-      bluetoothDevice = await navigator.bluetooth.requestDevice({
+      const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: ['heart_rate']
       });
 
-      bluetoothDevice.addEventListener('gattserverdisconnected', onBluetoothDisconnected);
-
-      const server = await bluetoothDevice.gatt.connect();
-      const service = await server.getPrimaryService('heart_rate');
-      hrCharacteristic = await service.getCharacteristic('heart_rate_measurement');
-
-      await hrCharacteristic.startNotifications();
-      hrCharacteristic.addEventListener('characteristicvaluechanged', handleHeartRateNotification);
-
-      isBleConnected = true;
-      btnBleConnect.classList.add('connected');
-      btnBleConnect.textContent = `เชื่อมต่อแล้ว: ${bluetoothDevice.name || 'อุปกรณ์วัดชีพจร'}`;
-      showToast('🔗 เชื่อมต่อเซนเซอร์วัดชีพจรสำเร็จ!');
-      speakVoice('เชื่อมต่อสายวัดหัวใจเรียบร้อย ระบบพร้อมตรวจจับโซน');
+      await setupGattConnection(device);
     } catch (err) {
       console.warn('Bluetooth connection error:', err);
       showToast('ยกเลิกหรือล้มเหลวในการเชื่อมต่อ Bluetooth');
@@ -698,17 +731,22 @@
     currentHeartRate = 0;
     currentHrZone = 0;
     btnBleConnect.classList.remove('connected');
-    btnBleConnect.textContent = '🔗 เชื่อมต่อสายคาดอก BLE';
+    const labelName = gameState.lastBleDeviceName ? `🔗 เชื่อมต่อ: ${gameState.lastBleDeviceName}` : '🔗 เชื่อมต่อสายคาดอก BLE';
+    btnBleConnect.textContent = labelName;
     updateHeartRate(0);
     showToast('⚠️ สัญญาณสายวัดหัวใจ Bluetooth ขาดการเชื่อมต่อ');
     speakVoice('สายวัดหัวใจตัดการเชื่อมต่อ');
   }
 
+  // กดคลิกธรรมดา: ต่ออุปกรณ์เดิมทันที | คลิกขวาหรือกดค้าง: จับคู่อุปกรณ์ตัวใหม่
   btnBleConnect.addEventListener('click', () => {
-    if (isBleConnected && bluetoothDevice && bluetoothDevice.gatt.connected) {
-      bluetoothDevice.gatt.disconnect();
-    } else {
-      connectBluetoothHeartRate();
+    connectBluetoothHeartRate(false);
+  });
+
+  btnBleConnect.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (confirm('คุณต้องการค้นหาและจับคู่กับอุปกรณ์บลูทูธตัวใหม่หรือไม่?')) {
+      connectBluetoothHeartRate(true);
     }
   });
 
@@ -1234,6 +1272,11 @@
 
     pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
     pocketTimeVal.textContent = timeValEl.textContent;
+
+    // อัปเดตข้อความปุ่มบลูทูธถ้ายังไม่ได้เชื่อมต่อ
+    if (!isBleConnected) {
+      btnBleConnect.textContent = gameState.lastBleDeviceName ? `🔗 เชื่อมต่อ: ${gameState.lastBleDeviceName}` : '🔗 เชื่อมต่อสายคาดอก BLE';
+    }
 
     btnBuyBlade.disabled = gameState.gold < getBladePrice();
     btnBuyCharm.disabled = gameState.gold < getCharmPrice();
