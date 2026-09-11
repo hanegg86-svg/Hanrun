@@ -19,6 +19,13 @@
   --rarity-rare: #38bdf8;
   --rarity-epic: #c084fc;
   --rarity-legendary: #fbbf24;
+
+  /* Heart Rate Zone Colors */
+  --zone-1: #9ca3af;
+  --zone-2: #38bdf8;
+  --zone-3: #eab308;
+  --zone-4: #f97316;
+  --zone-5: #ef4444;
 }
 
 * {
@@ -430,7 +437,7 @@ body {
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.5px;
-  padding: 4px 8px;
+  padding: 5px 8px;
   border-radius: 8px;
   margin-bottom: 10px;
   animation: pulse 1s infinite;
@@ -453,6 +460,23 @@ body {
 .hud-status-actions {
   display: flex;
   gap: 6px;
+}
+
+.voice-toggle-btn {
+  background: #181722;
+  border: 1px solid var(--border-gold);
+  color: var(--gold-glow);
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.voice-toggle-btn.muted {
+  color: var(--text-muted);
+  border-color: rgba(255, 255, 255, 0.15);
+  background: #121217;
 }
 
 .pocket-btn {
@@ -480,6 +504,81 @@ body {
   background: var(--gold-dark);
   color: #fff;
   border-color: var(--gold-primary);
+}
+
+/* Heart Rate Panel */
+.hr-panel {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 6px 0;
+}
+
+.hr-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hr-icon {
+  font-size: 1.1rem;
+  animation: heartBeat 1.2s infinite ease-in-out;
+}
+
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.15); }
+  60% { transform: scale(0.95); }
+}
+
+.hr-bpm {
+  font-size: 1.25rem;
+  font-weight: 900;
+  font-family: monospace, -apple-system;
+  color: #fff;
+}
+
+.hr-unit {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.hr-zone-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+}
+
+.hr-zone-badge.zone-1 { background: rgba(156, 163, 175, 0.2); color: var(--zone-1); }
+.hr-zone-badge.zone-2 { background: rgba(56, 189, 248, 0.2); color: var(--zone-2); border: 1px solid rgba(56, 189, 248, 0.4); }
+.hr-zone-badge.zone-3 { background: rgba(234, 179, 8, 0.25); color: var(--zone-3); border: 1px solid rgba(234, 179, 8, 0.6); box-shadow: 0 0 10px rgba(234, 179, 8, 0.4); }
+.hr-zone-badge.zone-4 { background: rgba(249, 115, 22, 0.2); color: var(--zone-4); }
+.hr-zone-badge.zone-5 { background: rgba(239, 68, 68, 0.3); color: var(--zone-5); border: 1px solid #ef4444; animation: pulse 0.8s infinite; }
+
+.btn-ble-connect {
+  background: #27272a;
+  border: 1px solid var(--border-gold);
+  color: var(--gold-glow);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-ble-connect.connected {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #38bdf8;
 }
 
 .hud-main-metric {
@@ -511,7 +610,7 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  margin: 16px 0;
+  margin: 14px 0;
 }
 
 .sub-metric-box {
@@ -622,7 +721,7 @@ body {
   cursor: pointer;
 }
 
-/* NEW: Equipment & Inventory Section */
+/* Equipment & Inventory Section */
 .equipment-section {
   background: #111016;
   border: 1px solid var(--border-gold);
@@ -748,7 +847,7 @@ body {
   max-width: 95%;
 }
 
-/* NEW: Monster Codex Section */
+/* Monster Codex Section */
 .codex-section {
   background: #111016;
   border: 1px solid var(--border-gold);
@@ -1276,7 +1375,7 @@ body {
   padding: 20px 0;
 }
 
-/* NEW: Utility Section */
+/* Utility Section */
 .utility-section {
   background: #111016;
   border: 1px solid var(--border-gold);
@@ -1310,7 +1409,7 @@ body {
   text-align: center;
 }
 
-/* Modal for Item Details */
+/* Item Action Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;

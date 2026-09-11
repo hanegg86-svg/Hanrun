@@ -129,6 +129,21 @@
     }
   });
 
+  // --- Web Speech Synthesis Narrative Engine ---
+  let isVoiceEnabled = true;
+
+  function speakVoice(text, isUrgent = false) {
+    if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
+    if (isUrgent) {
+      window.speechSynthesis.cancel();
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'th-TH';
+    utterance.rate = 1.05;
+    utterance.pitch = 0.95;
+    window.speechSynthesis.speak(utterance);
+  }
+
   // --- Boss List Database & Lore ---
   const BOSS_DATABASE = [
     { id: 'boss_1', tier: 'TIER I', name: 'Gargoyle of the Crypt', avatar: '👹', maxHpKm: 1.0, desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 1.00 กม. เพื่อทำลายมัน!', rewardExp: 1200, rewardGold: 150 },
@@ -186,6 +201,7 @@
     bossIndex: 0,
     bossHpRemain: 1.0,
     totalDistanceKm: 0.0,
+    maxHr: 178, // ค่ามาตรฐาน Max HR (220 - 42)
     lastDailyDate: new Date().toDateString(),
     career: {
       totalRuns: 0,
@@ -200,7 +216,6 @@
 
   let gameState = defaultState;
 
-  // --- State Migration & Persistence ---
   async function loadGameState() {
     let saved = await DB.getPlayerState();
     if (!saved) {
@@ -269,15 +284,23 @@
   let watchId = null;
   let lastCoord = null;
   let sessionBossKills = 0;
-  let currentGpxTrack = []; // สำหรับเก็บ Trackpoints สกัดลง GPX
+  let currentGpxTrack = [];
 
-  // Berserk / Frenzy rolling samples
+  // Heart Rate & Zone Variables (Web Bluetooth API)
+  let bluetoothDevice = null;
+  let hrCharacteristic = null;
+  let currentHeartRate = 0;
+  let currentHrZone = 0;
+  let previousHrZone = 0;
+  let isBleConnected = false;
+
+  // Berserk / Frenzy (Zone 3 Only)
   let isFrenzyActive = false;
-  let frenzyPaceStreakSec = 0;
   let nextChestKmCheckpoint = 1.0;
+  let nextKmAnnounceCheckpoint = 1.0;
   let paceSamples = [];
 
-  // --- Item Rarity & Generator (NEW: ระบบอุปกรณ์สวมใส่) ---
+  // --- Item Generator ---
   const ITEM_NAMES = {
     weapon: ['ดาบสั้นเงา', 'ดาบใหญ่ทมิฬ', 'เคียวมรณะ', 'ดาบโบราณ'],
     armor: ['เสื้อเกราะหนังเงา', 'เกราะเหล็กอสูร', 'ผ้าคลุมวิญญาณ', 'เกราะเพลทอเวจี'],
@@ -405,6 +428,12 @@
   const achievementsCounterEl = document.getElementById('achievements-counter');
   const gameToastEl = document.getElementById('game-toast');
 
+  // Heart Rate DOM
+  const hrBpmEl = document.getElementById('hr-bpm');
+  const hrZoneBadgeEl = document.getElementById('hr-zone-badge');
+  const btnBleConnect = document.getElementById('btn-ble-connect');
+  const voiceToggleBtn = document.getElementById('voice-toggle-btn');
+
   // Shop Elements
   const priceElixirEl = document.getElementById('price-elixir');
   const btnBuyElixir = document.getElementById('btn-buy-elixir');
@@ -454,11 +483,8 @@
   const btnModalSalvage = document.getElementById('btn-modal-salvage');
   const btnModalCancel = document.getElementById('btn-modal-cancel');
 
-  // Codex Elements
   const codexListEl = document.getElementById('codex-list');
   const codexCounterEl = document.getElementById('codex-counter');
-
-  // Utility Elements
   const btnExportBackup = document.getElementById('btn-export-backup');
   const inputImportBackup = document.getElementById('input-import-backup');
 
@@ -505,6 +531,7 @@
       gameState.statPoints = (gameState.statPoints || 0) + 3;
       leveledUp = true;
       showToast(`⭐ เลเวลอัป! สู่ระดับ LV. ${gameState.level} (ได้รับ +3 แต้มสเตตัส)`);
+      speakVoice(`เลเวลอัป สู่ระดับ ${gameState.level}`);
     }
     if (leveledUp) {
       gameState.title = getTitleForLevel(gameState.level);
@@ -536,7 +563,173 @@
     return null;
   }
 
-  // --- Battle Damage Calculation (เชื่อมโยง Equipment & Upgrades) ---
+  // --- Heart Rate Zone Calculator & State Evaluator ---
+  function calculateHrZone(bpm, maxHr) {
+    if (bpm <= 0) return 0;
+    const pct = (bpm / maxHr) * 100;
+    if (pct < 60) return 1;       // Zone 1 (<60%)
+    if (pct < 70) return 2;       // Zone 2 (60-70%) Shadow Focus
+    if (pct < 80) return 3;       // Zone 3 (70-80%) BERSERK FRENZY!
+    if (pct < 90) return 4;       // Zone 4 (80-90%) Threshold
+    return 5;                     // Zone 5 (>=90%) Danger Alert
+  }
+
+  function updateHeartRate(bpm) {
+    currentHeartRate = bpm;
+    hrBpmEl.textContent = bpm > 0 ? bpm : '--';
+    const zone = calculateHrZone(bpm, gameState.maxHr || 178);
+    currentHrZone = zone;
+
+    // อัปเดต UI Zone Badge
+    hrZoneBadgeEl.className = `hr-zone-badge zone-${zone}`;
+    const zoneNames = {
+      0: 'ไม่พบสัญญาณ',
+      1: 'Zone 1: วอร์มอัป',
+      2: 'Zone 2: สมาธิเงา (+EXP)',
+      3: 'Zone 3: BERSERK FRENZY! ⚡',
+      4: 'Zone 4: เขตพลังสูง',
+      5: 'Zone 5: อันตราย! (ผ่อนฝีเท้า)'
+    };
+    hrZoneBadgeEl.textContent = zoneNames[zone] || `Zone ${zone}`;
+
+    // ตรวจสอบการเปลี่ยนโซนเพื่อส่งเสียงพากย์
+    if (zone !== previousHrZone && isRunning) {
+      if (zone === 3) {
+        speakVoice('เข้าสู่โซนสาม สภาวะเบอร์เซิร์กปะทุ! พลังโจมตีติดคริติคอลร้อยเปอร์เซ็นต์', true);
+        showToast('⚡ BERSERK FRENZY: ชีพจร Zone 3 ล็อกเป้า! คริติคอล 100%');
+      } else if (zone === 5) {
+        speakVoice('คำเตือน! อัตราการเต้นหัวใจสูงเกินพิกัด กรุณาผ่อนฝีเท้าเพื่อความปลอดภัย', true);
+        showToast('⚠️ ระวัง! อัตราการเต้นหัวใจแตะ Zone 5 อันตราย');
+      } else if (zone === 2) {
+        speakVoice('เข้าสู่โซนสอง สมาธิเงาทำงาน ได้รับโบนัสค่าประสบการณ์');
+      } else if (previousHrZone === 3 && zone !== 3) {
+        speakVoice('หลุดจากโซนสาม สภาวะเบอร์เซิร์กสงบลง');
+      }
+      previousHrZone = zone;
+    }
+
+    // กำหนดสถานะ Frenzy: บังคับให้อยู่แค่ Zone 3 เท่านั้น
+    evaluateFrenzyState();
+    renderHUD();
+  }
+
+  function evaluateFrenzyState() {
+    if (isBleConnected) {
+      // เมื่อต่อสายวัดหัวใจ: Berserk ทำงานเฉพาะใน Zone 3
+      if (currentHrZone === 3) {
+        if (!isFrenzyActive) {
+          isFrenzyActive = true;
+          runHudEl.classList.add('frenzy-active');
+          frenzyBannerEl.style.display = 'block';
+        }
+      } else {
+        if (isFrenzyActive) {
+          isFrenzyActive = false;
+          runHudEl.classList.remove('frenzy-active');
+          frenzyBannerEl.style.display = 'none';
+        }
+      }
+    } else {
+      // Fallback: ถ้าไม่ได้ต่อสายวัดหัวใจ ใช้เพซแบบ Tempo (Zone 3 เทียบเท่า 5'45" - 6'30"/กม.)
+      if (runDistanceKm >= 0.05 && runSeconds > 10) {
+        const rollingPace = getRecentRollingPace();
+        if (rollingPace !== null && rollingPace <= 6.5 && rollingPace >= 5.5) {
+          if (!isFrenzyActive) {
+            isFrenzyActive = true;
+            runHudEl.classList.add('frenzy-active');
+            frenzyBannerEl.style.display = 'block';
+            speakVoice('เข้าสู่เพซจำลองโซนสาม สภาวะเบอร์เซิร์กทำงาน!', true);
+          }
+        } else if (rollingPace !== null && (rollingPace > 6.5 || rollingPace < 5.0)) {
+          if (isFrenzyActive) {
+            isFrenzyActive = false;
+            runHudEl.classList.remove('frenzy-active');
+            frenzyBannerEl.style.display = 'none';
+          }
+        }
+      }
+    }
+  }
+
+  // --- Web Bluetooth Heart Rate Connection ---
+  async function connectBluetoothHeartRate() {
+    if (!('bluetooth' in navigator)) {
+      alert('เบราว์เซอร์นี้ยังไม่รองรับ Web Bluetooth (แนะนำ Google Chrome บน Android หรือ Bluefy บน iOS)');
+      return;
+    }
+
+    try {
+      showToast('กำลังค้นหาอุปกรณ์วัดชีพจร Bluetooth...');
+      bluetoothDevice = await navigator.bluetooth.requestDevice({
+        filters: [{ services: ['heart_rate'] }]
+      });
+
+      bluetoothDevice.addEventListener('gattserverdisconnected', onBluetoothDisconnected);
+
+      const server = await bluetoothDevice.gatt.connect();
+      const service = await server.getPrimaryService('heart_rate');
+      hrCharacteristic = await service.getCharacteristic('heart_rate_measurement');
+
+      await hrCharacteristic.startNotifications();
+      hrCharacteristic.addEventListener('characteristicvaluechanged', handleHeartRateNotification);
+
+      isBleConnected = true;
+      btnBleConnect.classList.add('connected');
+      btnBleConnect.textContent = `เชื่อมต่อแล้ว: ${bluetoothDevice.name || 'สายคาดอก'}`;
+      showToast('🔗 เชื่อมต่อเซนเซอร์วัดชีพจรสำเร็จ!');
+      speakVoice('เชื่อมต่อสายวัดหัวใจเรียบร้อย ระบบพร้อมตรวจจับโซน');
+    } catch (err) {
+      console.warn('Bluetooth connection error:', err);
+      showToast('ยกเลิกหรือล้มเหลวในการเชื่อมต่อ Bluetooth');
+    }
+  }
+
+  function handleHeartRateNotification(event) {
+    const value = event.target.value;
+    const flags = value.getUint8(0);
+    const is16Bit = (flags & 0x01) !== 0;
+    let hrValue = 0;
+    if (is16Bit) {
+      hrValue = value.getUint16(1, true);
+    } else {
+      hrValue = value.getUint8(1);
+    }
+    updateHeartRate(hrValue);
+  }
+
+  function onBluetoothDisconnected() {
+    isBleConnected = false;
+    currentHeartRate = 0;
+    currentHrZone = 0;
+    btnBleConnect.classList.remove('connected');
+    btnBleConnect.textContent = '🔗 เชื่อมต่อสายคาดอก BLE';
+    updateHeartRate(0);
+    showToast('⚠️ สัญญาณสายวัดหัวใจ Bluetooth ขาดการเชื่อมต่อ');
+    speakVoice('สายวัดหัวใจตัดการเชื่อมต่อ');
+  }
+
+  btnBleConnect.addEventListener('click', () => {
+    if (isBleConnected && bluetoothDevice && bluetoothDevice.gatt.connected) {
+      bluetoothDevice.gatt.disconnect();
+    } else {
+      connectBluetoothHeartRate();
+    }
+  });
+
+  // ปุ่มสลับเปิด/ปิดเสียงพากย์
+  voiceToggleBtn.addEventListener('click', () => {
+    isVoiceEnabled = !isVoiceEnabled;
+    voiceToggleBtn.classList.toggle('muted', !isVoiceEnabled);
+    voiceToggleBtn.textContent = `🔊 เสียง: ${isVoiceEnabled ? 'เปิด' : 'ปิด'}`;
+    if (isVoiceEnabled) {
+      speakVoice('เปิดระบบเสียงผู้ช่วยนำทาง');
+    } else {
+      window.speechSynthesis.cancel();
+      showToast('ปิดระบบเสียงบรรยาย');
+    }
+  });
+
+  // --- Battle Damage Calculation ---
   function applyDistanceDamage(distanceDeltaKm) {
     if (distanceDeltaKm <= 0) return;
 
@@ -550,15 +743,26 @@
       if (Math.random() < 0.65) {
         gameState.chestsAvailable += 1;
         showToast('📦 สัญชาตญาณเงาตรวจพบ: คุณค้นพบหีบสมบัติดันเจี้ยน!');
+        speakVoice('ค้นพบหีบสมบัติใหม่');
       }
+    }
+
+    // เสียงรายงานระยะทางทุก 1 กิโลเมตร
+    if (runDistanceKm >= nextKmAnnounceCheckpoint) {
+      const currentPace = calculatePace(runSeconds, runDistanceKm);
+      const boss = BOSS_DATABASE[gameState.bossIndex];
+      const bossRemainPct = Math.round((gameState.bossHpRemain / boss.maxHpKm) * 100);
+      speakVoice(`ผ่านไปแล้ว ${Math.floor(runDistanceKm)} กิโลเมตร เพซเฉลี่ย ${currentPace} เลือดบอสเหลืออีก ${bossRemainPct} เปอร์เซ็นต์`);
+      nextKmAnnounceCheckpoint += 1.0;
     }
 
     const eqBonus = calculateEquipmentBonuses();
 
-    // ดาเมจ = STR + อัปเกรดดาบ + ไอเทมสวมใส่
-    const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01);
+    // ดาเมจ = STR + อัปเกรดดาบ + ไอเทมสวมใส่ + (Berserk Zone 3 มอบ x1.5 ดาเมจ)
+    const frenzyDmgBonus = isFrenzyActive ? 1.5 : 1.0;
+    const strMultiplier = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01)) * frenzyDmgBonus;
 
-    // คริติคอล = AGI + เนตรอเวจี + ไอเทมสวมใส่ + Frenzy
+    // คริติคอล: ถ้า Berserk ใน Zone 3 รับประกัน 100% ทันที
     let critChance = Math.min(65, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit);
     if (isFrenzyActive) {
       critChance = 100;
@@ -581,13 +785,15 @@
       gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
       gameState.chestsAvailable += 1;
 
-      // บันทึกลง Codex
       if (!gameState.bestiary[currentBoss.id]) {
         gameState.bestiary[currentBoss.id] = { kills: 0, name: currentBoss.name };
       }
       gameState.bestiary[currentBoss.id].kills += 1;
 
-      const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01);
+      // โบนัส Zone 2 (Shadow Focus) มอบ EXP เพิ่มอีก 50%
+      const zone2ExpBonus = currentHrZone === 2 ? 1.5 : 1.0;
+
+      const staMultiplier = (1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01)) * zone2ExpBonus;
       const charmMultiplier = 1 + (gameState.upgrades.charm * 0.10) + (eqBonus.bonusGold * 0.01);
       const streakMultiplier = 1 + Math.min(0.20, (gameState.streak.count - 1) * 0.02);
       const totalGoldMultiplier = staMultiplier * charmMultiplier * streakMultiplier;
@@ -596,6 +802,7 @@
       const rewardGold = Math.floor(currentBoss.rewardGold * totalGoldMultiplier);
 
       showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} เหรียญ & 📦 1 หีบ`);
+      speakVoice(`สยบ ${currentBoss.name} สำเร็จแล้ว ปิดผนึกชัยชนะ!`, true);
       addExp(rewardExp);
       gameState.gold += rewardGold;
 
@@ -616,17 +823,17 @@
     renderHUD();
   }
 
-  // --- Open Mystery Chest Logic (ดรอปไอเทมสวมใส่) ---
+  // --- Open Mystery Chest Logic ---
   function openMysteryChest() {
     if (gameState.chestsAvailable <= 0) return;
     gameState.chestsAvailable -= 1;
 
     const roll = Math.random();
     if (roll < 0.35 && gameState.inventory.length < 20) {
-      // ดรอปไอเทมสวมใส่หายาก!
       const newItem = rollRandomItem();
       gameState.inventory.push(newItem);
       showToast(`🎁 เปิดหีบพบ: [${newItem.rarity.toUpperCase()}] ${newItem.name}!`);
+      speakVoice(`ได้รับอุปกรณ์ระดับ ${newItem.rarity}`);
     } else if (roll < 0.70) {
       const goldDrop = Math.floor(120 + Math.random() * 220);
       gameState.gold += goldDrop;
@@ -638,6 +845,7 @@
     } else {
       gameState.statPoints = (gameState.statPoints || 0) + 1;
       showToast(`🌟 JACKPOT! หีบสมบัติมอบ +1 แต้มสเตตัสอิสระ!`);
+      speakVoice('แจ็กพอต ได้รับแต้มสเตตัสอิสระ');
     }
 
     saveGame();
@@ -671,7 +879,6 @@
       }
     });
 
-    // Inventory List
     invCountEl.textContent = gameState.inventory.length;
     inventoryGridEl.innerHTML = '';
     if (gameState.inventory.length === 0) {
@@ -690,7 +897,6 @@
     }
   }
 
-  // --- Item Modal Handlers ---
   function openItemModal(item) {
     selectedInventoryItem = item;
     modalItemIconEl.textContent = item.icon;
@@ -716,7 +922,6 @@
     const type = selectedInventoryItem.type;
     const currentEquipped = gameState.equipment[type];
 
-    // สลับไอเทม
     gameState.inventory = gameState.inventory.filter(i => i.id !== selectedInventoryItem.id);
     if (currentEquipped) {
       gameState.inventory.push(currentEquipped);
@@ -739,7 +944,6 @@
     renderUI();
   });
 
-  // ถอดไอเทมเมื่อกดที่ Slot สวมใส่
   document.querySelectorAll('.slot-box').forEach(slot => {
     slot.addEventListener('click', () => {
       const type = slot.getAttribute('data-slottype');
@@ -758,7 +962,7 @@
     });
   });
 
-  // --- Render Monster Codex (Bestiary) ---
+  // --- Render Monster Codex ---
   function renderMonsterCodex() {
     codexListEl.innerHTML = '';
     BOSS_DATABASE.forEach(boss => {
@@ -777,7 +981,7 @@
     });
   }
 
-  // --- JSON Backup & Restore ---
+  // --- Backup & Restore Handlers ---
   btnExportBackup.addEventListener('click', async () => {
     const history = await DB.getAllRunHistory();
     const backupData = {
@@ -821,7 +1025,7 @@
     reader.readAsText(file);
   });
 
-  // --- GPX Generator (สำหรับอัปโหลด Strava/Garmin) ---
+  // --- GPX Generator ---
   window.downloadRunGPX = async function (runTimestamp) {
     const history = await DB.getAllRunHistory();
     const run = history.find(r => r.timestamp === runTimestamp);
@@ -906,7 +1110,6 @@
       });
     }
 
-    // Daily Statistics
     dailyListEl.innerHTML = '';
     if (history.length === 0) {
       dailyListEl.innerHTML = '<div class="history-empty">ยังไม่มีสถิติรายวัน เริ่มออกล่าเพื่อเก็บสถิติ!</div>';
@@ -1004,13 +1207,14 @@
     statAgiEl.textContent = gameState.stats.agi;
 
     const eqBonus = calculateEquipmentBonuses();
-    const currentStrMult = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01)).toFixed(2);
+    const frenzyDmgBonus = isFrenzyActive ? 1.5 : 1.0;
+    const currentStrMult = ((1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01)) * frenzyDmgBonus).toFixed(2);
     strMultEl.textContent = currentStrMult;
     staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2) + eqBonus.bonusSta);
     
     let baseCrit = Math.min(65, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit).toFixed(1);
     if (isFrenzyActive) {
-      agiCritEl.textContent = '100 (FRENZY)';
+      agiCritEl.textContent = '100 (ZONE 3)';
     } else {
       agiCritEl.textContent = baseCrit;
     }
@@ -1095,6 +1299,7 @@
           gameState.gold += q.rewardGold;
           addExp(q.rewardExp);
           showToast(`🎁 เคลมภารกิจสำเร็จ! +${q.rewardGold} ทอง`);
+          speakVoice(`เคลมภารกิจสำเร็จ ได้รับ ${q.rewardGold} เหรียญทอง`);
           saveGame();
           renderUI();
         }
@@ -1143,6 +1348,7 @@
           gameState.gold += a.rewardGold;
           addExp(a.rewardExp);
           showToast(`🏆 ปลดล็อกเกียรติยศ! +${a.rewardGold} ทอง & EXP`);
+          speakVoice('ปลดล็อกรางวัลเกียรติยศแห่งเงา');
           saveGame();
           renderUI();
         }
@@ -1173,6 +1379,7 @@
       gameState.gold -= 150;
       gameState.statPoints = (gameState.statPoints || 0) + 1;
       showToast('🧪 ดื่มน้ำยาจิตวิญญาณ: ได้รับ +1 แต้มสเตตัส!');
+      speakVoice('ดื่มน้ำยาจิตวิญญาณ ได้รับหนึ่งแต้มสเตตัส');
       saveGame();
       renderUI();
     }
@@ -1184,6 +1391,7 @@
       gameState.gold -= cost;
       gameState.upgrades.blade += 1;
       showToast(`🗡️ ตีบวกดาบเงาเป็น Lv.${gameState.upgrades.blade} (+${gameState.upgrades.blade * 5}% ดาเมจ)!`);
+      speakVoice(`ตีบวกดาบเงาสำเร็จ เลเวล ${gameState.upgrades.blade}`);
       saveGame();
       renderUI();
     }
@@ -1195,6 +1403,7 @@
       gameState.gold -= cost;
       gameState.upgrades.charm += 1;
       showToast(`🧿 เสริมพลังเครื่องรางเป็น Lv.${gameState.upgrades.charm} (+${gameState.upgrades.charm * 10}% ทอง)!`);
+      speakVoice(`เสริมพลังเครื่องราง เลเวล ${gameState.upgrades.charm}`);
       saveGame();
       renderUI();
     }
@@ -1206,6 +1415,7 @@
       gameState.gold -= cost;
       gameState.upgrades.eye += 1;
       showToast(`👁️ เบิกเนตรอเวจีเป็น Lv.${gameState.upgrades.eye} (+${gameState.upgrades.eye * 2}% คริติคอล)!`);
+      speakVoice(`เบิกเนตรอเวจี เลเวล ${gameState.upgrades.eye}`);
       saveGame();
       renderUI();
     }
@@ -1301,6 +1511,7 @@
     btnRunText.textContent = 'หยุดชั่วคราว';
     btnFinishRun.removeAttribute('disabled');
 
+    speakVoice('เริ่มการออกล่า จงวิ่งเพื่อกำราบอสูรเงา');
     await acquireWakeLock();
 
     runTimerInterval = setInterval(() => {
@@ -1319,25 +1530,7 @@
         questCal.current = Math.min(questCal.target, Math.floor(runDistanceKm * 65));
       }
 
-      if (runDistanceKm >= 0.05 && runSeconds > 10) {
-        const rollingPace = getRecentRollingPace();
-        if (rollingPace !== null && rollingPace <= 6.5 && rollingPace >= 2.0) {
-          frenzyPaceStreakSec++;
-          if (frenzyPaceStreakSec >= 10 && !isFrenzyActive) {
-            isFrenzyActive = true;
-            runHudEl.classList.add('frenzy-active');
-            frenzyBannerEl.style.display = 'block';
-            showToast('⚡ SHADOW FRENZY ปะทุ! พลังโจมตีติดคริติคอล 100%');
-          }
-        } else if (rollingPace !== null && rollingPace > 6.5) {
-          frenzyPaceStreakSec = 0;
-          if (isFrenzyActive) {
-            isFrenzyActive = false;
-            runHudEl.classList.remove('frenzy-active');
-            frenzyBannerEl.style.display = 'none';
-          }
-        }
-      }
+      evaluateFrenzyState();
     }, 1000);
 
     if (!isSimMode && 'geolocation' in navigator) {
@@ -1402,6 +1595,7 @@
     runHudEl.classList.remove('frenzy-active');
     frenzyBannerEl.style.display = 'none';
 
+    speakVoice('หยุดการล่าชั่วคราว');
     releaseWakeLock();
   }
 
@@ -1431,6 +1625,7 @@
     cancelUnlockHold();
     pocketOverlay.style.display = 'none';
     showToast(`🏁 จบการออกล่า! สะสมระยะทางได้ ${runDistanceKm.toFixed(2)} กม.`);
+    speakVoice(`จบการออกล่ารอบนี้ สะสมระยะทางได้ ${runDistanceKm.toFixed(2)} กิโลเมตร เก่งมากนักล่าเงา`, true);
 
     const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02);
     const bonusExp = Math.floor(runDistanceKm * 800 * staMultiplier);
@@ -1454,7 +1649,6 @@
     const ach50 = gameState.achievements.find(a => a.id === 'ach_dist50');
     if (ach50) ach50.current = Math.min(ach50.target, gameState.career.totalDistanceKm);
 
-    // บันทึกประวัติและ Trackpoints GPX เข้า IndexedDB
     const historyItem = {
       timestamp: Date.now(),
       displayDate: new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }),
@@ -1465,6 +1659,7 @@
       calories: Math.floor(runDistanceKm * 65),
       bossKills: sessionBossKills,
       expGained: bonusExp,
+      avgHeartRate: currentHeartRate > 0 ? currentHeartRate : null,
       gpxTrack: [...currentGpxTrack]
     };
 
@@ -1474,7 +1669,7 @@
     runSeconds = 0;
     sessionBossKills = 0;
     nextChestKmCheckpoint = 1.0;
-    frenzyPaceStreakSec = 0;
+    nextKmAnnounceCheckpoint = 1.0;
     currentGpxTrack = [];
     paceSamples = [];
     timeValEl.textContent = '00:00:00';
@@ -1512,7 +1707,6 @@
       runDistanceKm += km;
       const now = Date.now();
       recordPaceSample(now, runDistanceKm);
-      // พิกัดจำลองในสวนลุมพินี
       currentGpxTrack.push({
         lat: 13.7314 + (Math.random() * 0.002),
         lon: 100.5414 + (Math.random() * 0.002),
@@ -1540,7 +1734,7 @@
   simToggleBtn.addEventListener('click', () => {
     isSimMode = !isSimMode;
     simToggleBtn.classList.toggle('active', isSimMode);
-    simToggleBtn.textContent = `โหมดจำลองวิ่ง: ${isSimMode ? 'เปิด' : 'ปิด'}`;
+    simToggleBtn.textContent = `จำลอง: ${isSimMode ? 'เปิด' : 'ปิด'}`;
     simControls.style.display = isSimMode ? 'flex' : 'none';
     showToast(isSimMode ? 'เปิดโหมดจำลองวิ่ง (เทสต์ในห้องได้)' : 'ปิดโหมดจำลอง กลับสู่ระบบ GPS จริง');
   });

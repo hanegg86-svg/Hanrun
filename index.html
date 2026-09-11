@@ -113,16 +113,29 @@
 
     <!-- Run Tracker HUD -->
     <section class="run-hud" id="run-hud">
+      <!-- Berserk Frenzy Banner -->
       <div class="frenzy-banner" id="frenzy-banner" style="display: none;">
-        ⚡ SHADOW FRENZY: เพซติดสปีด! คริติคอล 100% ⚡
+        ⚡ BERSERK FRENZY: ชีพจร Zone 3 ล็อกเป้า! คริติคอล 100% ดาเมจ x1.5 ⚡
       </div>
 
       <div class="hud-status-row">
         <span class="gps-badge" id="gps-status">GPS: พร้อมใช้งาน</span>
         <div class="hud-status-actions">
-          <button class="pocket-btn" id="pocket-btn" type="button" title="โหมดกระเป๋า/ล็อกจอสีดำประหยัดแบต">🔒 โหมดพักจอ</button>
-          <button class="sim-toggle-btn" id="sim-toggle-btn" type="button">โหมดจำลองวิ่ง: ปิด</button>
+          <button class="voice-toggle-btn" id="voice-toggle-btn" type="button" title="เปิด/ปิดเสียงผู้ช่วยบรรยาย">🔊 เสียง: เปิด</button>
+          <button class="pocket-btn" id="pocket-btn" type="button" title="โหมดกระเป๋า/ล็อกจอสีดำประหยัดแบต">🔒 พักจอ</button>
+          <button class="sim-toggle-btn" id="sim-toggle-btn" type="button">จำลอง: ปิด</button>
         </div>
+      </div>
+
+      <!-- Bluetooth Heart Rate Widget -->
+      <div class="hr-panel">
+        <div class="hr-display" id="hr-display">
+          <span class="hr-icon">❤️</span>
+          <span class="hr-bpm" id="hr-bpm">--</span>
+          <span class="hr-unit">BPM</span>
+          <span class="hr-zone-badge" id="hr-zone-badge">โซน: ยังไม่เชื่อมต่อ</span>
+        </div>
+        <button class="btn-ble-connect" id="btn-ble-connect" type="button">🔗 เชื่อมต่อสายคาดอก BLE</button>
       </div>
 
       <div class="hud-main-metric">
@@ -165,7 +178,7 @@
       </div>
     </section>
 
-    <!-- Equipment & Inventory Section (NEW: ระบบอุปกรณ์สวมใส่) -->
+    <!-- Equipment & Inventory Section -->
     <section class="equipment-section">
       <div class="section-title-row">
         <h2 class="section-title">อุปกรณ์สวมใส่ (Equipment)</h2>
@@ -202,21 +215,17 @@
           <span class="inv-title">คลังไอเทมในกระเป๋า (<span id="inv-count">0</span>/20)</span>
           <span class="inv-hint">แตะไอเทมเพื่อสวมใส่หรือย่อยสลาย</span>
         </div>
-        <div class="inventory-grid" id="inventory-grid">
-          <!-- เรนเดอร์ไอเทมกระเป๋าผ่าน JS -->
-        </div>
+        <div class="inventory-grid" id="inventory-grid"></div>
       </div>
     </section>
 
-    <!-- Monster Codex / Bestiary (NEW: สมุดภาพมอนสเตอร์) -->
+    <!-- Monster Codex / Bestiary -->
     <section class="codex-section">
       <div class="section-title-row">
         <h2 class="section-title">สมุดภาพมอนสเตอร์ (Bestiary Codex)</h2>
         <span class="codex-counter" id="codex-counter">บันทึก 3 อสูร</span>
       </div>
-      <div class="codex-list" id="codex-list">
-        <!-- เรนเดอร์ข้อมูลบอสที่เคยสยบ -->
-      </div>
+      <div class="codex-list" id="codex-list"></div>
     </section>
 
     <!-- Shadow Armory (Shop System) -->
@@ -351,7 +360,7 @@
       </div>
     </section>
 
-    <!-- Runner Utility & Data Management (NEW: สำรองข้อมูล JSON) -->
+    <!-- Runner Utility & Data Management -->
     <section class="utility-section">
       <div class="section-title-row">
         <h2 class="section-title">การจัดการข้อมูล & สำรอง (Data Backup)</h2>
