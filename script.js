@@ -144,14 +144,79 @@
     window.speechSynthesis.speak(utterance);
   }
 
-  // --- Boss List Database & Lore ---
+  // --- Boss List Database & Lore (ขยายรองรับ 6 Tiers พร้อมลูกเล่นพิเศษ) ---
   const BOSS_DATABASE = [
-    { id: 'boss_1', tier: 'TIER I', name: 'Gargoyle of the Crypt', avatar: '👹', maxHpKm: 1.0, desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 1.00 กม. เพื่อทำลายมัน!', rewardExp: 1200, rewardGold: 150 },
-    { id: 'boss_2', tier: 'TIER II', name: 'Abyssal Blood Knight', avatar: '🤺', maxHpKm: 2.5, desc: 'อัศวินเกราะดำกระหายการต่อสู้ วิ่ง 2.50 กม. เพื่อสยบดาบโลหิต!', rewardExp: 3200, rewardGold: 350 },
-    { id: 'boss_3', tier: 'TIER III', name: 'Ancient Bone Dragon', avatar: '🐉', maxHpKm: 5.0, desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 5.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!', rewardExp: 7500, rewardGold: 800 }
+    {
+      id: 'boss_1',
+      tier: 'TIER I',
+      name: 'Gargoyle of the Crypt',
+      avatar: '👹',
+      maxHpKm: 1.0,
+      desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 1.00 กม. เพื่อทำลายมัน!',
+      rewardExp: 1200,
+      rewardGold: 150,
+      gimmick: 'none'
+    },
+    {
+      id: 'boss_2',
+      tier: 'TIER II',
+      name: 'Abyssal Blood Knight',
+      avatar: '🤺',
+      maxHpKm: 2.5,
+      desc: 'อัศวินเกราะดำกระหายการต่อสู้ วิ่ง 2.50 กม. เพื่อสยบดาบโลหิต!',
+      rewardExp: 3200,
+      rewardGold: 350,
+      gimmick: 'none'
+    },
+    {
+      id: 'boss_3',
+      tier: 'TIER III',
+      name: 'Ancient Bone Dragon',
+      avatar: '🐉',
+      maxHpKm: 5.0,
+      desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 5.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!',
+      rewardExp: 7500,
+      rewardGold: 800,
+      gimmick: 'none'
+    },
+    {
+      id: 'boss_4',
+      tier: 'TIER IV',
+      name: 'Shadow Lich: Malakor',
+      avatar: '🧙‍♂️',
+      maxHpKm: 7.5,
+      desc: 'จอมเวทอเวจีโบราณ เมื่อเลือดต่ำกว่า 60% หมอกคำสาปจะสูบเลือดคืนหากเพซวิ่งช้ากว่า 7:30!',
+      rewardExp: 13000,
+      rewardGold: 1600,
+      gimmick: 'mist'
+    },
+    {
+      id: 'boss_5',
+      tier: 'TIER V',
+      name: 'Void Behemoth: Titan of Ruin',
+      avatar: '🗿',
+      maxHpKm: 10.0,
+      desc: 'ไททันศิลาแห่งความว่างเปล่า เกราะหนาลดดาเมจ 30% ทลายเกราะด้วยคริติคอลหรือท่าไม้ตาย Shadow Slash!',
+      rewardExp: 22000,
+      rewardGold: 2800,
+      gimmick: 'carapace'
+    },
+    {
+      id: 'boss_6',
+      tier: 'TIER VI',
+      name: 'Abyssal Empress: Nyxaria',
+      avatar: '👑',
+      maxHpKm: 15.0,
+      desc: 'จักรพรรดินีเงาราตรี 3 เฟส: ร่างเงาหลอก (ทลายด้วย Flow State), สนามเรโซแนนซ์ และช่วงจันทรคราสทมิฬ!',
+      rewardExp: 38000,
+      rewardGold: 5000,
+      gimmick: 'empress'
+    }
   ];
 
   function getTitleForLevel(level) {
+    if (level >= 35) return 'Abyssal Sovereign Emperor';
+    if (level >= 30) return 'Void Overlord';
     if (level >= 25) return 'Shadow Sovereign';
     if (level >= 20) return 'Dread Champion';
     if (level >= 15) return 'Abyssal Dreadnought';
@@ -175,7 +240,10 @@
       { id: 'ach_first', name: 'First Blood (การล่าครั้งแรก)', desc: 'จบเซสชันการล่าสำเร็จ 1 รอบ', target: 1, current: 0, unit: 'รอบ', rewardExp: 1000, rewardGold: 200, claimed: false },
       { id: 'ach_dist10', name: 'Shadow Nomad (เส้นทาง 10K)', desc: 'สะสมระยะทางรวมแตะ 10.0 กม.', target: 10.0, current: 0.0, unit: 'กม.', rewardExp: 3500, rewardGold: 600, claimed: false },
       { id: 'ach_dist50', name: 'Abyssal Walker (นักเดินทาง 50K)', desc: 'สะสมระยะทางรวมแตะ 50.0 กม.', target: 50.0, current: 0.0, unit: 'กม.', rewardExp: 12000, rewardGold: 2500, claimed: false },
-      { id: 'ach_boss_dragon', name: 'Dragon Bane (ผู้สยบมังกร)', desc: 'โค่นมังกรกระดูก Ancient Bone Dragon (Tier III)', target: 1, current: 0, unit: 'ตัว', rewardExp: 6000, rewardGold: 1200, claimed: false }
+      { id: 'ach_boss_dragon', name: 'Dragon Bane (ผู้สยบมังกร)', desc: 'โค่นมังกรกระดูก Ancient Bone Dragon (Tier III)', target: 1, current: 0, unit: 'ตัว', rewardExp: 6000, rewardGold: 1200, claimed: false },
+      { id: 'ach_boss_malakor', name: 'Lich Bane (ผู้สยบจอมเวท)', desc: 'โค่นจอมเวทอเวจี Shadow Lich: Malakor (Tier IV)', target: 1, current: 0, unit: 'ตัว', rewardExp: 10000, rewardGold: 2000, claimed: false },
+      { id: 'ach_boss_titan', name: 'Titan Breaker (ผู้กะเทาะศิลาไททัน)', desc: 'โค่น Void Behemoth: Titan of Ruin (Tier V)', target: 1, current: 0, unit: 'ตัว', rewardExp: 16000, rewardGold: 3500, claimed: false },
+      { id: 'ach_boss_empress', name: 'Eclipse Sovereign (ผู้สยบจักรพรรดินี)', desc: 'โค่น Abyssal Empress: Nyxaria (Tier VI)', target: 1, current: 0, unit: 'ตัว', rewardExp: 28000, rewardGold: 6000, claimed: false }
     ];
   }
 
@@ -195,7 +263,10 @@
     bestiary: {
       boss_1: { kills: 0, name: 'Gargoyle of the Crypt' },
       boss_2: { kills: 0, name: 'Abyssal Blood Knight' },
-      boss_3: { kills: 0, name: 'Ancient Bone Dragon' }
+      boss_3: { kills: 0, name: 'Ancient Bone Dragon' },
+      boss_4: { kills: 0, name: 'Shadow Lich: Malakor' },
+      boss_5: { kills: 0, name: 'Void Behemoth: Titan of Ruin' },
+      boss_6: { kills: 0, name: 'Abyssal Empress: Nyxaria' }
     },
     chestsAvailable: 0,
     streak: { count: 1, lastDate: new Date().toDateString() },
@@ -217,6 +288,11 @@
   };
 
   let gameState = defaultState;
+
+  // --- Boss Gimmick State Runtime Variables ---
+  let bossVulnerableTimer = 0; // วินาทีคงเหลือของสถานะเกราะแตก (จาก Shadow Slash)
+  let mistHealingTick = 0;
+  let gimmickAnnounced = {}; // บันทึกไม่ให้เสียงเตือนลูกเล่นซ้ำรัวๆ
 
   async function loadGameState() {
     let saved = await DB.getPlayerState();
@@ -247,6 +323,21 @@
     } else {
       gameState = defaultState;
     }
+
+    // ประสานบอสใหม่ทั้ง 6 ตัวเข้ากับ Bestiary เสมอ
+    BOSS_DATABASE.forEach(b => {
+      if (!gameState.bestiary[b.id]) {
+        gameState.bestiary[b.id] = { kills: 0, name: b.name };
+      }
+    });
+
+    // ประสานความสำเร็จใหม่เข้ากับบันทึกเดิม
+    const defaultAchs = generateAchievements();
+    defaultAchs.forEach(defAch => {
+      if (!gameState.achievements.find(a => a.id === defAch.id)) {
+        gameState.achievements.push(defAch);
+      }
+    });
 
     verifyDailyAndStreakReset();
     await DB.savePlayerState(gameState);
@@ -303,7 +394,7 @@
   let nextKmAnnounceCheckpoint = 1.0;
   let paceSamples = [];
 
-  // --- New: Ultimate & Flow State Variables ---
+  // Ultimate & Flow State Variables
   let isOverdriveActive = false;
   let overdriveSecondsRemaining = 0;
   let isFlowStateActive = false;
@@ -408,6 +499,7 @@
   const btnAddSta = document.getElementById('btn-add-sta');
   const btnAddAgi = document.getElementById('btn-add-agi');
 
+  const bossCardEl = document.getElementById('boss-card');
   const bossTierEl = document.getElementById('boss-tier');
   const bossAvatarEl = document.getElementById('boss-avatar');
   const bossNameEl = document.getElementById('boss-name');
@@ -415,6 +507,9 @@
   const bossHpBarEl = document.getElementById('boss-hp-bar');
   const bossHpRemainEl = document.getElementById('boss-hp-remain');
   const bossHpMaxEl = document.getElementById('boss-hp-max');
+  const bossGimmickBannerEl = document.getElementById('boss-gimmick-banner');
+  const bossGimmickTagEl = document.getElementById('boss-gimmick-tag');
+  const bossGimmickTextEl = document.getElementById('boss-gimmick-text');
 
   const chestCardEl = document.getElementById('chest-card');
   const chestCountEl = document.getElementById('chest-count');
@@ -709,7 +804,6 @@
     }
 
     try {
-      // 1. ตรวจสอบอุปกรณ์ที่เคยจับคู่ผ่าน getDevices() เพื่อเชื่อมต่อด่วน
       if (!forceNew && 'getDevices' in navigator.bluetooth) {
         const pairedDevices = await navigator.bluetooth.getDevices();
         if (pairedDevices.length > 0) {
@@ -726,7 +820,6 @@
         }
       }
 
-      // 2. ค้นหาเฉพาะกลุ่ม Smartwatch (Huawei, Garmin, Polar) และสายคาดอกวัดชีพจร (ตัดอุปกรณ์ไม่เกี่ยวออก)
       showToast('กำลังค้นหาเฉพาะ Smartwatch & สายวัดชีพจร...');
       const device = await navigator.bluetooth.requestDevice({
         filters: [
@@ -781,7 +874,6 @@
     speakVoice('สายวัดหัวใจตัดการเชื่อมต่อ');
   }
 
-  // กดคลิกธรรมดา: ต่ออุปกรณ์เดิมทันที | คลิกขวาหรือกดค้าง: จับคู่อุปกรณ์ตัวใหม่
   btnBleConnect.addEventListener('click', () => {
     connectBluetoothHeartRate(false);
   });
@@ -805,13 +897,22 @@
     }
   });
 
-  // --- Battle Damage Calculation ---
+  // --- Battle Damage Calculation with Boss Gimmick Logic ---
   function applyDistanceDamage(distanceDeltaKm) {
     if (distanceDeltaKm <= 0) return;
 
+    const currentBoss = BOSS_DATABASE[gameState.bossIndex];
+    const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
+
     // 1. เพิ่มเกจไม้ตายตามระยะทาง (+2% ต่อ 100 เมตร, และ x2 เมื่ออยู่ใน Flow State)
-    const ultBonusMult = isFlowStateActive ? 2 : 1;
-    addUltimateCharge((distanceDeltaKm / 0.1) * 2 * ultBonusMult);
+    let ultChargeBonusMult = isFlowStateActive ? 2 : 1;
+    // พิเศษ: บอส Tier VI Phase 2 (Vacuum Resonance) ชาร์จไม้ตายไว x3 ใน HR Zone 2 - 3
+    if (currentBoss.gimmick === 'empress' && bossHpPct <= 0.65 && bossHpPct > 0.25) {
+      if (currentHrZone === 2 || currentHrZone === 3 || isFrenzyActive) {
+        ultChargeBonusMult *= 3;
+      }
+    }
+    addUltimateCharge((distanceDeltaKm / 0.1) * 2 * ultChargeBonusMult);
 
     // 2. ตรวจสอบการควบคุมเพซสม่ำเสมอ (Pace Rhythm Combo / Flow State)
     const rollingPace = getRecentRollingPace();
@@ -821,7 +922,7 @@
         rhythmConsistentDistance = 0.0;
       } else {
         const paceDiff = Math.abs(rollingPace - rhythmBaselinePace);
-        if (paceDiff <= 0.25) { // เบี่ยงเบนไม่เกิน 15 วินาที/กม. (0.25 นาที)
+        if (paceDiff <= 0.25) { // เบี่ยงเบนไม่เกิน 15 วินาที/กม.
           rhythmConsistentDistance += distanceDeltaKm;
           if (rhythmConsistentDistance >= 0.4 && !isFlowStateActive) {
             isFlowStateActive = true;
@@ -829,7 +930,6 @@
             speakVoice('เข้าสู่สภาวะโฟลว์สเตท คุมจังหวะยอดเยี่ยม');
           }
         } else {
-          // หากเพซแกว่งเกินเกณฑ์ ให้รีเซ็ตจังหวะใหม่
           rhythmBaselinePace = rollingPace;
           rhythmConsistentDistance = 0.0;
           if (isFlowStateActive) {
@@ -856,8 +956,7 @@
 
     if (runDistanceKm >= nextKmAnnounceCheckpoint) {
       const currentPace = calculatePace(runSeconds, runDistanceKm);
-      const boss = BOSS_DATABASE[gameState.bossIndex];
-      const bossRemainPct = Math.round((gameState.bossHpRemain / boss.maxHpKm) * 100);
+      const bossRemainPct = Math.round((gameState.bossHpRemain / currentBoss.maxHpKm) * 100);
       speakVoice(`ผ่านไปแล้ว ${Math.floor(runDistanceKm)} กิโลเมตร เพซเฉลี่ย ${currentPace} เลือดบอสเหลืออีก ${bossRemainPct} เปอร์เซ็นต์`);
       nextKmAnnounceCheckpoint += 1.0;
     }
@@ -872,8 +971,90 @@
       critChance = 100;
     }
 
+    // --- BOSS GIMMICK MODIFIERS ---
+    let bossDamageMultiplier = 1.0;
+
+    // TIER IV: Malakor (หมอกคำสาปสูบวิญญาณ เมื่อ HP ต่ำกว่า 60%)
+    if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.60) {
+      if (rollingPace === null || rollingPace > 7.5) {
+        bossDamageMultiplier *= 0.5; // ดาเมจลด 50% หากวิ่งช้ากว่าเพซ 7:30
+        if (!gimmickAnnounced.mistWarn) {
+          gimmickAnnounced.mistWarn = true;
+          speakVoice('หมอกคำสาปสูบวิญญาณทำงาน! เร่งฝีเท้าให้เร็วกว่าเพซ 7 นาทีครึ่งเพื่อสลายหมอก');
+          showToast('🌫️ หมอกคำสาปทำงาน: วิ่งช้ากว่า 7:30/กม. ดาเมจลด 50% และบอสจะฮีล!');
+        }
+      } else {
+        if (gimmickAnnounced.mistWarn && !gimmickAnnounced.mistClear) {
+          gimmickAnnounced.mistClear = true;
+          showToast('💨 วิ่งฉีกหมอกคำสาปสำเร็จ! ดาเมจกลับคืนเต็มอัตรา');
+        }
+      }
+    }
+
+    // TIER V: Titan of Ruin (เกราะศิลาดึกดำบรรพ์ & Enrage)
+    if (currentBoss.gimmick === 'carapace') {
+      if (bossVulnerableTimer > 0) {
+        bossDamageMultiplier *= 2.0; // เกราะแตกจาก Shadow Slash รับดาเมจ x2
+      } else {
+        // เกราะหินปกติลดดาเมจ 30% แต่คริติคอลจะทะลุเกราะได้
+        bossDamageMultiplier *= 0.70;
+      }
+
+      // Enrage เมื่อ HP ต่ำกว่า 30%
+      if (bossHpPct <= 0.30) {
+        if (!gimmickAnnounced.titanEnrage) {
+          gimmickAnnounced.titanEnrage = true;
+          speakVoice('ไททันศิลาคำรามคลุ้มคลั่ง! เร่งชีพจรแตะโซนสามเพื่อเคาน์เตอร์ดาเมจ', true);
+          showToast('🗿 ไททันคลุ้มคลั่ง: ดันชีพจรเข้า Zone 3 เพื่อทำลายจังหวะทุบแผ่นดิน!');
+        }
+        if (isFrenzyActive || currentHrZone === 3) {
+          bossDamageMultiplier *= 1.5; // เคาน์เตอร์ตอนคลุ้มคลั่ง
+        }
+      }
+    }
+
+    // TIER VI: Nyxaria (จักรพรรดินีเงาราตรี 3 เฟส)
+    if (currentBoss.gimmick === 'empress') {
+      if (bossHpPct > 0.65) {
+        // Phase 1: Shadow Phantoms (ร่างเงาลวง)
+        if (isFlowStateActive) {
+          critChance = Math.min(100, critChance + 20);
+          bossDamageMultiplier *= 1.2; // ทลายร่างเงาด้วยสมาธิ Flow State
+        } else {
+          bossDamageMultiplier *= 0.60; // หากไม่ Flow ร่างเงาจะรับดาเมจแทน 40%
+          if (!gimmickAnnounced.empressP1) {
+            gimmickAnnounced.empressP1 = true;
+            speakVoice('จักรพรรดินีแยกร่างเงาหลอก วิ่งคุมเพซสม่ำเสมอเพื่อเข้าสู่โฟลว์สเตท');
+            showToast('👑 ร่างเงาลวง: ดาเมจลด 40% (เข้าสู่ Flow State เพื่อทลายร่างแยก)');
+          }
+        }
+      } else if (bossHpPct <= 0.65 && bossHpPct > 0.25) {
+        // Phase 2: Vacuum Resonance
+        if (!gimmickAnnounced.empressP2) {
+          gimmickAnnounced.empressP2 = true;
+          speakVoice('เข้าสู่เฟสสอง สนามคลื่นสูญญากาศ ชาร์จไม้ตายไวสามเท่าในโซนสองและสาม');
+          showToast('⚡ เฟส 2 เรโซแนนซ์: วิ่ง Zone 2 หรือ 3 ชาร์จท่าไม้ตายไวขึ้น 300%!');
+        }
+      } else {
+        // Phase 3: Eclipse Frenzy (จันทรคราสทมิฬ)
+        if (!gimmickAnnounced.empressP3) {
+          gimmickAnnounced.empressP3 = true;
+          speakVoice('เข้าสู่จันทรคราสทมิฬขั้นสุดท้าย! ปลดปล่อยพลังทั้งหมดเพื่อปิดฉาก', true);
+          showToast('🌑 จันทรคราสทมิฬ: พลังโจมตีและคริติคอลพุ่งทะยาน เร่งสปีดสังหาร!');
+        }
+        bossDamageMultiplier *= 1.40;
+        critChance = Math.min(100, critChance + 25);
+      }
+    }
+
     const isCrit = (Math.random() * 100) < critChance;
-    const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? 1.8 : 1.0);
+
+    // ถ้าเป็นบอสเกราะหิน การติด Crit จะลบล้างโทษลดดาเมจ 30% ได้
+    if (currentBoss.gimmick === 'carapace' && bossVulnerableTimer <= 0 && isCrit) {
+      bossDamageMultiplier = (bossDamageMultiplier / 0.70); // Bypass armor penalty
+    }
+
+    const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? 1.8 : 1.0) * bossDamageMultiplier;
 
     if (isCrit) {
       addUltimateCharge(3); // ติดคริติคอลได้รับเกจไม้ตาย +3%
@@ -882,7 +1063,6 @@
       showToast(`💥 CRITICAL! ปลดปล่อยดาเมจ x1.8 เท่า`);
     }
 
-    const currentBoss = BOSS_DATABASE[gameState.bossIndex];
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - effectiveDamage);
 
     if (gameState.bossHpRemain <= 0.001) {
@@ -915,10 +1095,24 @@
       const questBoss = gameState.dailyQuests.find(q => q.id === 'dq_boss');
       if (questBoss) questBoss.current = Math.min(questBoss.target, questBoss.current + 1);
 
+      // ตรวจสอบ Achievements ประจำบอสแต่ละ Tier
       if (currentBoss.tier === 'TIER III') {
         const achDragon = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
         if (achDragon) achDragon.current = Math.min(achDragon.target, achDragon.current + 1);
+      } else if (currentBoss.tier === 'TIER IV') {
+        const achMalakor = gameState.achievements.find(a => a.id === 'ach_boss_malakor');
+        if (achMalakor) achMalakor.current = Math.min(achMalakor.target, achMalakor.current + 1);
+      } else if (currentBoss.tier === 'TIER V') {
+        const achTitan = gameState.achievements.find(a => a.id === 'ach_boss_titan');
+        if (achTitan) achTitan.current = Math.min(achTitan.target, achTitan.current + 1);
+      } else if (currentBoss.tier === 'TIER VI') {
+        const achEmpress = gameState.achievements.find(a => a.id === 'ach_boss_empress');
+        if (achEmpress) achEmpress.current = Math.min(achEmpress.target, achEmpress.current + 1);
       }
+
+      // รีเซ็ตสถานะลูกเล่นก่อนเปลี่ยนบอส
+      bossVulnerableTimer = 0;
+      gimmickAnnounced = {};
 
       gameState.bossIndex = (gameState.bossIndex + 1) % BOSS_DATABASE.length;
       const nextBoss = BOSS_DATABASE[gameState.bossIndex];
@@ -940,13 +1134,21 @@
     const eqBonus = calculateEquipmentBonuses();
     const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01);
     
-    // สร้างความเสียหายฉับพลัน 0.35 กม. x ตัวคูณ STR
-    const burstDamageKm = 0.35 * strMultiplier;
+    // สร้างความเสียหายฉับพลัน 0.40 กม. x ตัวคูณ STR
+    const burstDamageKm = 0.40 * strMultiplier;
     const currentBoss = BOSS_DATABASE[gameState.bossIndex];
 
+    // ลูกเล่นพิเศษ: กะเทาะเกราะศิลาบอส Tier V
+    if (currentBoss.gimmick === 'carapace') {
+      bossVulnerableTimer = 60; // บอสติดสถานะเกราะแตก รับดาเมจ x2 นาน 60 วินาที
+      showToast('💥 SHADOW SLASH กะเทาะเกราะศิลาแตกสะบั้น! บอสเปราะบาง x2 (60 วิ)');
+      speakVoice('คมดาบผ่าเกราะศิลาแตกสะบั้น ไททันติดสถานะเปราะบาง', true);
+    } else {
+      showToast(`🗡️ SHADOW SLASH! ปลดปล่อยดาบอเวจีฟันบอสลึก ${burstDamageKm.toFixed(2)} กม.!`);
+      speakVoice('ปลดปล่อยคมดาบอเวจี! เข้าสู่สภาวะโอเวอร์ไดรฟ์', true);
+    }
+
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - burstDamageKm);
-    showToast(`🗡️ SHADOW SLASH! ปลดปล่อยดาบอเวจีฟันบอสลึก ${burstDamageKm.toFixed(2)} กม.!`);
-    speakVoice('ปลดปล่อยคมดาบอเวจี! เข้าสู่สภาวะโอเวอร์ไดรฟ์', true);
 
     // เปิดใช้งานสถานะ Overdrive Surge นาน 45 วินาที
     isOverdriveActive = true;
@@ -971,6 +1173,23 @@
       showToast(`🏆 ฟันสังหาร ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} เหรียญ`);
       addExp(rewardExp);
       gameState.gold += rewardGold;
+
+      if (currentBoss.tier === 'TIER III') {
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+      } else if (currentBoss.tier === 'TIER IV') {
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_malakor');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+      } else if (currentBoss.tier === 'TIER V') {
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_titan');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+      } else if (currentBoss.tier === 'TIER VI') {
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_empress');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+      }
+
+      bossVulnerableTimer = 0;
+      gimmickAnnounced = {};
 
       gameState.bossIndex = (gameState.bossIndex + 1) % BOSS_DATABASE.length;
       const nextBoss = BOSS_DATABASE[gameState.bossIndex];
@@ -1122,7 +1341,7 @@
     });
   });
 
-  // --- Render Monster Codex ---
+  // --- Render Monster Codex (ครบ 6 บอส) ---
   function renderMonsterCodex() {
     codexListEl.innerHTML = '';
     BOSS_DATABASE.forEach(boss => {
@@ -1389,6 +1608,55 @@
     const hpPercent = Math.max(0, Math.min(100, (gameState.bossHpRemain / boss.maxHpKm) * 100));
     bossHpBarEl.style.width = `${hpPercent}%`;
 
+    // --- Dynamic Boss Gimmick Banner Rendering ---
+    const bossHpPct = gameState.bossHpRemain / boss.maxHpKm;
+    bossGimmickBannerEl.className = 'boss-gimmick-banner';
+    bossCardEl.classList.remove('eclipse-active');
+
+    if (boss.gimmick === 'mist') {
+      bossGimmickBannerEl.style.display = 'flex';
+      if (bossHpPct <= 0.60) {
+        bossGimmickBannerEl.classList.add('active-mist');
+        bossGimmickTagEl.textContent = '🌫️ หมอกสูบวิญญาณ';
+        bossGimmickTextEl.textContent = 'คุมเพซให้เร็วกว่า 7:30/กม. มิฉะนั้นดาเมจลด 50% และบอสจะฮีล';
+      } else {
+        bossGimmickTagEl.textContent = '⏳ ผนึกหมอก';
+        bossGimmickTextEl.textContent = 'หมอกคำสาปจะปะทุเมื่อเลือดบอสต่ำกว่า 60%';
+      }
+    } else if (boss.gimmick === 'carapace') {
+      bossGimmickBannerEl.style.display = 'flex';
+      if (bossVulnerableTimer > 0) {
+        bossGimmickBannerEl.classList.add('active-vulnerable');
+        bossGimmickTagEl.textContent = '🛡️ เกราะแตกสะบั้น!';
+        bossGimmickTextEl.textContent = `บอสเปราะบาง รับดาเมจ x2 นานอีก ${bossVulnerableTimer} วิ`;
+      } else if (bossHpPct <= 0.30) {
+        bossGimmickBannerEl.classList.add('active-carapace');
+        bossGimmickTagEl.textContent = '⚡ คลุ้มคลั่ง!';
+        bossGimmickTextEl.textContent = 'ดันชีพจรแตะ Zone 3 เพื่อเคาน์เตอร์ดาเมจสวนกลับ x1.5';
+      } else {
+        bossGimmickBannerEl.classList.add('active-carapace');
+        bossGimmickTagEl.textContent = '🗿 เกราะศิลา';
+        bossGimmickTextEl.textContent = 'ลดดาเมจ 30% (กะเทาะเกราะด้วยคริติคอล หรือ Shadow Slash)';
+      }
+    } else if (boss.gimmick === 'empress') {
+      bossGimmickBannerEl.style.display = 'flex';
+      if (bossHpPct > 0.65) {
+        bossGimmickTagEl.textContent = '👑 เฟส 1: ร่างเงาหลอก';
+        bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทลายร่างลวงตาแล้ว!' : 'วิ่งคุมเพซเพื่อเข้าสู่ Flow State ไม่เช่นนั้นดาเมจลด 40%';
+      } else if (bossHpPct > 0.25) {
+        bossGimmickBannerEl.classList.add('active-vulnerable');
+        bossGimmickTagEl.textContent = '⚡ เฟส 2: เรโซแนนซ์';
+        bossGimmickTextEl.textContent = 'วิ่ง Zone 2-3 จะชาร์จเกจไม้ตาย Shadow Slash ไวขึ้น 3 เท่า!';
+      } else {
+        bossGimmickBannerEl.classList.add('active-eclipse');
+        bossCardEl.classList.add('eclipse-active');
+        bossGimmickTagEl.textContent = '🌑 เฟส 3: จันทรคราส';
+        bossGimmickTextEl.textContent = 'จันทรคราสทมิฬปะทุ! ดาเมจ +40% และคริติคอล +25% สปรินต์เผด็จศึก!';
+      }
+    } else {
+      bossGimmickBannerEl.style.display = 'none';
+    }
+
     if (gameState.chestsAvailable > 0) {
       chestCardEl.style.display = 'block';
       chestCountEl.textContent = gameState.chestsAvailable;
@@ -1416,7 +1684,6 @@
       btnCastUltimate.textContent = ultPercent >= 100 ? '🗡️ ท่าไม้ตายพร้อม (รอออกล่า)' : '🗡️ ปลดปล่อยคมดาบอเวจี (กำลังชาร์จ)';
     }
 
-    // Flow state badge toggle
     flowBadgeEl.style.display = isFlowStateActive ? 'inline-block' : 'none';
 
     pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
@@ -1702,7 +1969,7 @@
       pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
 
-      // ชาร์จเกจไม้ตายอัตโนมัติเมื่ออยู่ในสภาวะ Zone 3 (+0.5%/วินาที หรือ +1.0% หากอยู่ใน Flow State)
+      // ชาร์จเกจไม้ตายอัตโนมัติเมื่ออยู่ในสภาวะ Zone 3 (+0.5%/วิ หรือ +1.0% หาก Flow)
       if (isFrenzyActive || currentHrZone === 3) {
         const ultTimeRate = isFlowStateActive ? 1.0 : 0.5;
         addUltimateCharge(ultTimeRate);
@@ -1718,6 +1985,28 @@
           overdriveBannerEl.style.display = 'none';
           speakVoice('สถานะโอเวอร์ไดรฟ์หมดเวลาลงแล้ว');
           showToast('สถานะ Overdrive สิ้นสุดลง');
+        }
+      }
+
+      // นับเวลาสถานะบอสเปราะบาง (Vulnerable) จากการโดน Shadow Slash
+      if (bossVulnerableTimer > 0) {
+        bossVulnerableTimer--;
+      }
+
+      // กลไกการฟื้นฟูเลือดของ Malakor (Tier IV) ผ่านหมอกสูบวิญญาณ
+      const currentBoss = BOSS_DATABASE[gameState.bossIndex];
+      const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
+      if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.60) {
+        const rollingPace = getRecentRollingPace();
+        if (rollingPace === null || rollingPace > 7.5) {
+          mistHealingTick++;
+          if (mistHealingTick >= 20) { // ทุกๆ 20 วินาทีที่วิ่งช้าเกินเกณฑ์ บอสจะดูดเลือด +0.02 กม.
+            mistHealingTick = 0;
+            gameState.bossHpRemain = Math.min(currentBoss.maxHpKm, gameState.bossHpRemain + 0.02);
+            showToast('🌫️ หมอกคำสาปสูบพลัง! บอสฟื้นฟูเลือด +0.02 กม.');
+          }
+        } else {
+          mistHealingTick = 0;
         }
       }
 

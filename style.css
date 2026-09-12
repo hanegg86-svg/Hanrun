@@ -266,6 +266,7 @@ body {
   box-shadow: 0 0 25px rgba(185, 28, 28, 0.2);
   position: relative;
   overflow: hidden;
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
 }
 
 .boss-card::before {
@@ -276,6 +277,15 @@ body {
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, transparent, #ef4444, transparent);
+}
+
+.boss-card.eclipse-active {
+  border-color: #ec4899;
+  box-shadow: 0 0 35px rgba(236, 72, 153, 0.5);
+}
+
+.boss-card.eclipse-active::before {
+  background: linear-gradient(90deg, transparent, #ec4899, transparent);
 }
 
 .boss-header {
@@ -361,6 +371,58 @@ body {
   color: #f87171;
   text-align: right;
   font-weight: 600;
+}
+
+/* Boss Gimmick Alert Banner */
+.boss-gimmick-banner {
+  margin-top: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  transition: all 0.3s ease;
+}
+
+.boss-gimmick-banner.active-mist {
+  border-color: #a855f7;
+  background: rgba(88, 28, 135, 0.25);
+  animation: pulse 1.5s infinite;
+}
+
+.boss-gimmick-banner.active-carapace {
+  border-color: #f59e0b;
+  background: rgba(180, 83, 9, 0.2);
+}
+
+.boss-gimmick-banner.active-vulnerable {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.2);
+  animation: pulse 1s infinite;
+}
+
+.boss-gimmick-banner.active-eclipse {
+  border-color: #ec4899;
+  background: rgba(190, 24, 93, 0.3);
+  animation: pulse 0.8s infinite;
+}
+
+.gimmick-tag {
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  white-space: nowrap;
+}
+
+.gimmick-desc {
+  color: #f4f4f5;
+  font-size: 0.68rem;
+  line-height: 1.2;
 }
 
 /* Chest Loot Drop Card */
