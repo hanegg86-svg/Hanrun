@@ -144,7 +144,44 @@
     window.speechSynthesis.speak(utterance);
   }
 
-  // --- Boss List Database & Lore (ขยายรองรับ 6 Tiers พร้อมลูกเล่นพิเศษ) ---
+  // --- Equipment Set System Database ---
+  const SET_DATABASE = {
+    shadowstalker: {
+      id: 'shadowstalker',
+      name: 'เซ็ตเงามัจจุราช',
+      fullName: 'Shadowstalker Armor',
+      icon: '🌑',
+      color: '#c084fc',
+      bonuses: {
+        2: 'คริติคอล +10% & เกจไม้ตายชาร์จไวขึ้น 25%',
+        4: 'ท่าไม้ตาย Shadow Slash แรงขึ้น 50% & เกราะศิลาแตกนานขึ้นเป็น 90 วินาที'
+      }
+    },
+    bloodknight: {
+      id: 'bloodknight',
+      name: 'เซ็ตอัศวินโลหิต',
+      fullName: 'Bloodknight Battlegear',
+      icon: '🩸',
+      color: '#f87171',
+      bonuses: {
+        2: 'ค่าความอึด STA +25% & ได้รับทองคำเพิ่มขึ้น +20%',
+        4: 'ขณะอยู่ใน Heart Rate Zone 2-3 จะได้รับโบนัส EXP เพิ่มขึ้น +40%'
+      }
+    },
+    voidwalker: {
+      id: 'voidwalker',
+      name: 'เซ็ตผู้ท่องมิติ',
+      fullName: 'Void Walker Raiment',
+      icon: '🌌',
+      color: '#38bdf8',
+      bonuses: {
+        2: 'เข้าสู่ Flow State ง่ายขึ้น 50% (คุมเพซเพียง 200 เมตร)',
+        4: 'เมื่ออยู่ใน Flow State การโจมตีจะทะลุเกราะบอส 100% (True Damage)'
+      }
+    }
+  };
+
+  // --- Boss List Database (7 Tiers พร้อมบอสใหม่ Ignis-Vorax) ---
   const BOSS_DATABASE = [
     {
       id: 'boss_1',
@@ -207,14 +244,26 @@
       name: 'Abyssal Empress: Nyxaria',
       avatar: '👑',
       maxHpKm: 15.0,
-      desc: 'จักรพรรดินีเงาราตรี 3 เฟส: ร่างเงาหลอก (ทลายด้วย Flow State), สนามเรโซแนนซ์ และช่วงจันทรคราสทมิฬ!',
+      desc: 'จักรพรรดินีเงาราตรี 3 เฟส: ร่างเงาหลอก (ทลายด้วย Flow State), สนามเรโซแนนซ์ และจันทรคราสทมิฬ!',
       rewardExp: 38000,
       rewardGold: 5000,
       gimmick: 'empress'
+    },
+    {
+      id: 'boss_7',
+      tier: 'TIER VII',
+      name: 'Eclipse Harbinger: Ignis-Vorax',
+      avatar: '☄️',
+      maxHpKm: 21.0,
+      desc: 'เทพอสูรเพลิงสุริยคราส เลือด 21 กม. ครึ่งแรกคลื่นความร้อนแผดเผา ครึ่งหลังระเบิดซูเปอร์โนวา ชาร์จไม้ตายไว x2!',
+      rewardExp: 55000,
+      rewardGold: 8500,
+      gimmick: 'supernova'
     }
   ];
 
   function getTitleForLevel(level) {
+    if (level >= 45) return 'Eclipse God Slayer';
     if (level >= 35) return 'Abyssal Sovereign Emperor';
     if (level >= 30) return 'Void Overlord';
     if (level >= 25) return 'Shadow Sovereign';
@@ -243,7 +292,8 @@
       { id: 'ach_boss_dragon', name: 'Dragon Bane (ผู้สยบมังกร)', desc: 'โค่นมังกรกระดูก Ancient Bone Dragon (Tier III)', target: 1, current: 0, unit: 'ตัว', rewardExp: 6000, rewardGold: 1200, claimed: false },
       { id: 'ach_boss_malakor', name: 'Lich Bane (ผู้สยบจอมเวท)', desc: 'โค่นจอมเวทอเวจี Shadow Lich: Malakor (Tier IV)', target: 1, current: 0, unit: 'ตัว', rewardExp: 10000, rewardGold: 2000, claimed: false },
       { id: 'ach_boss_titan', name: 'Titan Breaker (ผู้กะเทาะศิลาไททัน)', desc: 'โค่น Void Behemoth: Titan of Ruin (Tier V)', target: 1, current: 0, unit: 'ตัว', rewardExp: 16000, rewardGold: 3500, claimed: false },
-      { id: 'ach_boss_empress', name: 'Eclipse Sovereign (ผู้สยบจักรพรรดินี)', desc: 'โค่น Abyssal Empress: Nyxaria (Tier VI)', target: 1, current: 0, unit: 'ตัว', rewardExp: 28000, rewardGold: 6000, claimed: false }
+      { id: 'ach_boss_empress', name: 'Eclipse Sovereign (ผู้สยบจักรพรรดินี)', desc: 'โค่น Abyssal Empress: Nyxaria (Tier VI)', target: 1, current: 0, unit: 'ตัว', rewardExp: 28000, rewardGold: 6000, claimed: false },
+      { id: 'ach_boss_ignis', name: 'Harbinger Extinguisher (ผู้ดับสุริยคราส)', desc: 'โค่น Eclipse Harbinger: Ignis-Vorax (Tier VII)', target: 1, current: 0, unit: 'ตัว', rewardExp: 45000, rewardGold: 10000, claimed: false }
     ];
   }
 
@@ -255,7 +305,7 @@
     nextExp: 1000,
     gold: 0,
     statPoints: 0,
-    ultimateCharge: 0, // Adrenaline Gauge (0 - 100%)
+    ultimateCharge: 0,
     stats: { str: 10, sta: 10, agi: 10 },
     upgrades: { blade: 0, charm: 0, eye: 0 },
     equipment: { weapon: null, armor: null, boots: null, relic: null },
@@ -266,7 +316,8 @@
       boss_3: { kills: 0, name: 'Ancient Bone Dragon' },
       boss_4: { kills: 0, name: 'Shadow Lich: Malakor' },
       boss_5: { kills: 0, name: 'Void Behemoth: Titan of Ruin' },
-      boss_6: { kills: 0, name: 'Abyssal Empress: Nyxaria' }
+      boss_6: { kills: 0, name: 'Abyssal Empress: Nyxaria' },
+      boss_7: { kills: 0, name: 'Eclipse Harbinger: Ignis-Vorax' }
     },
     chestsAvailable: 0,
     streak: { count: 1, lastDate: new Date().toDateString() },
@@ -288,11 +339,12 @@
   };
 
   let gameState = defaultState;
+  let currentInvFilter = 'all';
 
   // --- Boss Gimmick State Runtime Variables ---
-  let bossVulnerableTimer = 0; // วินาทีคงเหลือของสถานะเกราะแตก (จาก Shadow Slash)
+  let bossVulnerableTimer = 0;
   let mistHealingTick = 0;
-  let gimmickAnnounced = {}; // บันทึกไม่ให้เสียงเตือนลูกเล่นซ้ำรัวๆ
+  let gimmickAnnounced = {};
 
   async function loadGameState() {
     let saved = await DB.getPlayerState();
@@ -324,7 +376,7 @@
       gameState = defaultState;
     }
 
-    // ประสานบอสใหม่ทั้ง 6 ตัวเข้ากับ Bestiary เสมอ
+    // ประสานบอสทั้งหมด 7 ตัวเข้ากับ Bestiary เสมอ
     BOSS_DATABASE.forEach(b => {
       if (!gameState.bestiary[b.id]) {
         gameState.bestiary[b.id] = { kills: 0, name: b.name };
@@ -401,12 +453,12 @@
   let rhythmBaselinePace = null;
   let rhythmConsistentDistance = 0.0;
 
-  // --- Item Generator ---
+  // --- Item Generator with Set Affinity ---
   const ITEM_NAMES = {
-    weapon: ['ดาบสั้นเงา', 'ดาบใหญ่ทมิฬ', 'เคียวมรณะ', 'ดาบโบราณ'],
-    armor: ['เสื้อเกราะหนังเงา', 'เกราะเหล็กอสูร', 'ผ้าคลุมวิญญาณ', 'เกราะเพลทอเวจี'],
-    boots: ['รองเท้าก้าวมัจจุราช', 'รองเท้าเกราะทมิฬ', 'รองเท้าลมกรดเงา', 'สนับแข้งแห่งสายลม'],
-    relic: ['แหวนวิญญาณบาป', 'จี้หยดโลหิต', 'เครื่องรางตาเหยี่ยว', 'หินมนตราโบราณ']
+    weapon: ['ดาบสั้น', 'ดาบใหญ่ทมิฬ', 'เคียวมรณะ', 'ดาบโบราณ'],
+    armor: ['เสื้อเกราะหนัง', 'เกราะเหล็กอสูร', 'ผ้าคลุมวิญญาณ', 'เกราะเพลทอเวจี'],
+    boots: ['รองเท้าก้าวเงา', 'รองเท้าเกราะทมิฬ', 'รองเท้าลมกรด', 'สนับแข้งสายลม'],
+    relic: ['แหวนวิญญาณ', 'จี้หยดโลหิต', 'เครื่องรางตาเหยี่ยว', 'หินมนตราโบราณ']
   };
 
   function rollRandomItem() {
@@ -415,18 +467,18 @@
     const roll = Math.random();
 
     let rarity = 'common';
-    let mainStatVal = 5;
+    let mainStatVal = 6;
     let subStatVal = 0;
 
-    if (roll < 0.05) {
+    if (roll < 0.06) {
       rarity = 'legendary';
       mainStatVal = 25;
       subStatVal = 10;
-    } else if (roll < 0.20) {
+    } else if (roll < 0.22) {
       rarity = 'epic';
       mainStatVal = 18;
       subStatVal = 6;
-    } else if (roll < 0.50) {
+    } else if (roll < 0.52) {
       rarity = 'rare';
       mainStatVal = 12;
       subStatVal = 3;
@@ -435,20 +487,39 @@
       mainStatVal = 6;
     }
 
+    // สุ่มสังกัด 1 ใน 3 เซ็ตโบราณ
+    const setKeys = Object.keys(SET_DATABASE);
+    const setId = setKeys[Math.floor(Math.random() * setKeys.length)];
+    const setInfo = SET_DATABASE[setId];
+
     const nameList = ITEM_NAMES[type];
-    const name = nameList[Math.floor(Math.random() * nameList.length)];
+    const baseName = nameList[Math.floor(Math.random() * nameList.length)];
     const icons = { weapon: '🗡️', armor: '🛡️', boots: '🥾', relic: '🧿' };
 
     return {
       id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      name: `${name} [${rarity.toUpperCase()}]`,
+      name: `${baseName}แห่ง${setInfo.name.replace('เซ็ต', '')}`,
       type,
       rarity,
+      setId,
       mainStatVal,
       subStatVal,
       icon: icons[type],
       goldValue: rarity === 'legendary' ? 400 : rarity === 'epic' ? 180 : rarity === 'rare' ? 80 : 30
     };
+  }
+
+  // คำนวณจำนวนชิ้นของแต่ละเซ็ตที่สวมใส่อยู่
+  function getActiveEquippedSets() {
+    const counts = { shadowstalker: 0, bloodknight: 0, voidwalker: 0 };
+    const eq = gameState.equipment;
+    ['weapon', 'armor', 'boots', 'relic'].forEach(slot => {
+      const item = eq[slot];
+      if (item && item.setId && counts[item.setId] !== undefined) {
+        counts[item.setId]++;
+      }
+    });
+    return counts;
   }
 
   function calculateEquipmentBonuses() {
@@ -475,7 +546,17 @@
       if (eq.relic.subStatVal) bonusSta += eq.relic.subStatVal;
     }
 
-    return { bonusDmg, bonusSta, bonusCrit, bonusGold };
+    // คำนวณบัฟจาก Set Bonuses
+    const setCounts = getActiveEquippedSets();
+    if (setCounts.shadowstalker >= 2) {
+      bonusCrit += 10;
+    }
+    if (setCounts.bloodknight >= 2) {
+      bonusSta += 25;
+      bonusGold += 20;
+    }
+
+    return { bonusDmg, bonusSta, bonusCrit, bonusGold, setCounts };
   }
 
   // --- DOM Elements ---
@@ -582,16 +663,20 @@
   const pocketTimeVal = document.getElementById('pocket-time-val');
   const pocketUnlockBar = document.getElementById('pocket-unlock-bar');
 
-  // Equipment & Modal Elements
+  // Equipment, Sets & Modal Elements
   const equipSummaryEl = document.getElementById('equip-summary');
+  const setBonusesContainerEl = document.getElementById('set-bonuses-container');
   const inventoryGridEl = document.getElementById('inventory-grid');
   const invCountEl = document.getElementById('inv-count');
   const itemModalEl = document.getElementById('item-modal');
   const modalItemIconEl = document.getElementById('modal-item-icon');
   const modalItemNameEl = document.getElementById('modal-item-name');
   const modalItemRarityEl = document.getElementById('modal-item-rarity');
+  const modalItemSetEl = document.getElementById('modal-item-set');
   const modalMainStatEl = document.getElementById('modal-main-stat');
   const modalSubStatEl = document.getElementById('modal-sub-stat');
+  const modalSetBonus2El = document.getElementById('modal-set-bonus-2');
+  const modalSetBonus4El = document.getElementById('modal-set-bonus-4');
   const btnModalEquip = document.getElementById('btn-modal-equip');
   const btnModalSalvage = document.getElementById('btn-modal-salvage');
   const btnModalCancel = document.getElementById('btn-modal-cancel');
@@ -643,7 +728,7 @@
       gameState.nextExp = Math.floor(gameState.nextExp * 1.35);
       gameState.statPoints = (gameState.statPoints || 0) + 3;
       leveledUp = true;
-      showToast(`⭐ เลเวลอัป! สู่ระดับ LV. ${gameState.level} (ได้รับ +3 แต้มสเตตัส)`);
+      showToast(`⭐ เลเวลอัป! สู่ระดับ LV. ${gameState.level} (+3 แต้มสเตตัส)`);
       speakVoice(`เลเวลอัป สู่ระดับ ${gameState.level}`);
     }
     if (leveledUp) {
@@ -654,8 +739,15 @@
   }
 
   function addUltimateCharge(amount) {
+    const setCounts = getActiveEquippedSets();
+    let finalAmount = amount;
+    // โบนัสเซ็ตเงามัจจุราช 2 ชิ้น: ชาร์จไม้ตายไวขึ้น 25%
+    if (setCounts.shadowstalker >= 2) {
+      finalAmount *= 1.25;
+    }
+
     const prevCharge = gameState.ultimateCharge;
-    gameState.ultimateCharge = Math.min(100, Math.max(0, gameState.ultimateCharge + amount));
+    gameState.ultimateCharge = Math.min(100, Math.max(0, gameState.ultimateCharge + finalAmount));
     if (prevCharge < 100 && gameState.ultimateCharge >= 100) {
       speakVoice('เกจท่าไม้ตายเต็มเปี่ยม ปลดปล่อยคมดาบอเวจีได้แล้ว!', true);
       showToast('⚡ ท่าไม้ตายพร้อมใช้งาน! กด SHADOW SLASH เพื่อสังหาร');
@@ -820,21 +912,16 @@
         }
       }
 
-      showToast('กำลังค้นหาเฉพาะ Smartwatch & สายวัดชีพจร...');
+      showToast('กำลังค้นหา Smartwatch & สายวัดชีพจร...');
       const device = await navigator.bluetooth.requestDevice({
         filters: [
           { services: ['heart_rate'] },
           { namePrefix: 'HUAWEI' },
           { namePrefix: 'Huawei' },
-          { namePrefix: 'huawei' },
           { namePrefix: 'Watch' },
-          { namePrefix: 'WATCH' },
           { namePrefix: 'Band' },
-          { namePrefix: 'BAND' },
           { namePrefix: 'Garmin' },
-          { namePrefix: 'GARMIN' },
           { namePrefix: 'Polar' },
-          { namePrefix: 'POLAR' },
           { namePrefix: 'Magene' },
           { namePrefix: 'CooSpo' },
           { namePrefix: 'Coros' }
@@ -897,34 +984,46 @@
     }
   });
 
-  // --- Battle Damage Calculation with Boss Gimmick Logic ---
+  // --- Battle Damage Calculation with Boss Gimmick & Set Logic ---
   function applyDistanceDamage(distanceDeltaKm) {
     if (distanceDeltaKm <= 0) return;
 
     const currentBoss = BOSS_DATABASE[gameState.bossIndex];
     const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
+    const eqBonus = calculateEquipmentBonuses();
+    const setCounts = eqBonus.setCounts;
 
     // 1. เพิ่มเกจไม้ตายตามระยะทาง (+2% ต่อ 100 เมตร, และ x2 เมื่ออยู่ใน Flow State)
     let ultChargeBonusMult = isFlowStateActive ? 2 : 1;
-    // พิเศษ: บอส Tier VI Phase 2 (Vacuum Resonance) ชาร์จไม้ตายไว x3 ใน HR Zone 2 - 3
+    
+    // บอส Tier VI Phase 2 (Vacuum Resonance) ชาร์จไม้ตายไว x3 ใน HR Zone 2 - 3
     if (currentBoss.gimmick === 'empress' && bossHpPct <= 0.65 && bossHpPct > 0.25) {
       if (currentHrZone === 2 || currentHrZone === 3 || isFrenzyActive) {
         ultChargeBonusMult *= 3;
       }
     }
+
+    // บอส Tier VII Supernova Phase: เมื่อเลือดต่ำกว่า 50% ชาร์จไม้ตายไว x2
+    if (currentBoss.gimmick === 'supernova' && bossHpPct <= 0.50) {
+      ultChargeBonusMult *= 2;
+    }
+
     addUltimateCharge((distanceDeltaKm / 0.1) * 2 * ultChargeBonusMult);
 
-    // 2. ตรวจสอบการควบคุมเพซสม่ำเสมอ (Pace Rhythm Combo / Flow State)
+    // 2. ตรวจสอบ Pace Rhythm Combo / Flow State
+    // โบนัสเซ็ตผู้ท่องมิติ 2 ชิ้น: เข้าสู่ Flow State ง่ายขึ้น (ต้องการ 0.20 กม. แทน 0.40 กม.)
+    const flowThresholdKm = setCounts.voidwalker >= 2 ? 0.20 : 0.40;
     const rollingPace = getRecentRollingPace();
+
     if (rollingPace !== null) {
       if (rhythmBaselinePace === null) {
         rhythmBaselinePace = rollingPace;
         rhythmConsistentDistance = 0.0;
       } else {
         const paceDiff = Math.abs(rollingPace - rhythmBaselinePace);
-        if (paceDiff <= 0.25) { // เบี่ยงเบนไม่เกิน 15 วินาที/กม.
+        if (paceDiff <= 0.25) {
           rhythmConsistentDistance += distanceDeltaKm;
-          if (rhythmConsistentDistance >= 0.4 && !isFlowStateActive) {
+          if (rhythmConsistentDistance >= flowThresholdKm && !isFlowStateActive) {
             isFlowStateActive = true;
             showToast('🌊 เข้าสู่สภาวะ FLOW STATE! โบนัส EXP +50% & เกจไม้ตายชาร์จไว x2');
             speakVoice('เข้าสู่สภาวะโฟลว์สเตท คุมจังหวะยอดเยี่ยม');
@@ -961,12 +1060,10 @@
       nextKmAnnounceCheckpoint += 1.0;
     }
 
-    const eqBonus = calculateEquipmentBonuses();
-
     const frenzyDmgBonus = isFrenzyActive ? 1.5 : 1.0;
     const strMultiplier = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01)) * frenzyDmgBonus;
 
-    let critChance = Math.min(65, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit);
+    let critChance = Math.min(75, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit);
     if (isFrenzyActive) {
       critChance = 100;
     }
@@ -974,10 +1071,10 @@
     // --- BOSS GIMMICK MODIFIERS ---
     let bossDamageMultiplier = 1.0;
 
-    // TIER IV: Malakor (หมอกคำสาปสูบวิญญาณ เมื่อ HP ต่ำกว่า 60%)
+    // TIER IV: Malakor (หมอกคำสาปสูบวิญญาณ)
     if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.60) {
       if (rollingPace === null || rollingPace > 7.5) {
-        bossDamageMultiplier *= 0.5; // ดาเมจลด 50% หากวิ่งช้ากว่าเพซ 7:30
+        bossDamageMultiplier *= 0.5;
         if (!gimmickAnnounced.mistWarn) {
           gimmickAnnounced.mistWarn = true;
           speakVoice('หมอกคำสาปสูบวิญญาณทำงาน! เร่งฝีเท้าให้เร็วกว่าเพซ 7 นาทีครึ่งเพื่อสลายหมอก');
@@ -994,13 +1091,11 @@
     // TIER V: Titan of Ruin (เกราะศิลาดึกดำบรรพ์ & Enrage)
     if (currentBoss.gimmick === 'carapace') {
       if (bossVulnerableTimer > 0) {
-        bossDamageMultiplier *= 2.0; // เกราะแตกจาก Shadow Slash รับดาเมจ x2
+        bossDamageMultiplier *= 2.0;
       } else {
-        // เกราะหินปกติลดดาเมจ 30% แต่คริติคอลจะทะลุเกราะได้
         bossDamageMultiplier *= 0.70;
       }
 
-      // Enrage เมื่อ HP ต่ำกว่า 30%
       if (bossHpPct <= 0.30) {
         if (!gimmickAnnounced.titanEnrage) {
           gimmickAnnounced.titanEnrage = true;
@@ -1008,7 +1103,7 @@
           showToast('🗿 ไททันคลุ้มคลั่ง: ดันชีพจรเข้า Zone 3 เพื่อทำลายจังหวะทุบแผ่นดิน!');
         }
         if (isFrenzyActive || currentHrZone === 3) {
-          bossDamageMultiplier *= 1.5; // เคาน์เตอร์ตอนคลุ้มคลั่ง
+          bossDamageMultiplier *= 1.5;
         }
       }
     }
@@ -1016,12 +1111,11 @@
     // TIER VI: Nyxaria (จักรพรรดินีเงาราตรี 3 เฟส)
     if (currentBoss.gimmick === 'empress') {
       if (bossHpPct > 0.65) {
-        // Phase 1: Shadow Phantoms (ร่างเงาลวง)
         if (isFlowStateActive) {
           critChance = Math.min(100, critChance + 20);
-          bossDamageMultiplier *= 1.2; // ทลายร่างเงาด้วยสมาธิ Flow State
+          bossDamageMultiplier *= 1.2;
         } else {
-          bossDamageMultiplier *= 0.60; // หากไม่ Flow ร่างเงาจะรับดาเมจแทน 40%
+          bossDamageMultiplier *= 0.60;
           if (!gimmickAnnounced.empressP1) {
             gimmickAnnounced.empressP1 = true;
             speakVoice('จักรพรรดินีแยกร่างเงาหลอก วิ่งคุมเพซสม่ำเสมอเพื่อเข้าสู่โฟลว์สเตท');
@@ -1029,14 +1123,12 @@
           }
         }
       } else if (bossHpPct <= 0.65 && bossHpPct > 0.25) {
-        // Phase 2: Vacuum Resonance
         if (!gimmickAnnounced.empressP2) {
           gimmickAnnounced.empressP2 = true;
-          speakVoice('เข้าสู่เฟสสอง สนามคลื่นสูญญากาศ ชาร์จไม้ตายไวสามเท่าในโซนสองและสาม');
+          speakVoice('เข้าสู่เฟสสอง สนามเรโซแนนซ์ ชาร์จไม้ตายไวสามเท่าในโซนสองและสาม');
           showToast('⚡ เฟส 2 เรโซแนนซ์: วิ่ง Zone 2 หรือ 3 ชาร์จท่าไม้ตายไวขึ้น 300%!');
         }
       } else {
-        // Phase 3: Eclipse Frenzy (จันทรคราสทมิฬ)
         if (!gimmickAnnounced.empressP3) {
           gimmickAnnounced.empressP3 = true;
           speakVoice('เข้าสู่จันทรคราสทมิฬขั้นสุดท้าย! ปลดปล่อยพลังทั้งหมดเพื่อปิดฉาก', true);
@@ -1047,20 +1139,46 @@
       }
     }
 
+    // TIER VII: Ignis-Vorax (เทพอสูรเพลิงสุริยคราส)
+    if (currentBoss.gimmick === 'supernova') {
+      if (bossHpPct > 0.50) {
+        if (!gimmickAnnounced.ignisSolar) {
+          gimmickAnnounced.ignisSolar = true;
+          speakVoice('เทพอสูรเพลิงสุริยคราสปลดปล่อยคลื่นความร้อน สะสมระยะทางฝ่าเปลวเพลิง');
+          showToast('☄️ คลื่นสุริยคราส: วิ่งรักษาระยะทางอย่างมั่นคงเพื่อทลายเกราะสุริยะ');
+        }
+      } else {
+        if (!gimmickAnnounced.ignisSupernova) {
+          gimmickAnnounced.ignisSupernova = true;
+          speakVoice('คำเตือนระดับสูงสุด! อสูรเพลิงเข้าสู่สภาวะซูเปอร์โนวา ปลดปล่อยท่าไม้ตายรัวๆ เพื่อปิดฉาก', true);
+          showToast('💥 SOLAR SUPERNOVA! เกจไม้ตายชาร์จไว x2 ปลดปล่อยคมดาบอเวจีสกัดกั้น');
+        }
+        bossDamageMultiplier *= 1.35;
+        critChance = Math.min(100, critChance + 20);
+      }
+    }
+
+    // โบนัสเซ็ตผู้ท่องมิติ 4 ชิ้น: เมื่ออยู่ใน Flow State โจมตีทะลุเกราะบอส 100% (True Damage)
+    if (setCounts.voidwalker >= 4 && isFlowStateActive) {
+      if (bossDamageMultiplier < 1.0) {
+        bossDamageMultiplier = 1.0;
+      }
+    }
+
     const isCrit = (Math.random() * 100) < critChance;
 
-    // ถ้าเป็นบอสเกราะหิน การติด Crit จะลบล้างโทษลดดาเมจ 30% ได้
+    // ติดคริติคอลทะลุเกราะหิน
     if (currentBoss.gimmick === 'carapace' && bossVulnerableTimer <= 0 && isCrit) {
-      bossDamageMultiplier = (bossDamageMultiplier / 0.70); // Bypass armor penalty
+      bossDamageMultiplier = (bossDamageMultiplier / 0.70);
     }
 
     const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? 1.8 : 1.0) * bossDamageMultiplier;
 
     if (isCrit) {
-      addUltimateCharge(3); // ติดคริติคอลได้รับเกจไม้ตาย +3%
+      addUltimateCharge(3);
       const questCrit = gameState.dailyQuests.find(q => q.id === 'dq_crit');
       if (questCrit) questCrit.current = Math.min(questCrit.target, questCrit.current + 1);
-      showToast(`💥 CRITICAL! ปลดปล่อยดาเมจ x1.8 เท่า`);
+      showToast(`💥 CRITICAL! ดาเมจทะลวง x1.8`);
     }
 
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - effectiveDamage);
@@ -1075,10 +1193,16 @@
       }
       gameState.bestiary[currentBoss.id].kills += 1;
 
+      // โบนัสเซ็ตอัศวินโลหิต 4 ชิ้น: โบนัส EXP +40% ขณะอยู่ใน Zone 2 หรือ 3
+      let setExpBonus = 1.0;
+      if (setCounts.bloodknight >= 4 && (currentHrZone === 2 || currentHrZone === 3 || isFrenzyActive)) {
+        setExpBonus = 1.4;
+      }
+
       const zone2ExpBonus = currentHrZone === 2 ? 1.5 : 1.0;
       const flowExpBonus = isFlowStateActive ? 1.5 : 1.0;
 
-      const staMultiplier = (1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01)) * zone2ExpBonus * flowExpBonus;
+      const staMultiplier = (1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01)) * zone2ExpBonus * flowExpBonus * setExpBonus;
       const charmMultiplier = 1 + (gameState.upgrades.charm * 0.10) + (eqBonus.bonusGold * 0.01);
       const streakMultiplier = 1 + Math.min(0.20, (gameState.streak.count - 1) * 0.02);
       const overdriveGoldMult = isOverdriveActive ? 2.0 : 1.0;
@@ -1087,7 +1211,7 @@
       const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier);
       const rewardGold = Math.floor(currentBoss.rewardGold * totalGoldMultiplier);
 
-      showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} เหรียญ & 📦 1 หีบ`);
+      showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} ทอง & 📦 1 หีบ`);
       speakVoice(`สยบ ${currentBoss.name} สำเร็จแล้ว ปิดผนึกชัยชนะ!`, true);
       addExp(rewardExp);
       gameState.gold += rewardGold;
@@ -1095,22 +1219,24 @@
       const questBoss = gameState.dailyQuests.find(q => q.id === 'dq_boss');
       if (questBoss) questBoss.current = Math.min(questBoss.target, questBoss.current + 1);
 
-      // ตรวจสอบ Achievements ประจำบอสแต่ละ Tier
+      // Achievements Checks
       if (currentBoss.tier === 'TIER III') {
-        const achDragon = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
-        if (achDragon) achDragon.current = Math.min(achDragon.target, achDragon.current + 1);
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       } else if (currentBoss.tier === 'TIER IV') {
-        const achMalakor = gameState.achievements.find(a => a.id === 'ach_boss_malakor');
-        if (achMalakor) achMalakor.current = Math.min(achMalakor.target, achMalakor.current + 1);
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_malakor');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       } else if (currentBoss.tier === 'TIER V') {
-        const achTitan = gameState.achievements.find(a => a.id === 'ach_boss_titan');
-        if (achTitan) achTitan.current = Math.min(achTitan.target, achTitan.current + 1);
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_titan');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       } else if (currentBoss.tier === 'TIER VI') {
-        const achEmpress = gameState.achievements.find(a => a.id === 'ach_boss_empress');
-        if (achEmpress) achEmpress.current = Math.min(achEmpress.target, achEmpress.current + 1);
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_empress');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+      } else if (currentBoss.tier === 'TIER VII') {
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_ignis');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       }
 
-      // รีเซ็ตสถานะลูกเล่นก่อนเปลี่ยนบอส
       bossVulnerableTimer = 0;
       gimmickAnnounced = {};
 
@@ -1132,25 +1258,26 @@
 
     gameState.ultimateCharge = 0;
     const eqBonus = calculateEquipmentBonuses();
+    const setCounts = eqBonus.setCounts;
     const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01);
     
-    // สร้างความเสียหายฉับพลัน 0.40 กม. x ตัวคูณ STR
-    const burstDamageKm = 0.40 * strMultiplier;
+    // โบนัสเซ็ตเงามัจจุราช 4 ชิ้น: ท่าไม้ตาย Shadow Slash แรงขึ้น 50%
+    const shadowSetDmgMult = setCounts.shadowstalker >= 4 ? 1.5 : 1.0;
+    const burstDamageKm = 0.40 * strMultiplier * shadowSetDmgMult;
     const currentBoss = BOSS_DATABASE[gameState.bossIndex];
 
-    // ลูกเล่นพิเศษ: กะเทาะเกราะศิลาบอส Tier V
     if (currentBoss.gimmick === 'carapace') {
-      bossVulnerableTimer = 60; // บอสติดสถานะเกราะแตก รับดาเมจ x2 นาน 60 วินาที
-      showToast('💥 SHADOW SLASH กะเทาะเกราะศิลาแตกสะบั้น! บอสเปราะบาง x2 (60 วิ)');
+      // โบนัสเซ็ตเงามัจจุราช 4 ชิ้น: ยืดเวลาเกราะแตกเป็น 90 วินาที
+      bossVulnerableTimer = setCounts.shadowstalker >= 4 ? 90 : 60;
+      showToast(`💥 SHADOW SLASH กะเทาะเกราะศิลาแตกสะบั้น! บอสเปราะบาง x2 (${bossVulnerableTimer} วิ)`);
       speakVoice('คมดาบผ่าเกราะศิลาแตกสะบั้น ไททันติดสถานะเปราะบาง', true);
     } else {
-      showToast(`🗡️ SHADOW SLASH! ปลดปล่อยดาบอเวจีฟันบอสลึก ${burstDamageKm.toFixed(2)} กม.!`);
+      showToast(`🗡️ SHADOW SLASH! คมดาบอเวจีเฉือนบอส ${burstDamageKm.toFixed(2)} กม.!`);
       speakVoice('ปลดปล่อยคมดาบอเวจี! เข้าสู่สภาวะโอเวอร์ไดรฟ์', true);
     }
 
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - burstDamageKm);
 
-    // เปิดใช้งานสถานะ Overdrive Surge นาน 45 วินาที
     isOverdriveActive = true;
     overdriveSecondsRemaining = 45;
     runHudEl.classList.add('overdrive-active');
@@ -1168,7 +1295,7 @@
       gameState.bestiary[currentBoss.id].kills += 1;
 
       const rewardExp = Math.floor(currentBoss.rewardExp * 1.5);
-      const rewardGold = Math.floor(currentBoss.rewardGold * 2.0); // โบนัสทองสองเท่าทันที
+      const rewardGold = Math.floor(currentBoss.rewardGold * 2.0);
 
       showToast(`🏆 ฟันสังหาร ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} เหรียญ`);
       addExp(rewardExp);
@@ -1185,6 +1312,9 @@
         if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       } else if (currentBoss.tier === 'TIER VI') {
         const ach = gameState.achievements.find(a => a.id === 'ach_boss_empress');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+      } else if (currentBoss.tier === 'TIER VII') {
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_ignis');
         if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       }
 
@@ -1208,18 +1338,19 @@
     gameState.chestsAvailable -= 1;
 
     const roll = Math.random();
-    if (roll < 0.35 && gameState.inventory.length < 20) {
+    if (roll < 0.40 && gameState.inventory.length < 20) {
       const newItem = rollRandomItem();
       gameState.inventory.push(newItem);
-      showToast(`🎁 เปิดหีบพบ: [${newItem.rarity.toUpperCase()}] ${newItem.name}!`);
+      const setLabel = SET_DATABASE[newItem.setId] ? ` [${SET_DATABASE[newItem.setId].name}]` : '';
+      showToast(`🎁 พบอุปกรณ์: [${newItem.rarity.toUpperCase()}] ${newItem.name}${setLabel}!`);
       speakVoice(`ได้รับอุปกรณ์ระดับ ${newItem.rarity}`);
     } else if (roll < 0.70) {
       const goldDrop = Math.floor(120 + Math.random() * 220);
       gameState.gold += goldDrop;
-      showToast(`🎁 เปิดหีบสำเร็จ! พบถุงทองโบราณ +${goldDrop} 🪙`);
+      showToast(`🎁 พบถุงทองโบราณ +${goldDrop} 🪙`);
     } else if (roll < 0.92) {
       const expDrop = Math.floor(800 + Math.random() * 1000);
-      showToast(`🎁 เปิดหีบสำเร็จ! ดูดซับผลึกวิญญาณ +${expDrop} EXP`);
+      showToast(`🎁 ดูดซับผลึกวิญญาณ +${expDrop} EXP`);
       addExp(expDrop);
     } else {
       gameState.statPoints = (gameState.statPoints || 0) + 1;
@@ -1237,36 +1368,93 @@
   function renderEquipmentAndInventory() {
     const eq = gameState.equipment;
     const eqBonus = calculateEquipmentBonuses();
-    equipSummaryEl.textContent = `โบนัส: ดาเมจ +${eqBonus.bonusDmg}% | STA +${eqBonus.bonusSta}% | คริ +${eqBonus.bonusCrit}%`;
+    equipSummaryEl.textContent = `ดาเมจ +${eqBonus.bonusDmg}% | STA +${eqBonus.bonusSta}% | คริ +${eqBonus.bonusCrit}%`;
 
     const slots = ['weapon', 'armor', 'boots', 'relic'];
     slots.forEach(slotType => {
       const slotBox = document.getElementById(`slot-${slotType}`);
       const iconEl = document.getElementById(`icon-slot-${slotType}`);
       const nameEl = document.getElementById(`name-slot-${slotType}`);
+      const setTagEl = document.getElementById(`set-slot-${slotType}`);
       const equippedItem = eq[slotType];
 
       if (equippedItem) {
         slotBox.classList.add('equipped');
         iconEl.textContent = equippedItem.icon;
         nameEl.textContent = equippedItem.name;
+
+        if (equippedItem.setId && SET_DATABASE[equippedItem.setId]) {
+          const s = SET_DATABASE[equippedItem.setId];
+          slotBox.classList.add('has-set');
+          setTagEl.textContent = s.name.replace('เซ็ต', '');
+          setTagEl.style.backgroundColor = `${s.color}22`;
+          setTagEl.style.color = s.color;
+          setTagEl.style.borderColor = s.color;
+        } else {
+          slotBox.classList.remove('has-set');
+        }
       } else {
-        slotBox.classList.remove('equipped');
+        slotBox.classList.remove('equipped', 'has-set');
         const defaultIcons = { weapon: '🗡️', armor: '🛡️', boots: '🥾', relic: '🧿' };
         iconEl.textContent = defaultIcons[slotType];
         nameEl.textContent = 'ว่างเปล่า';
       }
     });
 
+    // Render Active Set Bonuses Banner
+    setBonusesContainerEl.innerHTML = '';
+    const setCounts = eqBonus.setCounts;
+    let hasAnySet = false;
+
+    Object.keys(SET_DATABASE).forEach(sId => {
+      const count = setCounts[sId];
+      if (count >= 2) {
+        hasAnySet = true;
+        const s = SET_DATABASE[sId];
+        const card = document.createElement('div');
+        card.className = 'set-bonus-badge';
+        card.style.borderColor = `${s.color}55`;
+        card.innerHTML = `
+          <div class="set-bonus-header" style="color: ${s.color};">
+            <span>${s.icon} ${s.name} (${count}/4 ชิ้น)</span>
+            <span>${count >= 4 ? '✨ ปลดล็อกครบ 4 ชิ้น' : '⚡ ปลดล็อก 2 ชิ้น'}</span>
+          </div>
+          <div class="set-bonus-text ${count >= 2 ? 'active' : ''}">• (2 ชิ้น): ${s.bonuses[2]}</div>
+          <div class="set-bonus-text ${count >= 4 ? 'active' : ''}">• (4 ชิ้น): ${s.bonuses[4]}</div>
+        `;
+        setBonusesContainerEl.appendChild(card);
+      }
+    });
+
+    if (!hasAnySet) {
+      setBonusesContainerEl.innerHTML = `
+        <div style="font-size: 0.62rem; color: #71717a; text-align: center; padding: 4px;">
+          สวมใส่อุปกรณ์ในเซ็ตเดียวกัน 2 หรือ 4 ชิ้น เพื่อปลดล็อกพลังเซ็ตโบราณ
+        </div>
+      `;
+    }
+
     invCountEl.textContent = gameState.inventory.length;
     inventoryGridEl.innerHTML = '';
-    if (gameState.inventory.length === 0) {
-      inventoryGridEl.innerHTML = '<div style="grid-column: span 4; font-size: 0.68rem; color: #71717a; text-align: center; padding: 15px 0;">กระเป๋าว่างเปล่า ออกล่าเพื่อหาไอเทมจากหีบสมบัติ</div>';
+
+    const filteredItems = currentInvFilter === 'all'
+      ? gameState.inventory
+      : gameState.inventory.filter(i => i.type === currentInvFilter);
+
+    if (filteredItems.length === 0) {
+      inventoryGridEl.innerHTML = '<div style="grid-column: span 4; font-size: 0.66rem; color: #71717a; text-align: center; padding: 18px 0;">ไม่มีไอเทมในหมวดหมู่นี้</div>';
     } else {
-      gameState.inventory.forEach(item => {
+      filteredItems.forEach(item => {
         const card = document.createElement('div');
         card.className = `inv-item-card rarity-${item.rarity}`;
+        
+        let setDotHtml = '';
+        if (item.setId && SET_DATABASE[item.setId]) {
+          setDotHtml = `<div class="inv-item-set-dot" style="background: ${SET_DATABASE[item.setId].color};" title="${SET_DATABASE[item.setId].name}"></div>`;
+        }
+
         card.innerHTML = `
+          ${setDotHtml}
           <span class="inv-item-icon">${item.icon}</span>
           <span class="inv-item-name">${item.name}</span>
         `;
@@ -1276,13 +1464,39 @@
     }
   }
 
+  // Inventory Filter Tabs Listener
+  document.querySelectorAll('.inv-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.inv-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentInvFilter = btn.getAttribute('data-filter');
+      renderEquipmentAndInventory();
+    });
+  });
+
   function openItemModal(item) {
     selectedInventoryItem = item;
     modalItemIconEl.textContent = item.icon;
     modalItemNameEl.textContent = item.name;
     modalItemRarityEl.textContent = `ระดับ: ${item.rarity.toUpperCase()}`;
     modalItemRarityEl.style.color = `var(--rarity-${item.rarity})`;
-    modalMainStatEl.textContent = `ค่าพลังหลัก: +${item.mainStatVal}% (ตามประเภทชิ้นส่วน)`;
+
+    if (item.setId && SET_DATABASE[item.setId]) {
+      const s = SET_DATABASE[item.setId];
+      modalItemSetEl.style.display = 'inline-block';
+      modalItemSetEl.textContent = `${s.icon} ${s.name}`;
+      modalItemSetEl.style.color = s.color;
+      modalItemSetEl.style.borderColor = `${s.color}66`;
+      modalItemSetEl.style.backgroundColor = `${s.color}15`;
+      modalSetBonus2El.textContent = `(2 ชิ้น) ${s.bonuses[2]}`;
+      modalSetBonus4El.textContent = `(4 ชิ้น) ${s.bonuses[4]}`;
+      document.getElementById('modal-set-desc-box').style.display = 'flex';
+    } else {
+      modalItemSetEl.style.display = 'none';
+      document.getElementById('modal-set-desc-box').style.display = 'none';
+    }
+
+    modalMainStatEl.textContent = `ค่าพลังหลัก: +${item.mainStatVal}% (ตามชิ้นส่วน)`;
     modalSubStatEl.textContent = item.subStatVal ? `ออปชันเสริม: +${item.subStatVal}% คริติคอล/ดาเมจ` : 'ไม่มีออปชันเสริม';
     btnModalSalvage.textContent = `ย่อยเป็น +${item.goldValue} 🪙`;
 
@@ -1341,7 +1555,7 @@
     });
   });
 
-  // --- Render Monster Codex (ครบ 6 บอส) ---
+  // --- Render Monster Codex (ครบ 7 บอส) ---
   function renderMonsterCodex() {
     codexListEl.innerHTML = '';
     BOSS_DATABASE.forEach(boss => {
@@ -1358,6 +1572,7 @@
       `;
       codexListEl.appendChild(card);
     });
+    codexCounterEl.textContent = `บันทึก ${BOSS_DATABASE.length} อสูร`;
   }
 
   // --- Backup & Restore Handlers ---
@@ -1392,10 +1607,10 @@
         if (imported.playerState && Array.isArray(imported.history)) {
           await DB.clearAndRestoreAll(imported.playerState, imported.history);
           gameState = imported.playerState;
-          showToast('📤 กู้คืนข้อมูลสำเร็จ! กำลังรีเฟรชหน้าจอ...');
+          showToast('📤 กู้คืนข้อมูลสำเร็จ! กำลังรีเฟรช...');
           setTimeout(() => location.reload(), 1500);
         } else {
-          showToast('❌ ไฟล์สำรองไม่ถูกต้องตามรูปแบบ');
+          showToast('❌ รูปแบบไฟล์สำรองไม่ถูกต้อง');
         }
       } catch (err) {
         showToast('❌ เกิดข้อผิดพลาดในการอ่านไฟล์');
@@ -1442,7 +1657,7 @@
     a.download = `ShadowStrider_${run.timestamp}.gpx`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('🗺️ ส่งออกไฟล์ GPX สำเร็จ! สามารถนำเข้า Strava ได้');
+    showToast('🗺️ ส่งออกไฟล์ GPX สำเร็จ! นำเข้า Strava ได้');
   };
 
   // --- Render Run History & Sessions ---
@@ -1591,7 +1806,7 @@
     strMultEl.textContent = currentStrMult;
     staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2) + eqBonus.bonusSta);
     
-    let baseCrit = Math.min(65, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit).toFixed(1);
+    let baseCrit = Math.min(75, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit).toFixed(1);
     if (isFrenzyActive) {
       agiCritEl.textContent = '100 (ZONE 3)';
     } else {
@@ -1608,10 +1823,10 @@
     const hpPercent = Math.max(0, Math.min(100, (gameState.bossHpRemain / boss.maxHpKm) * 100));
     bossHpBarEl.style.width = `${hpPercent}%`;
 
-    // --- Dynamic Boss Gimmick Banner Rendering ---
+    // Dynamic Boss Gimmick Banner Rendering
     const bossHpPct = gameState.bossHpRemain / boss.maxHpKm;
     bossGimmickBannerEl.className = 'boss-gimmick-banner';
-    bossCardEl.classList.remove('eclipse-active');
+    bossCardEl.classList.remove('eclipse-active', 'supernova-active');
 
     if (boss.gimmick === 'mist') {
       bossGimmickBannerEl.style.display = 'flex';
@@ -1646,12 +1861,24 @@
       } else if (bossHpPct > 0.25) {
         bossGimmickBannerEl.classList.add('active-vulnerable');
         bossGimmickTagEl.textContent = '⚡ เฟส 2: เรโซแนนซ์';
-        bossGimmickTextEl.textContent = 'วิ่ง Zone 2-3 จะชาร์จเกจไม้ตาย Shadow Slash ไวขึ้น 3 เท่า!';
+        bossGimmickTextEl.textContent = 'วิ่ง Zone 2-3 ชาร์จไม้ตาย Shadow Slash ไวขึ้น 3 เท่า!';
       } else {
         bossGimmickBannerEl.classList.add('active-eclipse');
         bossCardEl.classList.add('eclipse-active');
         bossGimmickTagEl.textContent = '🌑 เฟส 3: จันทรคราส';
-        bossGimmickTextEl.textContent = 'จันทรคราสทมิฬปะทุ! ดาเมจ +40% และคริติคอล +25% สปรินต์เผด็จศึก!';
+        bossGimmickTextEl.textContent = 'จันทรคราสปะทุ! ดาเมจ +40% และคริติคอล +25% สปรินต์เผด็จศึก!';
+      }
+    } else if (boss.gimmick === 'supernova') {
+      bossGimmickBannerEl.style.display = 'flex';
+      if (bossHpPct > 0.50) {
+        bossGimmickBannerEl.classList.add('active-carapace');
+        bossGimmickTagEl.textContent = '☄️ สุริยะเพลิง';
+        bossGimmickTextEl.textContent = 'สะสมระยะทางฝ่าเปลวเพลิงสุริยะเพื่อบุกทะลวงครึ่งแรก';
+      } else {
+        bossGimmickBannerEl.classList.add('active-supernova');
+        bossCardEl.classList.add('supernova-active');
+        bossGimmickTagEl.textContent = '💥 SUPERNOVA';
+        bossGimmickTextEl.textContent = 'สภาวะซูเปอร์โนวา! เกจไม้ตายชาร์จไว x2 ปลดปล่อย Shadow Slash สังหาร!';
       }
     } else {
       bossGimmickBannerEl.style.display = 'none';
@@ -1969,13 +2196,11 @@
       pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
 
-      // ชาร์จเกจไม้ตายอัตโนมัติเมื่ออยู่ในสภาวะ Zone 3 (+0.5%/วิ หรือ +1.0% หาก Flow)
       if (isFrenzyActive || currentHrZone === 3) {
         const ultTimeRate = isFlowStateActive ? 1.0 : 0.5;
         addUltimateCharge(ultTimeRate);
       }
 
-      // นับเวลาถอยหลังสถานะ Overdrive Surge
       if (isOverdriveActive) {
         overdriveSecondsRemaining--;
         overdriveTimeLeftEl.textContent = overdriveSecondsRemaining;
@@ -1988,19 +2213,17 @@
         }
       }
 
-      // นับเวลาสถานะบอสเปราะบาง (Vulnerable) จากการโดน Shadow Slash
       if (bossVulnerableTimer > 0) {
         bossVulnerableTimer--;
       }
 
-      // กลไกการฟื้นฟูเลือดของ Malakor (Tier IV) ผ่านหมอกสูบวิญญาณ
       const currentBoss = BOSS_DATABASE[gameState.bossIndex];
       const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
       if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.60) {
         const rollingPace = getRecentRollingPace();
         if (rollingPace === null || rollingPace > 7.5) {
           mistHealingTick++;
-          if (mistHealingTick >= 20) { // ทุกๆ 20 วินาทีที่วิ่งช้าเกินเกณฑ์ บอสจะดูดเลือด +0.02 กม.
+          if (mistHealingTick >= 20) {
             mistHealingTick = 0;
             gameState.bossHpRemain = Math.min(currentBoss.maxHpKm, gameState.bossHpRemain + 0.02);
             showToast('🌫️ หมอกคำสาปสูบพลัง! บอสฟื้นฟูเลือด +0.02 กม.');

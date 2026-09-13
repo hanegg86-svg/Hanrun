@@ -110,7 +110,7 @@
         <div class="chest-icon-anim">📦</div>
         <div class="chest-details">
           <h4 class="chest-title">พบหีบสมบัติดันเจี้ยน! (<span id="chest-count">0</span> หีบ)</h4>
-          <p class="chest-desc">ลุ้นรับอุปกรณ์สวมใส่หายาก, เหรียญทอง, หรือ EXP มหาศาล</p>
+          <p class="chest-desc">ลุ้นรับอุปกรณ์สวมใส่หายาก, ชุดเซ็ตทรงพลัง, เหรียญทอง หรือ EXP</p>
         </div>
         <button class="btn-open-chest" id="btn-open-chest" type="button">เปิดหีบ</button>
       </div>
@@ -216,30 +216,49 @@
           <span class="slot-label">อาวุธ</span>
           <div class="slot-item-icon" id="icon-slot-weapon">🗡️</div>
           <span class="slot-item-name" id="name-slot-weapon">ว่างเปล่า</span>
+          <span class="slot-item-set-tag" id="set-slot-weapon"></span>
         </div>
         <div class="slot-box" id="slot-armor" data-slottype="armor">
           <span class="slot-label">เกราะอก</span>
           <div class="slot-item-icon" id="icon-slot-armor">🛡️</div>
           <span class="slot-item-name" id="name-slot-armor">ว่างเปล่า</span>
+          <span class="slot-item-set-tag" id="set-slot-armor"></span>
         </div>
         <div class="slot-box" id="slot-boots" data-slottype="boots">
           <span class="slot-label">รองเท้าเงา</span>
           <div class="slot-item-icon" id="icon-slot-boots">🥾</div>
           <span class="slot-item-name" id="name-slot-boots">ว่างเปล่า</span>
+          <span class="slot-item-set-tag" id="set-slot-boots"></span>
         </div>
         <div class="slot-box" id="slot-relic" data-slottype="relic">
           <span class="slot-label">เครื่องราง</span>
           <div class="slot-item-icon" id="icon-slot-relic">🧿</div>
           <span class="slot-item-name" id="name-slot-relic">ว่างเปล่า</span>
+          <span class="slot-item-set-tag" id="set-slot-relic"></span>
         </div>
       </div>
 
-      <!-- Inventory Storage Grid -->
+      <!-- Active Set Bonuses Container -->
+      <div class="set-bonuses-container" id="set-bonuses-container">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Inventory Storage Grid with Category Tabs -->
       <div class="inventory-container">
         <div class="inv-header">
-          <span class="inv-title">คลังไอเทมในกระเป๋า (<span id="inv-count">0</span>/20)</span>
-          <span class="inv-hint">แตะไอเทมเพื่อสวมใส่หรือย่อยสลาย</span>
+          <span class="inv-title">คลังไอเทม (<span id="inv-count">0</span>/20)</span>
+          <span class="inv-hint">แตะเพื่อดู/สวมใส่</span>
         </div>
+
+        <!-- Inventory Filter Tabs -->
+        <div class="inv-tabs">
+          <button class="inv-tab-btn active" data-filter="all" type="button">ทั้งหมด</button>
+          <button class="inv-tab-btn" data-filter="weapon" type="button">อาวุธ</button>
+          <button class="inv-tab-btn" data-filter="armor" type="button">เกราะ</button>
+          <button class="inv-tab-btn" data-filter="boots" type="button">รองเท้า</button>
+          <button class="inv-tab-btn" data-filter="relic" type="button">เครื่องราง</button>
+        </div>
+
         <div class="inventory-grid" id="inventory-grid"></div>
       </div>
     </section>
@@ -248,7 +267,7 @@
     <section class="codex-section">
       <div class="section-title-row">
         <h2 class="section-title">สมุดภาพมอนสเตอร์ (Bestiary Codex)</h2>
-        <span class="codex-counter" id="codex-counter">บันทึก 6 อสูร</span>
+        <span class="codex-counter" id="codex-counter">บันทึก 7 อสูร</span>
       </div>
       <div class="codex-list" id="codex-list"></div>
     </section>
@@ -331,7 +350,7 @@
     <section class="achievements-section">
       <div class="section-title-row">
         <h2 class="section-title">เกียรติยศแห่งเงา (Milestones)</h2>
-        <span class="achievements-counter" id="achievements-counter">0/7 สำเร็จ</span>
+        <span class="achievements-counter" id="achievements-counter">0/8 สำเร็จ</span>
       </div>
       <div class="achievements-list" id="achievements-list"></div>
     </section>
@@ -418,14 +437,22 @@
       <div class="modal-card">
         <div class="modal-header">
           <span class="modal-item-icon" id="modal-item-icon">🗡️</span>
-          <div>
+          <div class="modal-header-info">
             <h3 class="modal-item-name" id="modal-item-name">ดาบ</h3>
-            <span class="modal-item-rarity" id="modal-item-rarity">Common</span>
+            <div class="modal-badges-row">
+              <span class="modal-item-rarity" id="modal-item-rarity">Common</span>
+              <span class="modal-item-set" id="modal-item-set">เซ็ตเงามัจจุราช</span>
+            </div>
           </div>
         </div>
         <div class="modal-body">
           <p class="modal-stat-line" id="modal-main-stat">+10% ดาเมจ</p>
           <p class="modal-stat-line modal-sub" id="modal-sub-stat">+3% คริติคอล</p>
+          <div class="modal-set-desc-box" id="modal-set-desc-box">
+            <span class="modal-set-title">🔮 คุณสมบัติเซ็ตโบราณ:</span>
+            <p class="modal-set-line" id="modal-set-bonus-2">(2 ชิ้น) โบนัส 2 ชิ้น</p>
+            <p class="modal-set-line" id="modal-set-bonus-4">(4 ชิ้น) โบนัส 4 ชิ้น</p>
+          </div>
         </div>
         <div class="modal-actions">
           <button class="btn-modal-action btn-equip" id="btn-modal-equip" type="button">สวมใส่</button>
