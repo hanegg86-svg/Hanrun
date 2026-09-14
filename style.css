@@ -938,9 +938,7 @@ body {
   cursor: pointer;
 }
 
-/* ==========================================================================
-   EQUIPMENT & INVENTORY SECTION (FIXED FOR SCREEN FIT & ZERO-OVERFLOW)
-   ========================================================================== */
+/* Equipment & Inventory Section */
 .equipment-section {
   background: #111016;
   border: 1px solid var(--border-gold);
@@ -960,7 +958,6 @@ body {
   max-width: 55%;
 }
 
-/* Equipment 4 Slots Grid: Use minmax(0, 1fr) to prevent blowout */
 .equip-slots-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -980,7 +977,7 @@ body {
   justify-content: center;
   cursor: pointer;
   min-height: 84px;
-  min-width: 0; /* CRITICAL: Prevents CSS Grid item from blowing out */
+  min-width: 0;
   overflow: hidden;
   position: relative;
   transition: transform 0.1s ease, border-color 0.2s ease;
@@ -1130,7 +1127,6 @@ body {
   color: var(--text-muted);
 }
 
-/* Inventory Grid: Limited height with smooth scrolling & minmax(0, 1fr) */
 .inventory-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1163,7 +1159,7 @@ body {
   align-items: center;
   cursor: pointer;
   position: relative;
-  min-width: 0; /* CRITICAL: Prevent grid blowout */
+  min-width: 0;
   overflow: hidden;
   transition: transform 0.1s ease;
 }
@@ -1507,17 +1503,87 @@ body {
   font-family: monospace, -apple-system;
 }
 
-/* History & Daily Stats Section */
+/* ==========================================================================
+   HISTORY & DAILY STATS SECTION (ACCORDION TOGGLE + INTERNAL SCROLL)
+   ========================================================================== */
 .history-section {
   background: #111016;
   border: 1px solid var(--border-gold);
   border-radius: 16px;
   padding: 14px;
+  transition: all 0.3s ease;
+}
+
+.title-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .history-count {
+  font-size: 0.68rem;
+  color: var(--gold-glow);
+  background: rgba(212, 175, 55, 0.12);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  font-weight: 700;
+}
+
+.btn-toggle-history {
+  background: #181722;
+  border: 1px solid var(--border-gold);
+  color: var(--gold-glow);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-toggle-history:active {
+  background: var(--gold-dark);
+  color: #fff;
+}
+
+/* Collapsed Mini Summary Card */
+.history-collapsed-summary {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px dashed rgba(212, 175, 55, 0.3);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.history-mini-icon {
+  font-size: 1.1rem;
+}
+
+.history-mini-text {
   font-size: 0.7rem;
-  color: var(--text-muted);
+  color: #d4d4d8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Collapsible Content Wrapper */
+.history-collapsible-content {
+  display: block;
+  transition: all 0.3s ease;
+}
+
+.history-section.collapsed .history-collapsible-content {
+  display: none;
+}
+
+.history-section.collapsed .history-collapsed-summary {
+  display: flex !important;
 }
 
 /* Tab Control Switcher */
@@ -1554,11 +1620,28 @@ body {
   width: 100%;
 }
 
-/* Daily Stats Card */
+/* Daily Stats Card List with Internal Scroll */
 .daily-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dark) #181722;
+}
+
+.daily-list::-webkit-scrollbar {
+  width: 4px;
+}
+.daily-list::-webkit-scrollbar-track {
+  background: #181722;
+  border-radius: 4px;
+}
+.daily-list::-webkit-scrollbar-thumb {
+  background: var(--gold-dark);
+  border-radius: 4px;
 }
 
 .daily-card {
@@ -1653,11 +1736,28 @@ body {
   font-family: monospace, -apple-system;
 }
 
-/* History List with GPX Download */
+/* History List with GPX Download & Internal Scroll */
 .history-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dark) #181722;
+}
+
+.history-list::-webkit-scrollbar {
+  width: 4px;
+}
+.history-list::-webkit-scrollbar-track {
+  background: #181722;
+  border-radius: 4px;
+}
+.history-list::-webkit-scrollbar-thumb {
+  background: var(--gold-dark);
+  border-radius: 4px;
 }
 
 .history-card {

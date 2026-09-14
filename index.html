@@ -239,9 +239,7 @@
       </div>
 
       <!-- Active Set Bonuses Container -->
-      <div class="set-bonuses-container" id="set-bonuses-container">
-        <!-- Rendered by JS -->
-      </div>
+      <div class="set-bonuses-container" id="set-bonuses-container"></div>
 
       <!-- Inventory Storage Grid with Category Tabs -->
       <div class="inventory-container">
@@ -380,27 +378,39 @@
       </div>
     </section>
 
-    <!-- History & Daily Stats Section -->
-    <section class="history-section">
+    <!-- History & Daily Stats Section (Accordion Toggle) -->
+    <section class="history-section" id="history-section">
       <div class="section-title-row">
-        <h2 class="section-title">บันทึกสถิติการล่า</h2>
-        <span class="history-count" id="history-count">0 บันทึก</span>
+        <div class="title-with-badge">
+          <h2 class="section-title">บันทึกสถิติการล่า</h2>
+          <span class="history-count" id="history-count">0 รอบ</span>
+        </div>
+        <button class="btn-toggle-history" id="btn-toggle-history" type="button">▾ พับเก็บ</button>
       </div>
 
-      <!-- Tab Navigation Switcher -->
-      <div class="tab-control">
-        <button class="tab-btn active" id="tab-btn-daily" type="button">📊 สถิติรายวัน (Daily)</button>
-        <button class="tab-btn" id="tab-btn-sessions" type="button">📜 ประวัติรายรอบ (Sessions)</button>
+      <!-- Mini summary displayed only when collapsed -->
+      <div class="history-collapsed-summary" id="history-collapsed-summary" style="display: none;">
+        <span class="history-mini-icon">📜</span>
+        <span class="history-mini-text" id="history-mini-text">มีประวัติการล่าสะสม แตะ "กางออก" เพื่อเปิดดู</span>
       </div>
 
-      <!-- Tab View 1: สถิติรายวัน -->
-      <div class="tab-view" id="view-daily">
-        <div class="daily-list" id="daily-list"></div>
-      </div>
+      <!-- Collapsible Container -->
+      <div class="history-collapsible-content" id="history-collapsible-content">
+        <!-- Tab Navigation Switcher -->
+        <div class="tab-control">
+          <button class="tab-btn active" id="tab-btn-daily" type="button">📊 สถิติรายวัน (Daily)</button>
+          <button class="tab-btn" id="tab-btn-sessions" type="button">📜 ประวัติรายรอบ (Sessions)</button>
+        </div>
 
-      <!-- Tab View 2: ประวัติรายรอบ -->
-      <div class="tab-view" id="view-sessions" style="display: none;">
-        <div class="history-list" id="history-list"></div>
+        <!-- Tab View 1: สถิติรายวัน -->
+        <div class="tab-view" id="view-daily">
+          <div class="daily-list" id="daily-list"></div>
+        </div>
+
+        <!-- Tab View 2: ประวัติรายรอบ -->
+        <div class="tab-view" id="view-sessions" style="display: none;">
+          <div class="history-list" id="history-list"></div>
+        </div>
       </div>
     </section>
 

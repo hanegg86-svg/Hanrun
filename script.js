@@ -327,6 +327,7 @@
     maxHr: 178,
     lastBleDeviceName: null,
     lastDailyDate: new Date().toDateString(),
+    isHistoryCollapsed: false,
     career: {
       totalRuns: 0,
       totalDistanceKm: 0.0,
@@ -372,18 +373,17 @@
       gameState.dailyQuests = saved.dailyQuests || generateDailyQuests();
       gameState.achievements = saved.achievements || generateAchievements();
       gameState.ultimateCharge = typeof saved.ultimateCharge === 'number' ? saved.ultimateCharge : 0;
+      gameState.isHistoryCollapsed = typeof saved.isHistoryCollapsed === 'boolean' ? saved.isHistoryCollapsed : false;
     } else {
       gameState = defaultState;
     }
 
-    // ประสานบอสทั้งหมด 7 ตัวเข้ากับ Bestiary เสมอ
     BOSS_DATABASE.forEach(b => {
       if (!gameState.bestiary[b.id]) {
         gameState.bestiary[b.id] = { kills: 0, name: b.name };
       }
     });
 
-    // ประสานความสำเร็จใหม่เข้ากับบันทึกเดิม
     const defaultAchs = generateAchievements();
     defaultAchs.forEach(defAch => {
       if (!gameState.achievements.find(a => a.id === defAch.id)) {
@@ -432,7 +432,7 @@
   let sessionBossKills = 0;
   let currentGpxTrack = [];
 
-  // Heart Rate & Zone Variables (Web Bluetooth API)
+  // Heart Rate & Zone Variables
   let bluetoothDevice = null;
   let hrCharacteristic = null;
   let currentHeartRate = 0;
@@ -440,13 +440,11 @@
   let previousHrZone = 0;
   let isBleConnected = false;
 
-  // Berserk / Frenzy (Zone 3 Only)
   let isFrenzyActive = false;
   let nextChestKmCheckpoint = 1.0;
   let nextKmAnnounceCheckpoint = 1.0;
   let paceSamples = [];
 
-  // Ultimate & Flow State Variables
   let isOverdriveActive = false;
   let overdriveSecondsRemaining = 0;
   let isFlowStateActive = false;
@@ -487,7 +485,6 @@
       mainStatVal = 6;
     }
 
-    // สุ่มสังกัด 1 ใน 3 เซ็ตโบราณ
     const setKeys = Object.keys(SET_DATABASE);
     const setId = setKeys[Math.floor(Math.random() * setKeys.length)];
     const setInfo = SET_DATABASE[setId];
@@ -509,7 +506,6 @@
     };
   }
 
-  // คำนวณจำนวนชิ้นของแต่ละเซ็ตที่สวมใส่อยู่
   function getActiveEquippedSets() {
     const counts = { shadowstalker: 0, bloodknight: 0, voidwalker: 0 };
     const eq = gameState.equipment;
@@ -546,7 +542,6 @@
       if (eq.relic.subStatVal) bonusSta += eq.relic.subStatVal;
     }
 
-    // คำนวณบัฟจาก Set Bonuses
     const setCounts = getActiveEquippedSets();
     if (setCounts.shadowstalker >= 2) {
       bonusCrit += 10;
@@ -649,6 +644,11 @@
   const careerBossesEl = document.getElementById('career-bosses');
   const careerLongestEl = document.getElementById('career-longest');
 
+  // History Accordion DOM
+  const historySectionEl = document.getElementById('history-section');
+  const btnToggleHistory = document.getElementById('btn-toggle-history');
+  const historyCollapsedSummary = document.getElementById('history-collapsed-summary');
+  const historyMiniText = document.getElementById('history-mini-text');
   const historyListEl = document.getElementById('history-list');
   const dailyListEl = document.getElementById('daily-list');
   const historyCountEl = document.getElementById('history-count');
@@ -688,7 +688,6 @@
 
   let selectedInventoryItem = null;
 
-  // --- Haversine Distance ---
   function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -741,7 +740,6 @@
   function addUltimateCharge(amount) {
     const setCounts = getActiveEquippedSets();
     let finalAmount = amount;
-    // โบนัสเซ็ตเงามัจจุราช 2 ชิ้น: ชาร์จไม้ตายไวขึ้น 25%
     if (setCounts.shadowstalker >= 2) {
       finalAmount *= 1.25;
     }
@@ -778,7 +776,6 @@
     return null;
   }
 
-  // --- Heart Rate Zone Calculator & State Evaluator ---
   function calculateHrZone(bpm, maxHr) {
     if (bpm <= 0) return 0;
     const pct = (bpm / maxHr) * 100;
@@ -861,7 +858,6 @@
     }
   }
 
-  // --- Web Bluetooth Engine with Targeted Filter & Auto-Reconnect ---
   async function setupGattConnection(device) {
     bluetoothDevice = device;
     bluetoothDevice.addEventListener('gattserverdisconnected', onBluetoothDisconnected);
@@ -886,7 +882,7 @@
 
   async function connectBluetoothHeartRate(forceNew = false) {
     if (!('bluetooth' in navigator)) {
-      alert('เบราว์เซอร์นี้ยังไม่รองรับ Web Bluetooth (แนะนำ Google Chrome บน Android หรือ Bluefy บน iOS)');
+      alert('เบราว์เซอร์นี้ยังไม่รองรับ Web Bluetooth');
       return;
     }
 
@@ -901,12 +897,12 @@
         if (pairedDevices.length > 0) {
           const matchedDevice = pairedDevices.find(d => d.name === gameState.lastBleDeviceName) || pairedDevices[0];
           if (matchedDevice) {
-            showToast(`⚡ กำลังเชื่อมต่อด่วนกับ ${matchedDevice.name || 'อุปกรณ์ที่เคยผูกไว้'}...`);
+            showToast(`⚡ กำลังเชื่อมต่อด่วนกับ ${matchedDevice.name || 'อุปกรณ์เดิม'}...`);
             try {
               await setupGattConnection(matchedDevice);
               return;
             } catch (reconnectErr) {
-              console.warn('เชื่อมต่อตัวเดิมไม่สำเร็จ จะเปิดหน้าต่างค้นหาใหม่:', reconnectErr);
+              console.warn('เชื่อมต่อเดิมไม่สำเร็จ:', reconnectErr);
             }
           }
         }
@@ -984,6 +980,29 @@
     }
   });
 
+  // --- Accordion Toggle Handlers for Run History ---
+  function updateHistoryAccordionUI() {
+    if (gameState.isHistoryCollapsed) {
+      historySectionEl.classList.add('collapsed');
+      btnToggleHistory.textContent = '▸ กางออก';
+    } else {
+      historySectionEl.classList.remove('collapsed');
+      btnToggleHistory.textContent = '▾ พับเก็บ';
+    }
+  }
+
+  btnToggleHistory.addEventListener('click', () => {
+    gameState.isHistoryCollapsed = !gameState.isHistoryCollapsed;
+    updateHistoryAccordionUI();
+    saveGame();
+  });
+
+  historyCollapsedSummary.addEventListener('click', () => {
+    gameState.isHistoryCollapsed = false;
+    updateHistoryAccordionUI();
+    saveGame();
+  });
+
   // --- Battle Damage Calculation with Boss Gimmick & Set Logic ---
   function applyDistanceDamage(distanceDeltaKm) {
     if (distanceDeltaKm <= 0) return;
@@ -993,25 +1012,20 @@
     const eqBonus = calculateEquipmentBonuses();
     const setCounts = eqBonus.setCounts;
 
-    // 1. เพิ่มเกจไม้ตายตามระยะทาง (+2% ต่อ 100 เมตร, และ x2 เมื่ออยู่ใน Flow State)
     let ultChargeBonusMult = isFlowStateActive ? 2 : 1;
     
-    // บอส Tier VI Phase 2 (Vacuum Resonance) ชาร์จไม้ตายไว x3 ใน HR Zone 2 - 3
     if (currentBoss.gimmick === 'empress' && bossHpPct <= 0.65 && bossHpPct > 0.25) {
       if (currentHrZone === 2 || currentHrZone === 3 || isFrenzyActive) {
         ultChargeBonusMult *= 3;
       }
     }
 
-    // บอส Tier VII Supernova Phase: เมื่อเลือดต่ำกว่า 50% ชาร์จไม้ตายไว x2
     if (currentBoss.gimmick === 'supernova' && bossHpPct <= 0.50) {
       ultChargeBonusMult *= 2;
     }
 
     addUltimateCharge((distanceDeltaKm / 0.1) * 2 * ultChargeBonusMult);
 
-    // 2. ตรวจสอบ Pace Rhythm Combo / Flow State
-    // โบนัสเซ็ตผู้ท่องมิติ 2 ชิ้น: เข้าสู่ Flow State ง่ายขึ้น (ต้องการ 0.20 กม. แทน 0.40 กม.)
     const flowThresholdKm = setCounts.voidwalker >= 2 ? 0.20 : 0.40;
     const rollingPace = getRecentRollingPace();
 
@@ -1068,10 +1082,8 @@
       critChance = 100;
     }
 
-    // --- BOSS GIMMICK MODIFIERS ---
     let bossDamageMultiplier = 1.0;
 
-    // TIER IV: Malakor (หมอกคำสาปสูบวิญญาณ)
     if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.60) {
       if (rollingPace === null || rollingPace > 7.5) {
         bossDamageMultiplier *= 0.5;
@@ -1088,7 +1100,6 @@
       }
     }
 
-    // TIER V: Titan of Ruin (เกราะศิลาดึกดำบรรพ์ & Enrage)
     if (currentBoss.gimmick === 'carapace') {
       if (bossVulnerableTimer > 0) {
         bossDamageMultiplier *= 2.0;
@@ -1108,7 +1119,6 @@
       }
     }
 
-    // TIER VI: Nyxaria (จักรพรรดินีเงาราตรี 3 เฟส)
     if (currentBoss.gimmick === 'empress') {
       if (bossHpPct > 0.65) {
         if (isFlowStateActive) {
@@ -1139,7 +1149,6 @@
       }
     }
 
-    // TIER VII: Ignis-Vorax (เทพอสูรเพลิงสุริยคราส)
     if (currentBoss.gimmick === 'supernova') {
       if (bossHpPct > 0.50) {
         if (!gimmickAnnounced.ignisSolar) {
@@ -1151,14 +1160,13 @@
         if (!gimmickAnnounced.ignisSupernova) {
           gimmickAnnounced.ignisSupernova = true;
           speakVoice('คำเตือนระดับสูงสุด! อสูรเพลิงเข้าสู่สภาวะซูเปอร์โนวา ปลดปล่อยท่าไม้ตายรัวๆ เพื่อปิดฉาก', true);
-          showToast('💥 SOLAR SUPERNOVA! เกจไม้ตายชาร์จไว x2 ปลดปล่อยคมดาบอเวจีสกัดกั้น');
+          showToast('💥 SOLAR SUPERNOVA! เกจไม้ตายชาร์จไว x2 ปลดปล่อย Shadow Slash สังหาร');
         }
         bossDamageMultiplier *= 1.35;
         critChance = Math.min(100, critChance + 20);
       }
     }
 
-    // โบนัสเซ็ตผู้ท่องมิติ 4 ชิ้น: เมื่ออยู่ใน Flow State โจมตีทะลุเกราะบอส 100% (True Damage)
     if (setCounts.voidwalker >= 4 && isFlowStateActive) {
       if (bossDamageMultiplier < 1.0) {
         bossDamageMultiplier = 1.0;
@@ -1167,7 +1175,6 @@
 
     const isCrit = (Math.random() * 100) < critChance;
 
-    // ติดคริติคอลทะลุเกราะหิน
     if (currentBoss.gimmick === 'carapace' && bossVulnerableTimer <= 0 && isCrit) {
       bossDamageMultiplier = (bossDamageMultiplier / 0.70);
     }
@@ -1193,7 +1200,6 @@
       }
       gameState.bestiary[currentBoss.id].kills += 1;
 
-      // โบนัสเซ็ตอัศวินโลหิต 4 ชิ้น: โบนัส EXP +40% ขณะอยู่ใน Zone 2 หรือ 3
       let setExpBonus = 1.0;
       if (setCounts.bloodknight >= 4 && (currentHrZone === 2 || currentHrZone === 3 || isFrenzyActive)) {
         setExpBonus = 1.4;
@@ -1219,7 +1225,6 @@
       const questBoss = gameState.dailyQuests.find(q => q.id === 'dq_boss');
       if (questBoss) questBoss.current = Math.min(questBoss.target, questBoss.current + 1);
 
-      // Achievements Checks
       if (currentBoss.tier === 'TIER III') {
         const ach = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
         if (ach) ach.current = Math.min(ach.target, ach.current + 1);
@@ -1261,13 +1266,11 @@
     const setCounts = eqBonus.setCounts;
     const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01);
     
-    // โบนัสเซ็ตเงามัจจุราช 4 ชิ้น: ท่าไม้ตาย Shadow Slash แรงขึ้น 50%
     const shadowSetDmgMult = setCounts.shadowstalker >= 4 ? 1.5 : 1.0;
     const burstDamageKm = 0.40 * strMultiplier * shadowSetDmgMult;
     const currentBoss = BOSS_DATABASE[gameState.bossIndex];
 
     if (currentBoss.gimmick === 'carapace') {
-      // โบนัสเซ็ตเงามัจจุราช 4 ชิ้น: ยืดเวลาเกราะแตกเป็น 90 วินาที
       bossVulnerableTimer = setCounts.shadowstalker >= 4 ? 90 : 60;
       showToast(`💥 SHADOW SLASH กะเทาะเกราะศิลาแตกสะบั้น! บอสเปราะบาง x2 (${bossVulnerableTimer} วิ)`);
       speakVoice('คมดาบผ่าเกราะศิลาแตกสะบั้น ไททันติดสถานะเปราะบาง', true);
@@ -1401,7 +1404,6 @@
       }
     });
 
-    // Render Active Set Bonuses Banner
     setBonusesContainerEl.innerHTML = '';
     const setCounts = eqBonus.setCounts;
     let hasAnySet = false;
@@ -1464,7 +1466,6 @@
     }
   }
 
-  // Inventory Filter Tabs Listener
   document.querySelectorAll('.inv-tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.inv-tab-btn').forEach(b => b.classList.remove('active'));
@@ -1555,7 +1556,6 @@
     });
   });
 
-  // --- Render Monster Codex (ครบ 7 บอส) ---
   function renderMonsterCodex() {
     codexListEl.innerHTML = '';
     BOSS_DATABASE.forEach(boss => {
@@ -1575,7 +1575,6 @@
     codexCounterEl.textContent = `บันทึก ${BOSS_DATABASE.length} อสูร`;
   }
 
-  // --- Backup & Restore Handlers ---
   btnExportBackup.addEventListener('click', async () => {
     const history = await DB.getAllRunHistory();
     const backupData = {
@@ -1619,7 +1618,6 @@
     reader.readAsText(file);
   });
 
-  // --- GPX Generator ---
   window.downloadRunGPX = async function (runTimestamp) {
     const history = await DB.getAllRunHistory();
     const run = history.find(r => r.timestamp === runTimestamp);
@@ -1660,16 +1658,26 @@
     showToast('🗺️ ส่งออกไฟล์ GPX สำเร็จ! นำเข้า Strava ได้');
   };
 
-  // --- Render Run History & Sessions ---
+  // --- Render Run History & Sessions with Accordion & Mini Summary ---
   async function renderHistoryAndDailyUI() {
     const history = await DB.getAllRunHistory();
     historyCountEl.textContent = `${history.length} รอบ`;
+
+    // อัปเดตข้อความในแถบย่อ (Mini Summary Bar)
+    if (history.length === 0) {
+      historyMiniText.textContent = 'ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!';
+    } else {
+      const latestRun = history[0];
+      historyMiniText.textContent = `ล่าสุด: ${latestRun.distanceKm.toFixed(2)} กม. (${latestRun.pace}) | ทั้งหมด ${history.length} รอบ [แตะดูกราฟ/ประวัติ]`;
+    }
+
+    updateHistoryAccordionUI();
 
     historyListEl.innerHTML = '';
     if (history.length === 0) {
       historyListEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!</div>';
     } else {
-      history.slice(0, 15).forEach(item => {
+      history.slice(0, 25).forEach(item => {
         const hasGpx = item.gpxTrack && item.gpxTrack.length > 0;
         const card = document.createElement('div');
         card.className = 'history-card';
@@ -1823,7 +1831,6 @@
     const hpPercent = Math.max(0, Math.min(100, (gameState.bossHpRemain / boss.maxHpKm) * 100));
     bossHpBarEl.style.width = `${hpPercent}%`;
 
-    // Dynamic Boss Gimmick Banner Rendering
     const bossHpPct = gameState.bossHpRemain / boss.maxHpKm;
     bossGimmickBannerEl.className = 'boss-gimmick-banner';
     bossCardEl.classList.remove('eclipse-active', 'supernova-active');
@@ -1896,7 +1903,6 @@
     calValEl.textContent = `${calValue} kcal`;
     updatePace();
 
-    // Ultimate Gauge UI update
     const ultPercent = Math.min(100, Math.floor(gameState.ultimateCharge));
     ultPctValEl.textContent = `${ultPercent}%`;
     ultBarFillEl.style.width = `${ultPercent}%`;
@@ -2049,7 +2055,6 @@
     renderCareerUI();
   }
 
-  // --- Shop Purchase Handlers ---
   btnBuyElixir.addEventListener('click', () => {
     if (gameState.gold >= 150) {
       gameState.gold -= 150;
@@ -2097,7 +2102,6 @@
     }
   });
 
-  // --- Timers & Pace Helpers ---
   function formatTime(totalSecs) {
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
@@ -2126,7 +2130,6 @@
     paceValEl.textContent = calculatePace(runSeconds, runDistanceKm);
   }
 
-  // --- Tab Control Switcher ---
   tabBtnDaily.addEventListener('click', () => {
     tabBtnDaily.classList.add('active');
     tabBtnSessions.classList.remove('active');
@@ -2141,7 +2144,6 @@
     viewDaily.style.display = 'none';
   });
 
-  // --- Pocket Mode Touch Shield Logic ---
   let unlockProgress = 0;
   let unlockInterval = null;
 
@@ -2180,7 +2182,6 @@
     showToast('🔒 เปิดโหมดพักจอ (แตะค้างเพื่อปลดล็อก)');
   });
 
-  // --- Engine Control (Start / Pause / Finish) ---
   async function startRunEngine() {
     isRunning = true;
     btnToggleRun.classList.add('running');
@@ -2400,7 +2401,6 @@
     await renderHistoryAndDailyUI();
   }
 
-  // --- Stat Allocation Handlers ---
   function upgradeStat(statKey) {
     if ((gameState.statPoints || 0) > 0) {
       gameState.statPoints -= 1;
@@ -2415,7 +2415,6 @@
   btnAddSta.addEventListener('click', () => upgradeStat('sta'));
   btnAddAgi.addEventListener('click', () => upgradeStat('agi'));
 
-  // --- Simulator Mode Handlers ---
   window.shadowStrider = {
     simulateStep(km) {
       if (!isRunning) {
@@ -2457,7 +2456,6 @@
     showToast(isSimMode ? 'เปิดโหมดจำลองวิ่ง (เทสต์ในห้องได้)' : 'ปิดโหมดจำลอง กลับสู่ระบบ GPS จริง');
   });
 
-  // Service Worker Registration
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./service-worker.js').catch(err => {
@@ -2466,7 +2464,6 @@
     });
   }
 
-  // --- Initialize Application ---
   await loadGameState();
   renderUI();
   await renderHistoryAndDailyUI();
