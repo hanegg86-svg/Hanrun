@@ -181,7 +181,7 @@
     }
   };
 
-  // --- Boss List Database (7 Tiers พร้อมบอสใหม่ Ignis-Vorax) ---
+  // --- Boss List Database (8 Tiers พร้อมบอสใหม่ Leviathan: Nihil-Khaos) ---
   const BOSS_DATABASE = [
     {
       id: 'boss_1',
@@ -259,10 +259,22 @@
       rewardExp: 55000,
       rewardGold: 8500,
       gimmick: 'supernova'
+    },
+    {
+      id: 'boss_8',
+      tier: 'TIER VIII',
+      name: 'Primordial Void Leviathan: Nihil-Khaos',
+      avatar: '🌌',
+      maxHpKm: 30.0,
+      desc: 'เลเวียธานมิติอเวจีบรรพกาล เลือด 30 กม. ต่ำกว่า 50% หลุมดำดูดกลืนเกจ ต่ำกว่า 20% ซิงกูลาริตียุบตัว ดาเมจ x2.5 ในโซนสูง!',
+      rewardExp: 85000,
+      rewardGold: 15000,
+      gimmick: 'singularity'
     }
   ];
 
   function getTitleForLevel(level) {
+    if (level >= 50) return 'Lord of the Primordial Void';
     if (level >= 45) return 'Eclipse God Slayer';
     if (level >= 35) return 'Abyssal Sovereign Emperor';
     if (level >= 30) return 'Void Overlord';
@@ -293,7 +305,8 @@
       { id: 'ach_boss_malakor', name: 'Lich Bane (ผู้สยบจอมเวท)', desc: 'โค่นจอมเวทอเวจี Shadow Lich: Malakor (Tier IV)', target: 1, current: 0, unit: 'ตัว', rewardExp: 10000, rewardGold: 2000, claimed: false },
       { id: 'ach_boss_titan', name: 'Titan Breaker (ผู้กะเทาะศิลาไททัน)', desc: 'โค่น Void Behemoth: Titan of Ruin (Tier V)', target: 1, current: 0, unit: 'ตัว', rewardExp: 16000, rewardGold: 3500, claimed: false },
       { id: 'ach_boss_empress', name: 'Eclipse Sovereign (ผู้สยบจักรพรรดินี)', desc: 'โค่น Abyssal Empress: Nyxaria (Tier VI)', target: 1, current: 0, unit: 'ตัว', rewardExp: 28000, rewardGold: 6000, claimed: false },
-      { id: 'ach_boss_ignis', name: 'Harbinger Extinguisher (ผู้ดับสุริยคราส)', desc: 'โค่น Eclipse Harbinger: Ignis-Vorax (Tier VII)', target: 1, current: 0, unit: 'ตัว', rewardExp: 45000, rewardGold: 10000, claimed: false }
+      { id: 'ach_boss_ignis', name: 'Harbinger Extinguisher (ผู้ดับสุริยคราส)', desc: 'โค่น Eclipse Harbinger: Ignis-Vorax (Tier VII)', target: 1, current: 0, unit: 'ตัว', rewardExp: 45000, rewardGold: 10000, claimed: false },
+      { id: 'ach_boss_leviathan', name: 'Void Leviathan Slayer (ผู้ดับชีพเลเวียธาน)', desc: 'โค่น Primordial Void Leviathan: Nihil-Khaos (Tier VIII)', target: 1, current: 0, unit: 'ตัว', rewardExp: 60000, rewardGold: 15000, claimed: false }
     ];
   }
 
@@ -317,7 +330,8 @@
       boss_4: { kills: 0, name: 'Shadow Lich: Malakor' },
       boss_5: { kills: 0, name: 'Void Behemoth: Titan of Ruin' },
       boss_6: { kills: 0, name: 'Abyssal Empress: Nyxaria' },
-      boss_7: { kills: 0, name: 'Eclipse Harbinger: Ignis-Vorax' }
+      boss_7: { kills: 0, name: 'Eclipse Harbinger: Ignis-Vorax' },
+      boss_8: { kills: 0, name: 'Primordial Void Leviathan: Nihil-Khaos' }
     },
     chestsAvailable: 0,
     streak: { count: 1, lastDate: new Date().toDateString() },
@@ -390,6 +404,15 @@
         gameState.achievements.push(defAch);
       }
     });
+
+    // เริ่มต้นแอป: ให้เริ่มที่ Boss Tier 1 เสมอหากไม่ได้อยู่ในระหว่างการวิ่ง
+    if (!isRunning) {
+      gameState.bossIndex = 0;
+      gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
+      bossVulnerableTimer = 0;
+      gimmickAnnounced = {};
+      mistHealingTick = 0;
+    }
 
     verifyDailyAndStreakReset();
     await DB.savePlayerState(gameState);
@@ -1167,6 +1190,31 @@
       }
     }
 
+    if (currentBoss.gimmick === 'singularity') {
+      if (bossHpPct > 0.50) {
+        if (!gimmickAnnounced.leviathanGrav) {
+          gimmickAnnounced.leviathanGrav = true;
+          speakVoice('เลเวียธานบรรพกาลแผ่สนามแรงโน้มถ่วงมิติอเวจี สะสมระยะทางฝ่าความว่างเปล่า');
+          showToast('🌌 สนามแรงโน้มถ่วง: ก้าววิ่งมั่นคงฝ่าแรงดึงดูดมิติอเวจี');
+        }
+      } else if (bossHpPct <= 0.50 && bossHpPct > 0.20) {
+        if (!gimmickAnnounced.leviathanVoid) {
+          gimmickAnnounced.leviathanVoid = true;
+          speakVoice('หลุมดำมิติอเวจีเริ่มดูดกลืนพลัง! เกจไม้ตายหยุดชาร์จตามเวลา ต้องอาศัยก้าววิ่งเท่านั้น', true);
+          showToast('🕳️ หลุมดำดูดกลืน: เกจไม้ตายไม่ชาร์จตามเวลา วิ่งเร่งก้าวเพื่อสะสมพลัง!');
+        }
+      } else {
+        if (!gimmickAnnounced.leviathanSingularity) {
+          gimmickAnnounced.leviathanSingularity = true;
+          speakVoice('คำเตือนฉุกเฉิน! แกนซิงกูลาริตียุบตัว เร่งสปีดแตะโซนสามหรือทำคริติคอล ดาเมจทวีคูณสองจุดห้าเท่า!', true);
+          showToast('🌀 SINGULARITY COLLAPSE! ชีพจร Zone 3-4 หรือคริติคอล ดาเมจ x2.5 ทะลวงมิติ!');
+        }
+        if (isFrenzyActive || currentHrZone >= 3 || isCrit) {
+          bossDamageMultiplier *= 2.5;
+        }
+      }
+    }
+
     if (setCounts.voidwalker >= 4 && isFlowStateActive) {
       if (bossDamageMultiplier < 1.0) {
         bossDamageMultiplier = 1.0;
@@ -1239,6 +1287,9 @@
         if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       } else if (currentBoss.tier === 'TIER VII') {
         const ach = gameState.achievements.find(a => a.id === 'ach_boss_ignis');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+      } else if (currentBoss.tier === 'TIER VIII') {
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_leviathan');
         if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       }
 
@@ -1318,6 +1369,9 @@
         if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       } else if (currentBoss.tier === 'TIER VII') {
         const ach = gameState.achievements.find(a => a.id === 'ach_boss_ignis');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+      } else if (currentBoss.tier === 'TIER VIII') {
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_leviathan');
         if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       }
 
@@ -1663,7 +1717,6 @@
     const history = await DB.getAllRunHistory();
     historyCountEl.textContent = `${history.length} รอบ`;
 
-    // อัปเดตข้อความในแถบย่อ (Mini Summary Bar)
     if (history.length === 0) {
       historyMiniText.textContent = 'ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!';
     } else {
@@ -1833,7 +1886,7 @@
 
     const bossHpPct = gameState.bossHpRemain / boss.maxHpKm;
     bossGimmickBannerEl.className = 'boss-gimmick-banner';
-    bossCardEl.classList.remove('eclipse-active', 'supernova-active');
+    bossCardEl.classList.remove('eclipse-active', 'supernova-active', 'singularity-active');
 
     if (boss.gimmick === 'mist') {
       bossGimmickBannerEl.style.display = 'flex';
@@ -1886,6 +1939,22 @@
         bossCardEl.classList.add('supernova-active');
         bossGimmickTagEl.textContent = '💥 SUPERNOVA';
         bossGimmickTextEl.textContent = 'สภาวะซูเปอร์โนวา! เกจไม้ตายชาร์จไว x2 ปลดปล่อย Shadow Slash สังหาร!';
+      }
+    } else if (boss.gimmick === 'singularity') {
+      bossGimmickBannerEl.style.display = 'flex';
+      if (bossHpPct > 0.50) {
+        bossGimmickBannerEl.classList.add('active-carapace');
+        bossGimmickTagEl.textContent = '🌌 สนามแรงโน้มถ่วง';
+        bossGimmickTextEl.textContent = 'ฝ่าแรงดึงดูดมิติอเวจี สะสมระยะทางกดดันเลเวียธาน';
+      } else if (bossHpPct > 0.20) {
+        bossGimmickBannerEl.classList.add('active-mist');
+        bossGimmickTagEl.textContent = '🕳️ หลุมดำดูดกลืน';
+        bossGimmickTextEl.textContent = 'หลุมดำดูดกลืนพลัง เกจไม้ตายไม่ชาร์จตามเวลา ต้องอาศัยก้าววิ่ง!';
+      } else {
+        bossGimmickBannerEl.classList.add('active-singularity');
+        bossCardEl.classList.add('singularity-active');
+        bossGimmickTagEl.textContent = '🌀 SINGULARITY';
+        bossGimmickTextEl.textContent = 'ซิงกูลาริตียุบตัว! วิ่ง Zone 3-4 หรือคริติคอล ดาเมจทะลวง x2.5!';
       }
     } else {
       bossGimmickBannerEl.style.display = 'none';
@@ -2183,6 +2252,17 @@
   });
 
   async function startRunEngine() {
+    // เมื่อเริ่มออกล่ารอบใหม่ ให้เริ่มที่ Boss Tier 1 เสมอทุกครั้ง
+    if (runSeconds === 0) {
+      gameState.bossIndex = 0;
+      gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
+      bossVulnerableTimer = 0;
+      gimmickAnnounced = {};
+      mistHealingTick = 0;
+      saveGame();
+      renderHUD();
+    }
+
     isRunning = true;
     btnToggleRun.classList.add('running');
     btnRunText.textContent = 'หยุดชั่วคราว';
@@ -2198,8 +2278,13 @@
       updatePace();
 
       if (isFrenzyActive || currentHrZone === 3) {
-        const ultTimeRate = isFlowStateActive ? 1.0 : 0.5;
-        addUltimateCharge(ultTimeRate);
+        const currentBoss = BOSS_DATABASE[gameState.bossIndex];
+        const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
+        // หากสู้เลเวียธานแล้วเลือดต่ำกว่า 50% หลุมดำจะดูดกลืนการชาร์จตามเวลา ต้องวิ่งเพื่อชาร์จเท่านั้น
+        if (!(currentBoss.gimmick === 'singularity' && bossHpPct <= 0.50)) {
+          const ultTimeRate = isFlowStateActive ? 1.0 : 0.5;
+          addUltimateCharge(ultTimeRate);
+        }
       }
 
       if (isOverdriveActive) {
@@ -2334,6 +2419,14 @@
         paceValEl.textContent = `--'--"`;
         btnRunText.textContent = 'เริ่มออกล่า';
         btnFinishRun.setAttribute('disabled', 'true');
+
+        // รีเซ็ตบอสกลับเป็น Tier 1 เสมอ
+        gameState.bossIndex = 0;
+        gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
+        bossVulnerableTimer = 0;
+        gimmickAnnounced = {};
+        mistHealingTick = 0;
+
         renderUI();
         showToast('ยกเลิกรอบการล่าเรียบร้อย');
       }
@@ -2395,6 +2488,13 @@
     paceValEl.textContent = `--'--"`;
     btnRunText.textContent = 'เริ่มออกล่า';
     btnFinishRun.setAttribute('disabled', 'true');
+
+    // รีเซ็ตบอสกลับเป็น Tier 1 เสมอสำหรับการเริ่มออกล่ารอบถัดไป
+    gameState.bossIndex = 0;
+    gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
+    bossVulnerableTimer = 0;
+    gimmickAnnounced = {};
+    mistHealingTick = 0;
 
     saveGame();
     renderUI();
