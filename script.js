@@ -154,7 +154,7 @@
       color: '#c084fc',
       bonuses: {
         2: 'คริติคอล +10% & เกจไม้ตายชาร์จไวขึ้น 25%',
-        4: 'ท่าไม้ตาย Shadow Slash แรงขึ้น 50% & เกราะศิลาแตกนานขึ้นเป็น 90 วินาที'
+        4: 'ท่าไม้ตาย Shadow Slash แรงขึ้น 50% & เกราะศิลาแตกนานขึ้น'
       }
     },
     bloodknight: {
@@ -181,17 +181,17 @@
     }
   };
 
-  // --- Boss List Database (8 Tiers พร้อมบอสใหม่ Leviathan: Nihil-Khaos) ---
+  // --- Boss List Database (ปรับเพิ่มความยากขึ้นทุก Tier พร้อมโบนัสรางวัลที่คุ้มค่า) ---
   const BOSS_DATABASE = [
     {
       id: 'boss_1',
       tier: 'TIER I',
       name: 'Gargoyle of the Crypt',
       avatar: '👹',
-      maxHpKm: 1.0,
-      desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 1.00 กม. เพื่อทำลายมัน!',
-      rewardExp: 1200,
-      rewardGold: 150,
+      maxHpKm: 1.25,
+      desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 1.25 กม. เพื่อทำลายมัน!',
+      rewardExp: 1500,
+      rewardGold: 180,
       gimmick: 'none'
     },
     {
@@ -199,10 +199,10 @@
       tier: 'TIER II',
       name: 'Abyssal Blood Knight',
       avatar: '🤺',
-      maxHpKm: 2.5,
-      desc: 'อัศวินเกราะดำกระหายการต่อสู้ วิ่ง 2.50 กม. เพื่อสยบดาบโลหิต!',
-      rewardExp: 3200,
-      rewardGold: 350,
+      maxHpKm: 3.0,
+      desc: 'อัศวินเกราะดำกระหายการต่อสู้ วิ่ง 3.00 กม. เพื่อสยบดาบโลหิต!',
+      rewardExp: 3800,
+      rewardGold: 420,
       gimmick: 'none'
     },
     {
@@ -210,10 +210,10 @@
       tier: 'TIER III',
       name: 'Ancient Bone Dragon',
       avatar: '🐉',
-      maxHpKm: 5.0,
-      desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 5.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!',
-      rewardExp: 7500,
-      rewardGold: 800,
+      maxHpKm: 6.0,
+      desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 6.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!',
+      rewardExp: 9000,
+      rewardGold: 950,
       gimmick: 'none'
     },
     {
@@ -221,10 +221,10 @@
       tier: 'TIER IV',
       name: 'Shadow Lich: Malakor',
       avatar: '🧙‍♂️',
-      maxHpKm: 7.5,
-      desc: 'จอมเวทอเวจีโบราณ เมื่อเลือดต่ำกว่า 60% หมอกคำสาปจะสูบเลือดคืนหากเพซวิ่งช้ากว่า 7:30!',
-      rewardExp: 13000,
-      rewardGold: 1600,
+      maxHpKm: 9.0,
+      desc: 'จอมเวทอเวจีโบราณ เมื่อเลือดต่ำกว่า 65% หมอกคำสาปจะสูบเลือดคืนหากเพซวิ่งช้ากว่า 7:30!',
+      rewardExp: 15500,
+      rewardGold: 1900,
       gimmick: 'mist'
     },
     {
@@ -232,10 +232,10 @@
       tier: 'TIER V',
       name: 'Void Behemoth: Titan of Ruin',
       avatar: '🗿',
-      maxHpKm: 10.0,
-      desc: 'ไททันศิลาแห่งความว่างเปล่า เกราะหนาลดดาเมจ 30% ทลายเกราะด้วยคริติคอลหรือท่าไม้ตาย Shadow Slash!',
-      rewardExp: 22000,
-      rewardGold: 2800,
+      maxHpKm: 12.0,
+      desc: 'ไททันศิลาแห่งความว่างเปล่า เกราะหนาลดดาเมจ 35% ทลายเกราะด้วยคริติคอลหรือท่าไม้ตาย Shadow Slash!',
+      rewardExp: 26000,
+      rewardGold: 3300,
       gimmick: 'carapace'
     },
     {
@@ -243,10 +243,10 @@
       tier: 'TIER VI',
       name: 'Abyssal Empress: Nyxaria',
       avatar: '👑',
-      maxHpKm: 15.0,
+      maxHpKm: 18.0,
       desc: 'จักรพรรดินีเงาราตรี 3 เฟส: ร่างเงาหลอก (ทลายด้วย Flow State), สนามเรโซแนนซ์ และจันทรคราสทมิฬ!',
-      rewardExp: 38000,
-      rewardGold: 5000,
+      rewardExp: 45000,
+      rewardGold: 6000,
       gimmick: 'empress'
     },
     {
@@ -254,10 +254,10 @@
       tier: 'TIER VII',
       name: 'Eclipse Harbinger: Ignis-Vorax',
       avatar: '☄️',
-      maxHpKm: 21.0,
-      desc: 'เทพอสูรเพลิงสุริยคราส เลือด 21 กม. ครึ่งแรกคลื่นความร้อนแผดเผา ครึ่งหลังระเบิดซูเปอร์โนวา ชาร์จไม้ตายไว x2!',
-      rewardExp: 55000,
-      rewardGold: 8500,
+      maxHpKm: 25.0,
+      desc: 'เทพอสูรเพลิงสุริยคราส เลือด 25 กม. ครึ่งแรกคลื่นความร้อนแผดเผา ครึ่งหลังระเบิดซูเปอร์โนวา ชาร์จไม้ตายไว x2!',
+      rewardExp: 65000,
+      rewardGold: 10000,
       gimmick: 'supernova'
     },
     {
@@ -265,13 +265,18 @@
       tier: 'TIER VIII',
       name: 'Primordial Void Leviathan: Nihil-Khaos',
       avatar: '🌌',
-      maxHpKm: 30.0,
-      desc: 'เลเวียธานมิติอเวจีบรรพกาล เลือด 30 กม. ต่ำกว่า 50% หลุมดำดูดกลืนเกจ ต่ำกว่า 20% ซิงกูลาริตียุบตัว ดาเมจ x2.5 ในโซนสูง!',
-      rewardExp: 85000,
-      rewardGold: 15000,
+      maxHpKm: 35.0,
+      desc: 'เลเวียธานมิติอเวจีบรรพกาล เลือด 35 กม. ต่ำกว่า 50% หลุมดำดูดกลืนเกจ ต่ำกว่า 20% ซิงกูลาริตียุบตัว ดาเมจ x2.5 ในโซนสูง!',
+      rewardExp: 100000,
+      rewardGold: 18000,
       gimmick: 'singularity'
     }
   ];
+
+  // สูตรคำนวณโอกาสสำเร็จของคลังสรรพาวุธเงา: ขั้นต่ำล็อกไว้ที่ 20%
+  function getUpgradeSuccessRate(currentLevel) {
+    return Math.max(20, 100 - (currentLevel * 2));
+  }
 
   function getTitleForLevel(level) {
     if (level >= 50) return 'Lord of the Primordial Void';
@@ -318,7 +323,7 @@
     nextExp: 1000,
     gold: 0,
     statPoints: 0,
-    ultimateCharge: 0,
+    ultimateCharge: 0, // สะสมได้สูงสุด 300 (3 สต็อก)
     stats: { str: 10, sta: 10, agi: 10 },
     upgrades: { blade: 0, charm: 0, eye: 0 },
     equipment: { weapon: null, armor: null, boots: null, relic: null },
@@ -336,7 +341,7 @@
     chestsAvailable: 0,
     streak: { count: 1, lastDate: new Date().toDateString() },
     bossIndex: 0,
-    bossHpRemain: 1.0,
+    bossHpRemain: 1.25,
     totalDistanceKm: 0.0,
     maxHr: 178,
     lastBleDeviceName: null,
@@ -386,7 +391,7 @@
       gameState.career = Object.assign({}, defaultState.career, saved.career || {});
       gameState.dailyQuests = saved.dailyQuests || generateDailyQuests();
       gameState.achievements = saved.achievements || generateAchievements();
-      gameState.ultimateCharge = typeof saved.ultimateCharge === 'number' ? saved.ultimateCharge : 0;
+      gameState.ultimateCharge = typeof saved.ultimateCharge === 'number' ? Math.min(300, saved.ultimateCharge) : 0;
       gameState.isHistoryCollapsed = typeof saved.isHistoryCollapsed === 'boolean' ? saved.isHistoryCollapsed : false;
     } else {
       gameState = defaultState;
@@ -625,10 +630,12 @@
   const calValEl = document.getElementById('cal-val');
   const gpsStatusEl = document.getElementById('gps-status');
 
-  // Ultimate Skill Elements
+  // Ultimate Skill Elements (3 Tiers)
   const ultPctValEl = document.getElementById('ult-pct-val');
   const ultBarFillEl = document.getElementById('ult-bar-fill');
-  const btnCastUltimate = document.getElementById('btn-cast-ultimate');
+  const btnCastUlt1 = document.getElementById('btn-cast-ult-1');
+  const btnCastUlt2 = document.getElementById('btn-cast-ult-2');
+  const btnCastUlt3 = document.getElementById('btn-cast-ult-3');
 
   const btnToggleRun = document.getElementById('btn-toggle-run');
   const btnRunText = document.getElementById('btn-run-text');
@@ -646,20 +653,25 @@
   const btnBleConnect = document.getElementById('btn-ble-connect');
   const voiceToggleBtn = document.getElementById('voice-toggle-btn');
 
-  // Shop Elements
+  // Shop Elements & Success Rate Labels
   const priceElixirEl = document.getElementById('price-elixir');
   const btnBuyElixir = document.getElementById('btn-buy-elixir');
   const lvlBladeEl = document.getElementById('lvl-blade');
   const bladeBonusEl = document.getElementById('blade-bonus');
   const priceBladeEl = document.getElementById('price-blade');
+  const rateBladeEl = document.getElementById('rate-blade');
   const btnBuyBlade = document.getElementById('btn-buy-blade');
+
   const lvlCharmEl = document.getElementById('lvl-charm');
   const charmBonusEl = document.getElementById('charm-bonus');
   const priceCharmEl = document.getElementById('price-charm');
+  const rateCharmEl = document.getElementById('rate-charm');
   const btnBuyCharm = document.getElementById('btn-buy-charm');
+
   const lvlEyeEl = document.getElementById('lvl-eye');
   const eyeBonusEl = document.getElementById('eye-bonus');
   const priceEyeEl = document.getElementById('price-eye');
+  const rateEyeEl = document.getElementById('rate-eye');
   const btnBuyEye = document.getElementById('btn-buy-eye');
 
   const careerDistanceEl = document.getElementById('career-distance');
@@ -760,6 +772,7 @@
     renderUI();
   }
 
+  // สะสมเกจไม้ตายได้สูงสุด 300% (3 ระดับ)
   function addUltimateCharge(amount) {
     const setCounts = getActiveEquippedSets();
     let finalAmount = amount;
@@ -768,11 +781,19 @@
     }
 
     const prevCharge = gameState.ultimateCharge;
-    gameState.ultimateCharge = Math.min(100, Math.max(0, gameState.ultimateCharge + finalAmount));
+    gameState.ultimateCharge = Math.min(300, Math.max(0, gameState.ultimateCharge + finalAmount));
+
     if (prevCharge < 100 && gameState.ultimateCharge >= 100) {
-      speakVoice('เกจท่าไม้ตายเต็มเปี่ยม ปลดปล่อยคมดาบอเวจีได้แล้ว!', true);
-      showToast('⚡ ท่าไม้ตายพร้อมใช้งาน! กด SHADOW SLASH เพื่อสังหาร');
+      speakVoice('เกจไม้ตายระดับหนึ่งพร้อมใช้งาน', true);
+      showToast('⚡ ท่าไม้ตายระดับ 1 พร้อมใช้งาน!');
+    } else if (prevCharge < 200 && gameState.ultimateCharge >= 200) {
+      speakVoice('เกจไม้ตายระดับสองชาร์จเสร็จสิ้น', true);
+      showToast('⚡⚡ ท่าไม้ตายระดับ 2 พร้อมใช้งาน!');
+    } else if (prevCharge < 300 && gameState.ultimateCharge >= 300) {
+      speakVoice('เกจไม้ตายระดับสามเต็มเปี่ยม ปลดปล่อยคมดาบทำลายล้างสูงสุดได้แล้ว!', true);
+      showToast('💥💥💥 ท่าไม้ตายระดับ 3 (MAX) เต็มเปี่ยม!');
     }
+
     renderHUD();
   }
 
@@ -1107,7 +1128,8 @@
 
     let bossDamageMultiplier = 1.0;
 
-    if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.60) {
+    // Shadow Lich หมอกคำสาปเริ่มทำงานเร็วขึ้นที่ 65%
+    if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.65) {
       if (rollingPace === null || rollingPace > 7.5) {
         bossDamageMultiplier *= 0.5;
         if (!gimmickAnnounced.mistWarn) {
@@ -1123,11 +1145,12 @@
       }
     }
 
+    // Void Behemoth เกราะหนาลดดาเมจ 35% (คูณ 0.65)
     if (currentBoss.gimmick === 'carapace') {
       if (bossVulnerableTimer > 0) {
         bossDamageMultiplier *= 2.0;
       } else {
-        bossDamageMultiplier *= 0.70;
+        bossDamageMultiplier *= 0.65;
       }
 
       if (bossHpPct <= 0.30) {
@@ -1142,17 +1165,18 @@
       }
     }
 
+    // Empress ร่างลวงตาลดดาเมจ 45% (คูณ 0.55)
     if (currentBoss.gimmick === 'empress') {
       if (bossHpPct > 0.65) {
         if (isFlowStateActive) {
           critChance = Math.min(100, critChance + 20);
           bossDamageMultiplier *= 1.2;
         } else {
-          bossDamageMultiplier *= 0.60;
+          bossDamageMultiplier *= 0.55;
           if (!gimmickAnnounced.empressP1) {
             gimmickAnnounced.empressP1 = true;
             speakVoice('จักรพรรดินีแยกร่างเงาหลอก วิ่งคุมเพซสม่ำเสมอเพื่อเข้าสู่โฟลว์สเตท');
-            showToast('👑 ร่างเงาลวง: ดาเมจลด 40% (เข้าสู่ Flow State เพื่อทลายร่างแยก)');
+            showToast('👑 ร่างเงาลวง: ดาเมจลด 45% (เข้าสู่ Flow State เพื่อทลายร่างแยก)');
           }
         }
       } else if (bossHpPct <= 0.65 && bossHpPct > 0.25) {
@@ -1224,7 +1248,7 @@
     const isCrit = (Math.random() * 100) < critChance;
 
     if (currentBoss.gimmick === 'carapace' && bossVulnerableTimer <= 0 && isCrit) {
-      bossDamageMultiplier = (bossDamageMultiplier / 0.70);
+      bossDamageMultiplier = (bossDamageMultiplier / 0.65);
     }
 
     const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? 1.8 : 1.0) * bossDamageMultiplier;
@@ -1305,35 +1329,42 @@
     renderHUD();
   }
 
-  // --- Ultimate Skill Execution: Shadow Slash ---
-  function activateUltimateSkill() {
-    if (gameState.ultimateCharge < 100 || !isRunning) {
+  // --- Ultimate Skill Execution: 3-Tier Multi-Stock System ---
+  function activateUltimateSkill(tier = 1) {
+    const cost = tier * 100;
+    if (gameState.ultimateCharge < cost || !isRunning) {
       if (!isRunning) showToast('กรุณากดเริ่มออกล่าก่อนใช้ท่าไม้ตาย');
       return;
     }
 
-    gameState.ultimateCharge = 0;
+    gameState.ultimateCharge = Math.max(0, gameState.ultimateCharge - cost);
     const eqBonus = calculateEquipmentBonuses();
     const setCounts = eqBonus.setCounts;
     const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01);
-    
     const shadowSetDmgMult = setCounts.shadowstalker >= 4 ? 1.5 : 1.0;
-    const burstDamageKm = 0.40 * strMultiplier * shadowSetDmgMult;
+
+    // ความแรงและระยะเวลาแยกตาม Tier
+    const tierBaseDamages = { 1: 0.40, 2: 1.00, 3: 2.20 };
+    const tierOverdriveSec = { 1: 30, 2: 60, 3: 90 };
+    const tierVulnSec = { 1: 60, 2: 90, 3: 120 };
+
+    const burstDamageKm = tierBaseDamages[tier] * strMultiplier * shadowSetDmgMult;
     const currentBoss = BOSS_DATABASE[gameState.bossIndex];
 
     if (currentBoss.gimmick === 'carapace') {
-      bossVulnerableTimer = setCounts.shadowstalker >= 4 ? 90 : 60;
-      showToast(`💥 SHADOW SLASH กะเทาะเกราะศิลาแตกสะบั้น! บอสเปราะบาง x2 (${bossVulnerableTimer} วิ)`);
-      speakVoice('คมดาบผ่าเกราะศิลาแตกสะบั้น ไททันติดสถานะเปราะบาง', true);
+      const bonusVuln = setCounts.shadowstalker >= 4 ? 30 : 0;
+      bossVulnerableTimer = tierVulnSec[tier] + bonusVuln;
+      showToast(`💥 SHADOW SLASH (Lv.${tier}) กะเทาะเกราะแตก! บอสเปราะบาง (${bossVulnerableTimer} วิ)`);
+      speakVoice(`คมดาบระดับ ${tier} ผ่าเกราะศิลาแตกสะบั้น ไททันติดสถานะเปราะบาง`, true);
     } else {
-      showToast(`🗡️ SHADOW SLASH! คมดาบอเวจีเฉือนบอส ${burstDamageKm.toFixed(2)} กม.!`);
-      speakVoice('ปลดปล่อยคมดาบอเวจี! เข้าสู่สภาวะโอเวอร์ไดรฟ์', true);
+      showToast(`🗡️ SHADOW SLASH (Lv.${tier})! เฉือนบอส ${burstDamageKm.toFixed(2)} กม.!`);
+      speakVoice(`ปลดปล่อยคมดาบอเวจีระดับ ${tier}! เข้าสู่สภาวะโอเวอร์ไดรฟ์`, true);
     }
 
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - burstDamageKm);
 
     isOverdriveActive = true;
-    overdriveSecondsRemaining = 45;
+    overdriveSecondsRemaining = tierOverdriveSec[tier];
     runHudEl.classList.add('overdrive-active');
     overdriveBannerEl.style.display = 'block';
     overdriveTimeLeftEl.textContent = overdriveSecondsRemaining;
@@ -1348,8 +1379,8 @@
       }
       gameState.bestiary[currentBoss.id].kills += 1;
 
-      const rewardExp = Math.floor(currentBoss.rewardExp * 1.5);
-      const rewardGold = Math.floor(currentBoss.rewardGold * 2.0);
+      const rewardExp = Math.floor(currentBoss.rewardExp * (1 + (tier * 0.4)));
+      const rewardGold = Math.floor(currentBoss.rewardGold * (1 + (tier * 0.5)));
 
       showToast(`🏆 ฟันสังหาร ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} เหรียญ`);
       addExp(rewardExp);
@@ -1387,7 +1418,9 @@
     renderUI();
   }
 
-  btnCastUltimate.addEventListener('click', activateUltimateSkill);
+  btnCastUlt1.addEventListener('click', () => activateUltimateSkill(1));
+  btnCastUlt2.addEventListener('click', () => activateUltimateSkill(2));
+  btnCastUlt3.addEventListener('click', () => activateUltimateSkill(3));
 
   // --- Open Mystery Chest Logic ---
   function openMysteryChest() {
@@ -1620,7 +1653,7 @@
         <div class="codex-avatar">${boss.avatar}</div>
         <div class="codex-info">
           <div class="codex-name">${boss.name}</div>
-          <div class="codex-tier">${boss.tier} | เลือดฐาน ${boss.maxHpKm.toFixed(1)} กม.</div>
+          <div class="codex-tier">${boss.tier} | เลือดฐาน ${boss.maxHpKm.toFixed(2)} กม.</div>
         </div>
         <div class="codex-kills">สยบแล้ว: ${bInfo.kills} ตัว</div>
       `;
@@ -1890,13 +1923,13 @@
 
     if (boss.gimmick === 'mist') {
       bossGimmickBannerEl.style.display = 'flex';
-      if (bossHpPct <= 0.60) {
+      if (bossHpPct <= 0.65) {
         bossGimmickBannerEl.classList.add('active-mist');
         bossGimmickTagEl.textContent = '🌫️ หมอกสูบวิญญาณ';
         bossGimmickTextEl.textContent = 'คุมเพซให้เร็วกว่า 7:30/กม. มิฉะนั้นดาเมจลด 50% และบอสจะฮีล';
       } else {
         bossGimmickTagEl.textContent = '⏳ ผนึกหมอก';
-        bossGimmickTextEl.textContent = 'หมอกคำสาปจะปะทุเมื่อเลือดบอสต่ำกว่า 60%';
+        bossGimmickTextEl.textContent = 'หมอกคำสาปจะปะทุเมื่อเลือดบอสต่ำกว่า 65%';
       }
     } else if (boss.gimmick === 'carapace') {
       bossGimmickBannerEl.style.display = 'flex';
@@ -1911,13 +1944,13 @@
       } else {
         bossGimmickBannerEl.classList.add('active-carapace');
         bossGimmickTagEl.textContent = '🗿 เกราะศิลา';
-        bossGimmickTextEl.textContent = 'ลดดาเมจ 30% (กะเทาะเกราะด้วยคริติคอล หรือ Shadow Slash)';
+        bossGimmickTextEl.textContent = 'ลดดาเมจ 35% (กะเทาะเกราะด้วยคริติคอล หรือ Shadow Slash)';
       }
     } else if (boss.gimmick === 'empress') {
       bossGimmickBannerEl.style.display = 'flex';
       if (bossHpPct > 0.65) {
         bossGimmickTagEl.textContent = '👑 เฟส 1: ร่างเงาหลอก';
-        bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทลายร่างลวงตาแล้ว!' : 'วิ่งคุมเพซเพื่อเข้าสู่ Flow State ไม่เช่นนั้นดาเมจลด 40%';
+        bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทลายร่างลวงตาแล้ว!' : 'วิ่งคุมเพซเพื่อเข้าสู่ Flow State ไม่เช่นนั้นดาเมจลด 45%';
       } else if (bossHpPct > 0.25) {
         bossGimmickBannerEl.classList.add('active-vulnerable');
         bossGimmickTagEl.textContent = '⚡ เฟส 2: เรโซแนนซ์';
@@ -1972,18 +2005,29 @@
     calValEl.textContent = `${calValue} kcal`;
     updatePace();
 
-    const ultPercent = Math.min(100, Math.floor(gameState.ultimateCharge));
-    ultPctValEl.textContent = `${ultPercent}%`;
-    ultBarFillEl.style.width = `${ultPercent}%`;
+    // จัดการเกจไม้ตาย 3 สต็อก (0 - 300%)
+    const ultCharge = Math.min(300, Math.floor(gameState.ultimateCharge));
+    const stockCount = Math.floor(ultCharge / 100);
+    ultPctValEl.textContent = `${ultCharge}% (สต็อก: ${stockCount}/3)`;
+    ultBarFillEl.style.width = `${Math.min(100, (ultCharge / 300) * 100)}%`;
 
-    if (ultPercent >= 100 && isRunning) {
-      btnCastUltimate.removeAttribute('disabled');
-      btnCastUltimate.classList.add('ready');
-      btnCastUltimate.textContent = '🗡️ ปลดปล่อยคมดาบอเวจี (READY)';
+    // อัปเดตสถานะปุ่มทั้ง 3 ระดับ
+    if (isRunning) {
+      btnCastUlt1.disabled = ultCharge < 100;
+      btnCastUlt1.className = `btn-cast-ult ${ultCharge >= 100 ? 'ready' : ''}`;
+
+      btnCastUlt2.disabled = ultCharge < 200;
+      btnCastUlt2.className = `btn-cast-ult ${ultCharge >= 200 ? 'ready-tier2' : ''}`;
+
+      btnCastUlt3.disabled = ultCharge < 300;
+      btnCastUlt3.className = `btn-cast-ult ${ultCharge >= 300 ? 'ready-tier3' : ''}`;
     } else {
-      btnCastUltimate.setAttribute('disabled', 'true');
-      btnCastUltimate.classList.remove('ready');
-      btnCastUltimate.textContent = ultPercent >= 100 ? '🗡️ ท่าไม้ตายพร้อม (รอออกล่า)' : '🗡️ ปลดปล่อยคมดาบอเวจี (กำลังชาร์จ)';
+      btnCastUlt1.disabled = true;
+      btnCastUlt2.disabled = true;
+      btnCastUlt3.disabled = true;
+      btnCastUlt1.className = 'btn-cast-ult';
+      btnCastUlt2.className = 'btn-cast-ult';
+      btnCastUlt3.className = 'btn-cast-ult';
     }
 
     flowBadgeEl.style.display = isFlowStateActive ? 'inline-block' : 'none';
@@ -2005,14 +2049,17 @@
     lvlBladeEl.textContent = gameState.upgrades.blade;
     bladeBonusEl.textContent = gameState.upgrades.blade * 5;
     priceBladeEl.textContent = getBladePrice();
+    rateBladeEl.textContent = getUpgradeSuccessRate(gameState.upgrades.blade);
 
     lvlCharmEl.textContent = gameState.upgrades.charm;
     charmBonusEl.textContent = gameState.upgrades.charm * 10;
     priceCharmEl.textContent = getCharmPrice();
+    rateCharmEl.textContent = getUpgradeSuccessRate(gameState.upgrades.charm);
 
     lvlEyeEl.textContent = gameState.upgrades.eye;
     eyeBonusEl.textContent = gameState.upgrades.eye * 2;
     priceEyeEl.textContent = getEyePrice();
+    rateEyeEl.textContent = getUpgradeSuccessRate(gameState.upgrades.eye);
   }
 
   function renderQuestsList() {
@@ -2135,37 +2182,64 @@
     }
   });
 
+  // อัปเกรดดาบเงาพิฆาต (มีโอกาสสำเร็จลดลงตามเลเวล ล็อกต่ำสุด 20%)
   btnBuyBlade.addEventListener('click', () => {
     const cost = getBladePrice();
     if (gameState.gold >= cost) {
       gameState.gold -= cost;
-      gameState.upgrades.blade += 1;
-      showToast(`🗡️ ตีบวกดาบเงาเป็น Lv.${gameState.upgrades.blade} (+${gameState.upgrades.blade * 5}% ดาเมจ)!`);
-      speakVoice(`ตีบวกดาบเงาสำเร็จ เลเวล ${gameState.upgrades.blade}`);
+      const rate = getUpgradeSuccessRate(gameState.upgrades.blade);
+      const roll = Math.random() * 100;
+
+      if (roll < rate) {
+        gameState.upgrades.blade += 1;
+        showToast(`🗡️ ตีบวกดาบเงาสำเร็จเป็น Lv.${gameState.upgrades.blade} (+${gameState.upgrades.blade * 5}% ดาเมจ)!`);
+        speakVoice(`ตีบวกดาบเงาสำเร็จ เลเวล ${gameState.upgrades.blade}`);
+      } else {
+        showToast(`❌ ตีบวกดาบเงาล้มเหลว! (โอกาส ${rate}%) เสียเหรียญทอง`);
+        speakVoice('การตีบวกล้มเหลว');
+      }
       saveGame();
       renderUI();
     }
   });
 
+  // อัปเกรดเครื่องรางล่าโลหิต (มีโอกาสสำเร็จลดลงตามเลเวล ล็อกต่ำสุด 20%)
   btnBuyCharm.addEventListener('click', () => {
     const cost = getCharmPrice();
     if (gameState.gold >= cost) {
       gameState.gold -= cost;
-      gameState.upgrades.charm += 1;
-      showToast(`🧿 เสริมพลังเครื่องรางเป็น Lv.${gameState.upgrades.charm} (+${gameState.upgrades.charm * 10}% ทอง)!`);
-      speakVoice(`เสริมพลังเครื่องราง เลเวล ${gameState.upgrades.charm}`);
+      const rate = getUpgradeSuccessRate(gameState.upgrades.charm);
+      const roll = Math.random() * 100;
+
+      if (roll < rate) {
+        gameState.upgrades.charm += 1;
+        showToast(`🧿 เสริมพลังเครื่องรางสำเร็จเป็น Lv.${gameState.upgrades.charm} (+${gameState.upgrades.charm * 10}% ทอง)!`);
+        speakVoice(`เสริมพลังเครื่องรางสำเร็จ เลเวล ${gameState.upgrades.charm}`);
+      } else {
+        showToast(`❌ เสริมพลังเครื่องรางล้มเหลว! (โอกาส ${rate}%) เสียเหรียญทอง`);
+        speakVoice('การอัปเกรดล้มเหลว');
+      }
       saveGame();
       renderUI();
     }
   });
 
+  // อัปเกรดเนตรอเวจี (มีโอกาสสำเร็จลดลงตามเลเวล ล็อกต่ำสุด 20%)
   btnBuyEye.addEventListener('click', () => {
     const cost = getEyePrice();
     if (gameState.gold >= cost) {
       gameState.gold -= cost;
-      gameState.upgrades.eye += 1;
-      showToast(`👁️ เบิกเนตรอเวจีเป็น Lv.${gameState.upgrades.eye} (+${gameState.upgrades.eye * 2}% คริติคอล)!`);
-      speakVoice(`เบิกเนตรอเวจี เลเวล ${gameState.upgrades.eye}`);
+      const rate = getUpgradeSuccessRate(gameState.upgrades.eye);
+      const roll = Math.random() * 100;
+
+      if (roll < rate) {
+        gameState.upgrades.eye += 1;
+        showToast(`👁️ เบิกเนตรอเวจีสำเร็จเป็น Lv.${gameState.upgrades.eye} (+${gameState.upgrades.eye * 2}% คริติคอล)!`);
+        speakVoice(`เบิกเนตรอเวจีสำเร็จ เลเวล ${gameState.upgrades.eye}`);
+      } else {
+        showToast(`❌ เบิกเนตรอเวจีล้มเหลว! (โอกาส ${rate}%) เสียเหรียญทอง`);
+        speakVoice('การอัปเกรดล้มเหลว');
+      }
       saveGame();
       renderUI();
     }
@@ -2305,11 +2379,11 @@
 
       const currentBoss = BOSS_DATABASE[gameState.bossIndex];
       const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
-      if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.60) {
+      if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.65) {
         const rollingPace = getRecentRollingPace();
         if (rollingPace === null || rollingPace > 7.5) {
           mistHealingTick++;
-          if (mistHealingTick >= 20) {
+          if (mistHealingTick >= 15) { // ดูดเลือดไวขึ้นทุก 15 วิ
             mistHealingTick = 0;
             gameState.bossHpRemain = Math.min(currentBoss.maxHpKm, gameState.bossHpRemain + 0.02);
             showToast('🌫️ หมอกคำสาปสูบพลัง! บอสฟื้นฟูเลือด +0.02 กม.');

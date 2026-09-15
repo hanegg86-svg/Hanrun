@@ -792,7 +792,7 @@ body {
   100% { transform: scale(1.05); box-shadow: 0 0 10px rgba(56, 189, 248, 0.8); }
 }
 
-/* Ultimate Gauge Container */
+/* Ultimate Gauge Container (3 Tiers) */
 .ultimate-container {
   width: 100%;
   background: rgba(0, 0, 0, 0.4);
@@ -802,7 +802,7 @@ body {
   margin-bottom: 8px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .ultimate-header {
@@ -827,45 +827,76 @@ body {
 
 .ultimate-bar-track {
   width: 100%;
-  height: 7px;
+  height: 8px;
   background: #1e1b2e;
   border-radius: 4px;
   overflow: hidden;
   border: 1px solid rgba(192, 132, 252, 0.4);
+  position: relative;
 }
 
 .ultimate-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #9333ea, #c084fc, #f472b6);
+  background: linear-gradient(90deg, #9333ea 0%, #c084fc 50%, #ffd700 100%);
   box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
   transition: width 0.3s ease;
 }
 
-.btn-cast-ultimate {
+/* 3-Tier Ultimate Button Grid */
+.ultimate-actions-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
   width: 100%;
-  min-height: 40px;
+  margin-top: 2px;
+}
+
+.btn-cast-ult {
+  min-height: 38px;
   background: #201c2b;
   border: 1px solid rgba(192, 132, 252, 0.3);
   color: #71717a;
-  border-radius: 10px;
-  font-size: 0.78rem;
+  border-radius: 8px;
+  font-size: 0.7rem;
   font-weight: 800;
   cursor: not-allowed;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4px 2px;
 }
 
-.btn-cast-ultimate.ready {
+.btn-cast-ult.ready {
+  background: linear-gradient(180deg, #9333ea 0%, #581c87 100%);
+  border: 1px solid #d8b4fe;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(147, 51, 234, 0.5);
+}
+
+.btn-cast-ult.ready-tier2 {
   background: linear-gradient(180deg, #c084fc 0%, #7e22ce 100%);
   border: 1px solid #f3e8ff;
   color: #ffffff;
   cursor: pointer;
-  box-shadow: 0 0 18px rgba(168, 85, 247, 0.7);
+  box-shadow: 0 0 14px rgba(192, 132, 252, 0.7);
   animation: ultButtonPulse 1.2s infinite;
+}
+
+.btn-cast-ult.ready-tier3 {
+  background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+  border: 1px solid #fef08a;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.85);
+  animation: ultButtonPulse 0.8s infinite;
 }
 
 @keyframes ultButtonPulse {
   0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.02); filter: brightness(1.2); }
+  50% { transform: scale(1.03); filter: brightness(1.2); }
 }
 
 /* Big Control Buttons */
@@ -1279,7 +1310,7 @@ body {
   flex-shrink: 0;
 }
 
-/* Shop Section */
+/* Shop Section & Upgrade Success Rate Tag */
 .shop-section {
   background: #111016;
   border: 1px solid var(--border-gold);
@@ -1342,6 +1373,13 @@ body {
   font-size: 0.6rem;
   color: var(--gold-glow);
   margin-top: 2px;
+}
+
+.item-rate {
+  font-size: 0.58rem;
+  color: #38bdf8;
+  margin-top: 2px;
+  font-weight: 700;
 }
 
 .item-footer {
@@ -1518,9 +1556,7 @@ body {
   font-family: monospace, -apple-system;
 }
 
-/* ==========================================================================
-   HISTORY & DAILY STATS SECTION (ACCORDION TOGGLE + INTERNAL SCROLL)
-   ========================================================================== */
+/* History & Daily Stats Section */
 .history-section {
   background: #111016;
   border: 1px solid var(--border-gold);
@@ -1562,7 +1598,6 @@ body {
   color: #fff;
 }
 
-/* Collapsed Mini Summary Card */
 .history-collapsed-summary {
   background: rgba(0, 0, 0, 0.4);
   border: 1px dashed rgba(212, 175, 55, 0.3);
@@ -1587,7 +1622,6 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Collapsible Content Wrapper */
 .history-collapsible-content {
   display: block;
   transition: all 0.3s ease;
@@ -1601,7 +1635,6 @@ body {
   display: flex !important;
 }
 
-/* Tab Control Switcher */
 .tab-control {
   display: flex;
   gap: 6px;
@@ -1635,7 +1668,6 @@ body {
   width: 100%;
 }
 
-/* Daily Stats Card List with Internal Scroll */
 .daily-list {
   display: flex;
   flex-direction: column;
@@ -1751,7 +1783,6 @@ body {
   font-family: monospace, -apple-system;
 }
 
-/* History List with GPX Download & Internal Scroll */
 .history-list {
   display: flex;
   flex-direction: column;

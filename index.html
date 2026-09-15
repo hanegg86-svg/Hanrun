@@ -93,7 +93,7 @@
             <div class="boss-hp-bar" id="boss-hp-bar" style="width: 100%;"></div>
           </div>
           <div class="boss-hp-text">
-            พลังชีวิตบอส: <span id="boss-hp-remain">1.00</span> / <span id="boss-hp-max">1.00</span> กม.
+            พลังชีวิตบอส: <span id="boss-hp-remain">1.25</span> / <span id="boss-hp-max">1.25</span> กม.
           </div>
         </div>
       </div>
@@ -169,18 +169,26 @@
         </div>
       </div>
 
-      <!-- Ultimate Gauge & Action Button Container -->
+      <!-- Ultimate Gauge & 3-Tier Action Buttons Container -->
       <div class="ultimate-container">
         <div class="ultimate-header">
-          <span class="ult-label">⚡ เกจไม้ตาย: SHADOW SLASH</span>
-          <span class="ult-pct" id="ult-pct-val">0%</span>
+          <span class="ult-label">⚡ เกจไม้ตาย: SHADOW SLASH (3 สต็อก)</span>
+          <span class="ult-pct" id="ult-pct-val">0% (สต็อก: 0/3)</span>
         </div>
         <div class="ultimate-bar-track">
           <div class="ultimate-bar-fill" id="ult-bar-fill" style="width: 0%;"></div>
         </div>
-        <button class="btn-cast-ultimate" id="btn-cast-ultimate" type="button" disabled>
-          🗡️ ปลดปล่อยคมดาบอเวจี (SHADOW SLASH)
-        </button>
+        <div class="ultimate-actions-row">
+          <button class="btn-cast-ult" id="btn-cast-ult-1" type="button" disabled title="ใช้เกจ 100%: ดาเมจ 0.40 กม. / Overdrive 30 วิ">
+            🗡️ Lv.1 (100%)
+          </button>
+          <button class="btn-cast-ult" id="btn-cast-ult-2" type="button" disabled title="ใช้เกจ 200%: ดาเมจ 1.00 กม. / Overdrive 60 วิ">
+            ⚡ Lv.2 (200%)
+          </button>
+          <button class="btn-cast-ult" id="btn-cast-ult-3" type="button" disabled title="ใช้เกจ 300%: ดาเมจ 2.20 กม. / Overdrive 90 วิ">
+            💥 Lv.3 (300%)
+          </button>
+        </div>
       </div>
 
       <!-- Action Buttons -->
@@ -297,6 +305,7 @@
             <div class="item-info">
               <span class="item-name">ดาบเงาพิฆาต (Lv.<span id="lvl-blade">0</span>)</span>
               <span class="item-buff">ดาเมจพื้นฐาน +<span id="blade-bonus">0</span>%</span>
+              <span class="item-rate">โอกาสสำเร็จ: <strong id="rate-blade">100</strong>%</span>
             </div>
           </div>
           <div class="item-footer">
@@ -311,6 +320,7 @@
             <div class="item-info">
               <span class="item-name">เครื่องรางล่าโลหิต (Lv.<span id="lvl-charm">0</span>)</span>
               <span class="item-buff">โบนัสเหรียญทอง +<span id="charm-bonus">0</span>%</span>
+              <span class="item-rate">โอกาสสำเร็จ: <strong id="rate-charm">100</strong>%</span>
             </div>
           </div>
           <div class="item-footer">
@@ -325,6 +335,7 @@
             <div class="item-info">
               <span class="item-name">เนตรอเวจี (Lv.<span id="lvl-eye">0</span>)</span>
               <span class="item-buff">โอกาสคริติคอล +<span id="eye-bonus">0</span>%</span>
+              <span class="item-rate">โอกาสสำเร็จ: <strong id="rate-eye">100</strong>%</span>
             </div>
           </div>
           <div class="item-footer">
