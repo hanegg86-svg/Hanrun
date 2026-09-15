@@ -558,6 +558,70 @@ body {
   box-shadow: 0 0 40px rgba(234, 179, 8, 0.7);
 }
 
+/* Shadow Goblin Chase Banner */
+.goblin-banner {
+  width: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 50%, #047857 100%);
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #6ee7b7;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
+  animation: pulse 1.2s infinite ease-in-out;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.goblin-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.goblin-tag {
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+}
+
+.goblin-timer {
+  font-size: 0.78rem;
+  font-weight: 900;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: monospace, -apple-system;
+}
+
+.goblin-req-text {
+  font-size: 0.68rem;
+  color: #ecfdf5;
+}
+
+.goblin-progress-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.goblin-progress-fill {
+  height: 100%;
+  background: #fde047;
+  transition: width 0.2s ease;
+}
+
+.goblin-hint-text {
+  font-size: 0.58rem;
+  color: #d1fae5;
+  text-align: right;
+  font-weight: 600;
+}
+
 .frenzy-banner {
   width: 100%;
   background: linear-gradient(90deg, #ef4444, #b91c1c);
@@ -966,6 +1030,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .sim-hint {
@@ -982,6 +1048,12 @@ body {
   padding: 5px 8px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+.btn-sim-goblin {
+  background: #064e3b;
+  border-color: #34d399;
+  color: #a7f3d0;
 }
 
 /* Equipment & Inventory Section */

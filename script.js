@@ -366,6 +366,15 @@
   let mistHealingTick = 0;
   let gimmickAnnounced = {};
 
+  // --- Shadow Goblin Chase Event Runtime Variables ---
+  let isGoblinActive = false;
+  let goblinSecondsLeft = 0;
+  let goblinTargetPaceDec = null;
+  let goblinProgressSec = 0;
+  const GOBLIN_REQUIRED_SECONDS = 7; // วิ่งเร็วกว่าเป้าหมายสะสมครบ 7 วินาที
+  let lastGoblinTriggerKm = 0.0;
+  let goblinCooldownSeconds = 0;
+
   async function loadGameState() {
     let saved = await DB.getPlayerState();
     if (!saved) {
@@ -623,6 +632,14 @@
   const frenzyBannerEl = document.getElementById('frenzy-banner');
   const overdriveBannerEl = document.getElementById('overdrive-banner');
   const overdriveTimeLeftEl = document.getElementById('overdrive-time-left');
+
+  // Goblin Banner DOM
+  const goblinBannerEl = document.getElementById('goblin-banner');
+  const goblinTimerEl = document.getElementById('goblin-timer');
+  const goblinTargetPaceEl = document.getElementById('goblin-target-pace');
+  const goblinProgressFillEl = document.getElementById('goblin-progress-fill');
+  const goblinStatusHintEl = document.getElementById('goblin-status-hint');
+
   const distanceValEl = document.getElementById('distance-val');
   const timeValEl = document.getElementById('time-val');
   const paceValEl = document.getElementById('pace-val');
@@ -902,6 +919,63 @@
     }
   }
 
+  // --- Mini-Event: Shadow Goblin Chase Logic ---
+  function startGoblinChaseEvent() {
+    if (isGoblinActive || !isRunning) return;
+
+    let baselinePace = getRecentRollingPace();
+    if (baselinePace === null) {
+      if (runDistanceKm >= 0.05 && runSeconds > 10) {
+        baselinePace = (runSeconds / 60) / runDistanceKm;
+      } else {
+        baselinePace = 7.0; // ค่าพื้นฐานเริ่มต้นหากยังไม่มีสถิติ
+      }
+    }
+
+    // เพซเป้าหมาย: เร่งให้เร็วขึ้น 0.5 (ค่าเพซเป็นนาที/กม. ตัวเลขจึงลดลง 0.5)
+    goblinTargetPaceDec = Math.max(3.0, baselinePace - 0.5);
+    isGoblinActive = true;
+    goblinSecondsLeft = 45;
+    goblinProgressSec = 0;
+
+    const minPart = Math.floor(goblinTargetPaceDec);
+    const secPart = Math.round((goblinTargetPaceDec - minPart) * 60);
+    const targetPaceStr = `${minPart}'${secPart.toString().padStart(2, '0')}"`;
+
+    goblinTargetPaceEl.textContent = targetPaceStr;
+    goblinTimerEl.textContent = `${goblinSecondsLeft}s`;
+    goblinProgressFillEl.style.width = '0%';
+    goblinStatusHintEl.textContent = 'รักษาเพซเป้าหมายเพื่อจับกุม!';
+    goblinBannerEl.style.display = 'flex';
+
+    speakVoice(`พบโกบลินเงาหลบหนี! เร่งสปีดให้แตะเพซ ${minPart} นาที ${secPart} วินาที เพื่อจับกุม`, true);
+    showToast(`👺 โกบลินเงาปรากฏตัว! เร่งเพซขึ้น 0.5 (${targetPaceStr}) เพื่อสยบ!`);
+  }
+
+  function completeGoblinChaseSuccess() {
+    isGoblinActive = false;
+    goblinBannerEl.style.display = 'none';
+    goblinCooldownSeconds = 240; // คูลดาวน์ 4 นาที
+
+    gameState.chestsAvailable += 1;
+    const bonusGold = Math.floor(150 + (Math.random() * 200));
+    gameState.gold += bonusGold;
+    addUltimateCharge(50); // โบนัสชาร์จเกจไม้ตาย 50%
+
+    showToast(`🎉 สยบโกบลินเงาสำเร็จ! +📦 1 หีบ, +${bonusGold} 🪙, เกจไม้ตาย +50%`);
+    speakVoice('สยบโกบลินเงาสำเร็จ ยึดสมบัติได้แล้ว!', true);
+    saveGame();
+    renderUI();
+  }
+
+  function failGoblinChase() {
+    isGoblinActive = false;
+    goblinBannerEl.style.display = 'none';
+    goblinCooldownSeconds = 180;
+    showToast('💨 โกบลินเงาวิ่งหลบหนีหายไปในความมืด!');
+    speakVoice('โกบลินเงาหนีรอดไปได้');
+  }
+
   async function setupGattConnection(device) {
     bluetoothDevice = device;
     bluetoothDevice.addEventListener('gattserverdisconnected', onBluetoothDisconnected);
@@ -1111,6 +1185,14 @@
       }
     }
 
+    // สุ่มเกิด Shadow Goblin เมื่อวิ่งได้ระยะทางสะสมห่างจากรอบก่อนหน้าเกิน 1.2 กม.
+    if (!isGoblinActive && goblinCooldownSeconds <= 0 && (runDistanceKm - lastGoblinTriggerKm) >= 1.2) {
+      if (Math.random() < 0.35) {
+        lastGoblinTriggerKm = runDistanceKm;
+        startGoblinChaseEvent();
+      }
+    }
+
     if (runDistanceKm >= nextKmAnnounceCheckpoint) {
       const currentPace = calculatePace(runSeconds, runDistanceKm);
       const bossRemainPct = Math.round((gameState.bossHpRemain / currentBoss.maxHpKm) * 100);
@@ -1231,7 +1313,7 @@
         if (!gimmickAnnounced.leviathanSingularity) {
           gimmickAnnounced.leviathanSingularity = true;
           speakVoice('คำเตือนฉุกเฉิน! แกนซิงกูลาริตียุบตัว เร่งสปีดแตะโซนสามหรือทำคริติคอล ดาเมจทวีคูณสองจุดห้าเท่า!', true);
-          showToast('🌀 SINGULARITY COLLAPSE! ชีพจร Zone 3-4 หรือคริติคอล ดาเมจ x2.5 ทะลวงมิติ!');
+          showToast('🌀 SINGULARITY COLLAPSE! ชีพจร Zone 3-4 หรือคริติคอล ดาเมจทะลวง x2.5!');
         }
         if (isFrenzyActive || currentHrZone >= 3 || isCrit) {
           bossDamageMultiplier *= 2.5;
@@ -2333,6 +2415,10 @@
       bossVulnerableTimer = 0;
       gimmickAnnounced = {};
       mistHealingTick = 0;
+      isGoblinActive = false;
+      goblinCooldownSeconds = 0;
+      lastGoblinTriggerKm = 0.0;
+      goblinBannerEl.style.display = 'none';
       saveGame();
       renderHUD();
     }
@@ -2375,6 +2461,33 @@
 
       if (bossVulnerableTimer > 0) {
         bossVulnerableTimer--;
+      }
+
+      if (goblinCooldownSeconds > 0) {
+        goblinCooldownSeconds--;
+      }
+
+      // ตรวจสอบสถานะการไล่ล่าโกบลินเงา
+      if (isGoblinActive) {
+        goblinSecondsLeft--;
+        goblinTimerEl.textContent = `${goblinSecondsLeft}s`;
+
+        const rollingPace = getRecentRollingPace();
+        if (rollingPace !== null && goblinTargetPaceDec !== null && rollingPace <= goblinTargetPaceDec) {
+          goblinProgressSec++;
+          goblinStatusHintEl.textContent = `⚡ กำลังประชิดตัว! (${goblinProgressSec}/${GOBLIN_REQUIRED_SECONDS}s)`;
+        } else {
+          goblinStatusHintEl.textContent = 'เร่งความเร็วให้แตะเพซเป้าหมาย!';
+        }
+
+        const pct = Math.min(100, Math.round((goblinProgressSec / GOBLIN_REQUIRED_SECONDS) * 100));
+        goblinProgressFillEl.style.width = `${pct}%`;
+
+        if (goblinProgressSec >= GOBLIN_REQUIRED_SECONDS) {
+          completeGoblinChaseSuccess();
+        } else if (goblinSecondsLeft <= 0) {
+          failGoblinChase();
+        }
       }
 
       const currentBoss = BOSS_DATABASE[gameState.bossIndex];
@@ -2500,6 +2613,8 @@
         bossVulnerableTimer = 0;
         gimmickAnnounced = {};
         mistHealingTick = 0;
+        isGoblinActive = false;
+        goblinBannerEl.style.display = 'none';
 
         renderUI();
         showToast('ยกเลิกรอบการล่าเรียบร้อย');
@@ -2569,6 +2684,8 @@
     bossVulnerableTimer = 0;
     gimmickAnnounced = {};
     mistHealingTick = 0;
+    isGoblinActive = false;
+    goblinBannerEl.style.display = 'none';
 
     saveGame();
     renderUI();
@@ -2607,6 +2724,13 @@
       applyDistanceDamage(km);
       renderHUD();
       showToast(`⚡ จำลองวิ่งก้าวหน้า +${(km * 1000).toFixed(0)} เมตร!`);
+    },
+    triggerGoblin() {
+      if (!isRunning) {
+        showToast('กรุณากด "เริ่มออกล่า" ก่อนเพื่อสปอว์นโกบลิน');
+        return;
+      }
+      startGoblinChaseEvent();
     }
   };
 

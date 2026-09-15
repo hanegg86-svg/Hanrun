@@ -118,6 +118,21 @@
 
     <!-- Run Tracker HUD -->
     <section class="run-hud" id="run-hud">
+      <!-- Shadow Goblin Chase Mini-Event Banner -->
+      <div class="goblin-banner" id="goblin-banner" style="display: none;">
+        <div class="goblin-header-row">
+          <span class="goblin-tag">👺 โกบลินเงาหลบหนี!</span>
+          <span class="goblin-timer" id="goblin-timer">45s</span>
+        </div>
+        <div class="goblin-req-text">
+          เร่งสปรินต์ให้แตะเพซ: <strong id="goblin-target-pace">--'--"</strong> (เร็วขึ้น 0.5 เพซ)
+        </div>
+        <div class="goblin-progress-track">
+          <div class="goblin-progress-fill" id="goblin-progress-fill" style="width: 0%;"></div>
+        </div>
+        <div class="goblin-hint-text" id="goblin-status-hint">รักษาเพซเป้าหมายเพื่อจับกุม!</div>
+      </div>
+
       <!-- Berserk Frenzy Banner -->
       <div class="frenzy-banner" id="frenzy-banner" style="display: none;">
         ⚡ BERSERK FRENZY: ชีพจร Zone 3 ล็อกเป้า! คริติคอล 100% ดาเมจ x1.5 ⚡
@@ -208,6 +223,7 @@
         <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.2)">+200 ม.</button>
         <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.5)">+500 ม.</button>
         <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(1.0)">+1.0 กม.</button>
+        <button class="btn-sim-add btn-sim-goblin" type="button" onclick="window.shadowStrider.triggerGoblin()">👺 สปอว์นโกบลิน</button>
       </div>
     </section>
 
