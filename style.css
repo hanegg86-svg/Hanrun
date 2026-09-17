@@ -321,6 +321,15 @@ body {
   background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #38bdf8);
 }
 
+.boss-card.chrono-active {
+  border-color: #a855f7;
+  box-shadow: 0 0 45px rgba(168, 85, 247, 0.7);
+}
+
+.boss-card.chrono-active::before {
+  background: linear-gradient(90deg, #38bdf8, #a855f7, #ffd700);
+}
+
 .boss-header {
   display: flex;
   justify-content: space-between;
@@ -457,6 +466,12 @@ body {
 .boss-gimmick-banner.active-singularity {
   border-color: #818cf8;
   background: rgba(99, 102, 241, 0.35);
+  animation: pulse 0.6s infinite;
+}
+
+.boss-gimmick-banner.active-chrono {
+  border-color: #c084fc;
+  background: rgba(147, 51, 234, 0.35);
   animation: pulse 0.6s infinite;
 }
 

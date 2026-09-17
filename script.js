@@ -181,17 +181,17 @@
     }
   };
 
-  // --- Boss List Database (ปรับเพิ่มความยากขึ้นทุก Tier พร้อมโบนัสรางวัลที่คุ้มค่า) ---
+  // --- Boss List Database (ปรับสเกลเลือดฐานเพิ่มทุก Tier และเพิ่มบอสระดับ TIER IX) ---
   const BOSS_DATABASE = [
     {
       id: 'boss_1',
       tier: 'TIER I',
       name: 'Gargoyle of the Crypt',
       avatar: '👹',
-      maxHpKm: 1.25,
-      desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 1.25 กม. เพื่อทำลายมัน!',
-      rewardExp: 1500,
-      rewardGold: 180,
+      maxHpKm: 2.00,
+      desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 2.00 กม. เพื่อทำลายมัน!',
+      rewardExp: 2200,
+      rewardGold: 260,
       gimmick: 'none'
     },
     {
@@ -199,10 +199,10 @@
       tier: 'TIER II',
       name: 'Abyssal Blood Knight',
       avatar: '🤺',
-      maxHpKm: 3.0,
-      desc: 'อัศวินเกราะดำกระหายการต่อสู้ วิ่ง 3.00 กม. เพื่อสยบดาบโลหิต!',
-      rewardExp: 3800,
-      rewardGold: 420,
+      maxHpKm: 4.50,
+      desc: 'อัศวินเกราะดำกระหายการต่อสู้ วิ่ง 4.50 กม. เพื่อสยบดาบโลหิต!',
+      rewardExp: 5500,
+      rewardGold: 600,
       gimmick: 'none'
     },
     {
@@ -210,10 +210,10 @@
       tier: 'TIER III',
       name: 'Ancient Bone Dragon',
       avatar: '🐉',
-      maxHpKm: 6.0,
-      desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 6.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!',
-      rewardExp: 9000,
-      rewardGold: 950,
+      maxHpKm: 8.00,
+      desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 8.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!',
+      rewardExp: 12000,
+      rewardGold: 1300,
       gimmick: 'none'
     },
     {
@@ -221,10 +221,10 @@
       tier: 'TIER IV',
       name: 'Shadow Lich: Malakor',
       avatar: '🧙‍♂️',
-      maxHpKm: 9.0,
-      desc: 'จอมเวทอเวจีโบราณ เมื่อเลือดต่ำกว่า 65% หมอกคำสาปจะสูบเลือดคืนหากเพซวิ่งช้ากว่า 7:30!',
-      rewardExp: 15500,
-      rewardGold: 1900,
+      maxHpKm: 12.50,
+      desc: 'จอมเวทอเวจีโบราณ เมื่อเลือดต่ำกว่า 75% หมอกคำสาปจะสูบเลือดคืนหากเพซวิ่งช้ากว่า 7:30!',
+      rewardExp: 21000,
+      rewardGold: 2600,
       gimmick: 'mist'
     },
     {
@@ -232,10 +232,10 @@
       tier: 'TIER V',
       name: 'Void Behemoth: Titan of Ruin',
       avatar: '🗿',
-      maxHpKm: 12.0,
-      desc: 'ไททันศิลาแห่งความว่างเปล่า เกราะหนาลดดาเมจ 35% ทลายเกราะด้วยคริติคอลหรือท่าไม้ตาย Shadow Slash!',
-      rewardExp: 26000,
-      rewardGold: 3300,
+      maxHpKm: 18.00,
+      desc: 'ไททันศิลาแห่งความว่างเปล่า เกราะหนาลดดาเมจ 45% ทลายเกราะด้วยคริติคอลหรือท่าไม้ตาย Shadow Slash!',
+      rewardExp: 38000,
+      rewardGold: 4800,
       gimmick: 'carapace'
     },
     {
@@ -243,10 +243,10 @@
       tier: 'TIER VI',
       name: 'Abyssal Empress: Nyxaria',
       avatar: '👑',
-      maxHpKm: 18.0,
+      maxHpKm: 25.00,
       desc: 'จักรพรรดินีเงาราตรี 3 เฟส: ร่างเงาหลอก (ทลายด้วย Flow State), สนามเรโซแนนซ์ และจันทรคราสทมิฬ!',
-      rewardExp: 45000,
-      rewardGold: 6000,
+      rewardExp: 62000,
+      rewardGold: 8500,
       gimmick: 'empress'
     },
     {
@@ -254,10 +254,10 @@
       tier: 'TIER VII',
       name: 'Eclipse Harbinger: Ignis-Vorax',
       avatar: '☄️',
-      maxHpKm: 25.0,
-      desc: 'เทพอสูรเพลิงสุริยคราส เลือด 25 กม. ครึ่งแรกคลื่นความร้อนแผดเผา ครึ่งหลังระเบิดซูเปอร์โนวา ชาร์จไม้ตายไว x2!',
-      rewardExp: 65000,
-      rewardGold: 10000,
+      maxHpKm: 36.00,
+      desc: 'เทพอสูรเพลิงสุริยคราส เลือด 36 กม. ครึ่งแรกคลื่นความร้อนแผดเผา ครึ่งหลังระเบิดซูเปอร์โนวา ชาร์จไม้ตายไว x2!',
+      rewardExp: 95000,
+      rewardGold: 15000,
       gimmick: 'supernova'
     },
     {
@@ -265,11 +265,22 @@
       tier: 'TIER VIII',
       name: 'Primordial Void Leviathan: Nihil-Khaos',
       avatar: '🌌',
-      maxHpKm: 35.0,
-      desc: 'เลเวียธานมิติอเวจีบรรพกาล เลือด 35 กม. ต่ำกว่า 50% หลุมดำดูดกลืนเกจ ต่ำกว่า 20% ซิงกูลาริตียุบตัว ดาเมจ x2.5 ในโซนสูง!',
-      rewardExp: 100000,
-      rewardGold: 18000,
+      maxHpKm: 50.00,
+      desc: 'เลเวียธานมิติอเวจีบรรพกาล เลือด 50 กม. ต่ำกว่า 50% หลุมดำดูดกลืนเกจ ต่ำกว่า 20% ซิงกูลาริตียุบตัว ดาเมจ x2.5 ในโซนสูง!',
+      rewardExp: 145000,
+      rewardGold: 26000,
       gimmick: 'singularity'
+    },
+    {
+      id: 'boss_9',
+      tier: 'TIER IX',
+      name: 'Chrono-Abyss Overlord: Chronos-Nox',
+      avatar: '⏳',
+      maxHpKm: 70.00,
+      desc: 'เทพอสูรบิดผันกาลเวลา เลือด 70 กม. วิ่งเพซเร็วกว่า 6:30 ทะลวงมิติดาเมจ x3! แต่หากช้ากว่า 8:00 มิติเวลาจะหมุนกลับสูบเลือดฟื้นฟู!',
+      rewardExp: 220000,
+      rewardGold: 40000,
+      gimmick: 'chrono'
     }
   ];
 
@@ -279,6 +290,7 @@
   }
 
   function getTitleForLevel(level) {
+    if (level >= 60) return 'Eternal Sovereign of Time & Void';
     if (level >= 50) return 'Lord of the Primordial Void';
     if (level >= 45) return 'Eclipse God Slayer';
     if (level >= 35) return 'Abyssal Sovereign Emperor';
@@ -311,7 +323,8 @@
       { id: 'ach_boss_titan', name: 'Titan Breaker (ผู้กะเทาะศิลาไททัน)', desc: 'โค่น Void Behemoth: Titan of Ruin (Tier V)', target: 1, current: 0, unit: 'ตัว', rewardExp: 16000, rewardGold: 3500, claimed: false },
       { id: 'ach_boss_empress', name: 'Eclipse Sovereign (ผู้สยบจักรพรรดินี)', desc: 'โค่น Abyssal Empress: Nyxaria (Tier VI)', target: 1, current: 0, unit: 'ตัว', rewardExp: 28000, rewardGold: 6000, claimed: false },
       { id: 'ach_boss_ignis', name: 'Harbinger Extinguisher (ผู้ดับสุริยคราส)', desc: 'โค่น Eclipse Harbinger: Ignis-Vorax (Tier VII)', target: 1, current: 0, unit: 'ตัว', rewardExp: 45000, rewardGold: 10000, claimed: false },
-      { id: 'ach_boss_leviathan', name: 'Void Leviathan Slayer (ผู้ดับชีพเลเวียธาน)', desc: 'โค่น Primordial Void Leviathan: Nihil-Khaos (Tier VIII)', target: 1, current: 0, unit: 'ตัว', rewardExp: 60000, rewardGold: 15000, claimed: false }
+      { id: 'ach_boss_leviathan', name: 'Void Leviathan Slayer (ผู้ดับชีพเลเวียธาน)', desc: 'โค่น Primordial Void Leviathan: Nihil-Khaos (Tier VIII)', target: 1, current: 0, unit: 'ตัว', rewardExp: 60000, rewardGold: 15000, claimed: false },
+      { id: 'ach_boss_chronos', name: 'Chrono Overlord Slayer (ผู้ดับมิติเวลา)', desc: 'โค่น Chrono-Abyss Overlord: Chronos-Nox (Tier IX)', target: 1, current: 0, unit: 'ตัว', rewardExp: 100000, rewardGold: 25000, claimed: false }
     ];
   }
 
@@ -336,12 +349,13 @@
       boss_5: { kills: 0, name: 'Void Behemoth: Titan of Ruin' },
       boss_6: { kills: 0, name: 'Abyssal Empress: Nyxaria' },
       boss_7: { kills: 0, name: 'Eclipse Harbinger: Ignis-Vorax' },
-      boss_8: { kills: 0, name: 'Primordial Void Leviathan: Nihil-Khaos' }
+      boss_8: { kills: 0, name: 'Primordial Void Leviathan: Nihil-Khaos' },
+      boss_9: { kills: 0, name: 'Chrono-Abyss Overlord: Chronos-Nox' }
     },
     chestsAvailable: 0,
     streak: { count: 1, lastDate: new Date().toDateString() },
     bossIndex: 0,
-    bossHpRemain: 1.25,
+    bossHpRemain: 2.00,
     totalDistanceKm: 0.0,
     maxHr: 178,
     lastBleDeviceName: null,
@@ -364,6 +378,7 @@
   // --- Boss Gimmick State Runtime Variables ---
   let bossVulnerableTimer = 0;
   let mistHealingTick = 0;
+  let chronoHealingTick = 0;
   let gimmickAnnounced = {};
 
   // --- Shadow Goblin Chase Event Runtime Variables ---
@@ -371,7 +386,7 @@
   let goblinSecondsLeft = 0;
   let goblinTargetPaceDec = null;
   let goblinProgressSec = 0;
-  const GOBLIN_REQUIRED_SECONDS = 7; // วิ่งเร็วกว่าเป้าหมายสะสมครบ 7 วินาที
+  const GOBLIN_REQUIRED_SECONDS = 7;
   let lastGoblinTriggerKm = 0.0;
   let goblinCooldownSeconds = 0;
 
@@ -419,13 +434,13 @@
       }
     });
 
-    // เริ่มต้นแอป: ให้เริ่มที่ Boss Tier 1 เสมอหากไม่ได้อยู่ในระหว่างการวิ่ง
     if (!isRunning) {
       gameState.bossIndex = 0;
       gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
       bossVulnerableTimer = 0;
       gimmickAnnounced = {};
       mistHealingTick = 0;
+      chronoHealingTick = 0;
     }
 
     verifyDailyAndStreakReset();
@@ -633,7 +648,6 @@
   const overdriveBannerEl = document.getElementById('overdrive-banner');
   const overdriveTimeLeftEl = document.getElementById('overdrive-time-left');
 
-  // Goblin Banner DOM
   const goblinBannerEl = document.getElementById('goblin-banner');
   const goblinTimerEl = document.getElementById('goblin-timer');
   const goblinTargetPaceEl = document.getElementById('goblin-target-pace');
@@ -647,7 +661,6 @@
   const calValEl = document.getElementById('cal-val');
   const gpsStatusEl = document.getElementById('gps-status');
 
-  // Ultimate Skill Elements (3 Tiers)
   const ultPctValEl = document.getElementById('ult-pct-val');
   const ultBarFillEl = document.getElementById('ult-bar-fill');
   const btnCastUlt1 = document.getElementById('btn-cast-ult-1');
@@ -664,13 +677,11 @@
   const achievementsCounterEl = document.getElementById('achievements-counter');
   const gameToastEl = document.getElementById('game-toast');
 
-  // Heart Rate DOM
   const hrBpmEl = document.getElementById('hr-bpm');
   const hrZoneBadgeEl = document.getElementById('hr-zone-badge');
   const btnBleConnect = document.getElementById('btn-ble-connect');
   const voiceToggleBtn = document.getElementById('voice-toggle-btn');
 
-  // Shop Elements & Success Rate Labels
   const priceElixirEl = document.getElementById('price-elixir');
   const btnBuyElixir = document.getElementById('btn-buy-elixir');
   const lvlBladeEl = document.getElementById('lvl-blade');
@@ -696,7 +707,6 @@
   const careerBossesEl = document.getElementById('career-bosses');
   const careerLongestEl = document.getElementById('career-longest');
 
-  // History Accordion DOM
   const historySectionEl = document.getElementById('history-section');
   const btnToggleHistory = document.getElementById('btn-toggle-history');
   const historyCollapsedSummary = document.getElementById('history-collapsed-summary');
@@ -715,7 +725,6 @@
   const pocketTimeVal = document.getElementById('pocket-time-val');
   const pocketUnlockBar = document.getElementById('pocket-unlock-bar');
 
-  // Equipment, Sets & Modal Elements
   const equipSummaryEl = document.getElementById('equip-summary');
   const setBonusesContainerEl = document.getElementById('set-bonuses-container');
   const inventoryGridEl = document.getElementById('inventory-grid');
@@ -789,7 +798,6 @@
     renderUI();
   }
 
-  // สะสมเกจไม้ตายได้สูงสุด 300% (3 ระดับ)
   function addUltimateCharge(amount) {
     const setCounts = getActiveEquippedSets();
     let finalAmount = amount;
@@ -816,22 +824,28 @@
 
   function recordPaceSample(timestamp, distKm) {
     paceSamples.push({ time: timestamp, dist: distKm });
-    const cutoff = timestamp - 20000;
+    const cutoff = timestamp - 15000;
     paceSamples = paceSamples.filter(s => s.time >= cutoff);
   }
 
   function getRecentRollingPace() {
     const now = Date.now();
-    const cutoff = now - 20000;
+    const cutoff = now - 15000;
     paceSamples = paceSamples.filter(s => s.time >= cutoff);
     if (paceSamples.length < 2) return null;
 
     const oldest = paceSamples[0];
     const newest = paceSamples[paceSamples.length - 1];
+
+    // ตรวจจับหากไม่ได้ขยับเกิน 5 วินาที ตัดสถานะเพซออกเพื่อไม่ให้ค้าง
+    if (now - newest.time > 5000) {
+      return null;
+    }
+
     const dDist = newest.dist - oldest.dist;
     const dTimeSec = (newest.time - oldest.time) / 1000;
 
-    if (dDist >= 0.015 && dTimeSec >= 5) {
+    if (dDist >= 0.010 && dTimeSec >= 3) {
       return (dTimeSec / 60) / dDist;
     }
     return null;
@@ -908,12 +922,18 @@
             frenzyBannerEl.style.display = 'block';
             speakVoice('เข้าสู่เพซจำลองโซนสาม สภาวะเบอร์เซิร์กทำงาน!', true);
           }
-        } else if (rollingPace !== null && (rollingPace > 6.5 || rollingPace < 5.0)) {
+        } else {
           if (isFrenzyActive) {
             isFrenzyActive = false;
             runHudEl.classList.remove('frenzy-active');
             frenzyBannerEl.style.display = 'none';
           }
+        }
+      } else {
+        if (isFrenzyActive) {
+          isFrenzyActive = false;
+          runHudEl.classList.remove('frenzy-active');
+          frenzyBannerEl.style.display = 'none';
         }
       }
     }
@@ -928,11 +948,10 @@
       if (runDistanceKm >= 0.05 && runSeconds > 10) {
         baselinePace = (runSeconds / 60) / runDistanceKm;
       } else {
-        baselinePace = 7.0; // ค่าพื้นฐานเริ่มต้นหากยังไม่มีสถิติ
+        baselinePace = 7.0;
       }
     }
 
-    // เพซเป้าหมาย: เร่งให้เร็วขึ้น 0.5 (ค่าเพซเป็นนาที/กม. ตัวเลขจึงลดลง 0.5)
     goblinTargetPaceDec = Math.max(3.0, baselinePace - 0.5);
     isGoblinActive = true;
     goblinSecondsLeft = 45;
@@ -955,14 +974,14 @@
   function completeGoblinChaseSuccess() {
     isGoblinActive = false;
     goblinBannerEl.style.display = 'none';
-    goblinCooldownSeconds = 240; // คูลดาวน์ 4 นาที
+    goblinCooldownSeconds = 240;
 
     gameState.chestsAvailable += 1;
     const bonusGold = Math.floor(150 + (Math.random() * 200));
     gameState.gold += bonusGold;
-    addUltimateCharge(50); // โบนัสชาร์จเกจไม้ตาย 50%
+    addUltimateCharge(30);
 
-    showToast(`🎉 สยบโกบลินเงาสำเร็จ! +📦 1 หีบ, +${bonusGold} 🪙, เกจไม้ตาย +50%`);
+    showToast(`🎉 สยบโกบลินเงาสำเร็จ! +📦 1 หีบ, +${bonusGold} 🪙, เกจไม้ตาย +30%`);
     speakVoice('สยบโกบลินเงาสำเร็จ ยึดสมบัติได้แล้ว!', true);
     saveGame();
     renderUI();
@@ -1130,19 +1149,20 @@
     const eqBonus = calculateEquipmentBonuses();
     const setCounts = eqBonus.setCounts;
 
-    let ultChargeBonusMult = isFlowStateActive ? 2 : 1;
+    let ultChargeBonusMult = isFlowStateActive ? 1.5 : 1.0;
     
     if (currentBoss.gimmick === 'empress' && bossHpPct <= 0.65 && bossHpPct > 0.25) {
       if (currentHrZone === 2 || currentHrZone === 3 || isFrenzyActive) {
-        ultChargeBonusMult *= 3;
+        ultChargeBonusMult *= 2.0;
       }
     }
 
     if (currentBoss.gimmick === 'supernova' && bossHpPct <= 0.50) {
-      ultChargeBonusMult *= 2;
+      ultChargeBonusMult *= 1.5;
     }
 
-    addUltimateCharge((distanceDeltaKm / 0.1) * 2 * ultChargeBonusMult);
+    // ชาร์จเกจไม้ตายจากระยะทางช้าลง (1 กม. ได้เกจประมาณ 8-10%)
+    addUltimateCharge((distanceDeltaKm * 8) * ultChargeBonusMult);
 
     const flowThresholdKm = setCounts.voidwalker >= 2 ? 0.20 : 0.40;
     const rollingPace = getRecentRollingPace();
@@ -1157,7 +1177,7 @@
           rhythmConsistentDistance += distanceDeltaKm;
           if (rhythmConsistentDistance >= flowThresholdKm && !isFlowStateActive) {
             isFlowStateActive = true;
-            showToast('🌊 เข้าสู่สภาวะ FLOW STATE! โบนัส EXP +50% & เกจไม้ตายชาร์จไว x2');
+            showToast('🌊 เข้าสู่สภาวะ FLOW STATE! โบนัส EXP +50% & เกจไม้ตายชาร์จไว x1.5');
             speakVoice('เข้าสู่สภาวะโฟลว์สเตท คุมจังหวะยอดเยี่ยม');
           }
         } else {
@@ -1185,7 +1205,6 @@
       }
     }
 
-    // สุ่มเกิด Shadow Goblin เมื่อวิ่งได้ระยะทางสะสมห่างจากรอบก่อนหน้าเกิน 1.2 กม.
     if (!isGoblinActive && goblinCooldownSeconds <= 0 && (runDistanceKm - lastGoblinTriggerKm) >= 1.2) {
       if (Math.random() < 0.35) {
         lastGoblinTriggerKm = runDistanceKm;
@@ -1210,8 +1229,8 @@
 
     let bossDamageMultiplier = 1.0;
 
-    // Shadow Lich หมอกคำสาปเริ่มทำงานเร็วขึ้นที่ 65%
-    if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.65) {
+    // Shadow Lich หมอกคำสาปทำงานที่ 75%
+    if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.75) {
       if (rollingPace === null || rollingPace > 7.5) {
         bossDamageMultiplier *= 0.5;
         if (!gimmickAnnounced.mistWarn) {
@@ -1227,12 +1246,12 @@
       }
     }
 
-    // Void Behemoth เกราะหนาลดดาเมจ 35% (คูณ 0.65)
+    // Void Behemoth เกราะศิลาหนาลดดาเมจ 45% (คูณ 0.55)
     if (currentBoss.gimmick === 'carapace') {
       if (bossVulnerableTimer > 0) {
         bossDamageMultiplier *= 2.0;
       } else {
-        bossDamageMultiplier *= 0.65;
+        bossDamageMultiplier *= 0.55;
       }
 
       if (bossHpPct <= 0.30) {
@@ -1264,8 +1283,8 @@
       } else if (bossHpPct <= 0.65 && bossHpPct > 0.25) {
         if (!gimmickAnnounced.empressP2) {
           gimmickAnnounced.empressP2 = true;
-          speakVoice('เข้าสู่เฟสสอง สนามเรโซแนนซ์ ชาร์จไม้ตายไวสามเท่าในโซนสองและสาม');
-          showToast('⚡ เฟส 2 เรโซแนนซ์: วิ่ง Zone 2 หรือ 3 ชาร์จท่าไม้ตายไวขึ้น 300%!');
+          speakVoice('เข้าสู่เฟสสอง สนามเรโซแนนซ์ ชาร์จไม้ตายไวขึ้นในโซนสองและสาม');
+          showToast('⚡ เฟส 2 เรโซแนนซ์: วิ่ง Zone 2 หรือ 3 ชาร์จท่าไม้ตายไวขึ้น!');
         }
       } else {
         if (!gimmickAnnounced.empressP3) {
@@ -1289,7 +1308,7 @@
         if (!gimmickAnnounced.ignisSupernova) {
           gimmickAnnounced.ignisSupernova = true;
           speakVoice('คำเตือนระดับสูงสุด! อสูรเพลิงเข้าสู่สภาวะซูเปอร์โนวา ปลดปล่อยท่าไม้ตายรัวๆ เพื่อปิดฉาก', true);
-          showToast('💥 SOLAR SUPERNOVA! เกจไม้ตายชาร์จไว x2 ปลดปล่อย Shadow Slash สังหาร');
+          showToast('💥 SOLAR SUPERNOVA! เกจไม้ตายชาร์จไว x1.5 ปลดปล่อย Shadow Slash สังหาร');
         }
         bossDamageMultiplier *= 1.35;
         critChance = Math.min(100, critChance + 20);
@@ -1315,8 +1334,30 @@
           speakVoice('คำเตือนฉุกเฉิน! แกนซิงกูลาริตียุบตัว เร่งสปีดแตะโซนสามหรือทำคริติคอล ดาเมจทวีคูณสองจุดห้าเท่า!', true);
           showToast('🌀 SINGULARITY COLLAPSE! ชีพจร Zone 3-4 หรือคริติคอล ดาเมจทะลวง x2.5!');
         }
-        if (isFrenzyActive || currentHrZone >= 3 || isCrit) {
+        if (isFrenzyActive || currentHrZone >= 3) {
           bossDamageMultiplier *= 2.5;
+        }
+      }
+    }
+
+    // บอส Tier IX: Chrono-Abyss Overlord (กลไกบิดผันกาลเวลา: เช็กเพซต่ำกว่า 6.5 ทะลวงมิติดาเมจ x3)
+    if (currentBoss.gimmick === 'chrono') {
+      if (rollingPace !== null && rollingPace <= 6.5) {
+        bossDamageMultiplier *= 3.0;
+        critChance = Math.min(100, critChance + 30);
+        if (!gimmickAnnounced.chronoBreak) {
+          gimmickAnnounced.chronoBreak = true;
+          gimmickAnnounced.chronoRewind = false;
+          speakVoice('มิติเวลาแตกสลาย! เพซต่ำกว่า 6:30 ดาเมจทะลวงสามเท่า', true);
+          showToast('⏳ TIME SHATTER! เพซเร็วกว่า 6:30 ทะลวงมิติดาเมจ x3.0!');
+        }
+      } else if (rollingPace === null || rollingPace > 8.0) {
+        bossDamageMultiplier *= 0.6;
+        if (!gimmickAnnounced.chronoRewind) {
+          gimmickAnnounced.chronoRewind = true;
+          gimmickAnnounced.chronoBreak = false;
+          speakVoice('มิติเวลาหมุนย้อนกลับ! เพซช้ากว่า 8:00 บอสจะฟื้นฟูเลือด');
+          showToast('⏳ CHRONO REWIND: เพซช้ากว่า 8:00 บอสดูดซับเวลาฟื้นฟูเลือด!');
         }
       }
     }
@@ -1330,13 +1371,14 @@
     const isCrit = (Math.random() * 100) < critChance;
 
     if (currentBoss.gimmick === 'carapace' && bossVulnerableTimer <= 0 && isCrit) {
-      bossDamageMultiplier = (bossDamageMultiplier / 0.65);
+      bossDamageMultiplier = (bossDamageMultiplier / 0.55);
     }
 
     const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? 1.8 : 1.0) * bossDamageMultiplier;
 
     if (isCrit) {
-      addUltimateCharge(3);
+      // คริติคอลชาร์จไม้ตายเพียง 1% เพื่อไม่ให้เกจเด้งไวเกิน
+      addUltimateCharge(1);
       const questCrit = gameState.dailyQuests.find(q => q.id === 'dq_crit');
       if (questCrit) questCrit.current = Math.min(questCrit.target, questCrit.current + 1);
       showToast(`💥 CRITICAL! ดาเมจทะลวง x1.8`);
@@ -1397,6 +1439,9 @@
       } else if (currentBoss.tier === 'TIER VIII') {
         const ach = gameState.achievements.find(a => a.id === 'ach_boss_leviathan');
         if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+      } else if (currentBoss.tier === 'TIER IX') {
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_chronos');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       }
 
       bossVulnerableTimer = 0;
@@ -1425,7 +1470,6 @@
     const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01);
     const shadowSetDmgMult = setCounts.shadowstalker >= 4 ? 1.5 : 1.0;
 
-    // ความแรงและระยะเวลาแยกตาม Tier
     const tierBaseDamages = { 1: 0.40, 2: 1.00, 3: 2.20 };
     const tierOverdriveSec = { 1: 30, 2: 60, 3: 90 };
     const tierVulnSec = { 1: 60, 2: 90, 3: 120 };
@@ -1485,6 +1529,9 @@
         if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       } else if (currentBoss.tier === 'TIER VIII') {
         const ach = gameState.achievements.find(a => a.id === 'ach_boss_leviathan');
+        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+      } else if (currentBoss.tier === 'TIER IX') {
+        const ach = gameState.achievements.find(a => a.id === 'ach_boss_chronos');
         if (ach) ach.current = Math.min(ach.target, ach.current + 1);
       }
 
@@ -2001,17 +2048,17 @@
 
     const bossHpPct = gameState.bossHpRemain / boss.maxHpKm;
     bossGimmickBannerEl.className = 'boss-gimmick-banner';
-    bossCardEl.classList.remove('eclipse-active', 'supernova-active', 'singularity-active');
+    bossCardEl.classList.remove('eclipse-active', 'supernova-active', 'singularity-active', 'chrono-active');
 
     if (boss.gimmick === 'mist') {
       bossGimmickBannerEl.style.display = 'flex';
-      if (bossHpPct <= 0.65) {
+      if (bossHpPct <= 0.75) {
         bossGimmickBannerEl.classList.add('active-mist');
         bossGimmickTagEl.textContent = '🌫️ หมอกสูบวิญญาณ';
         bossGimmickTextEl.textContent = 'คุมเพซให้เร็วกว่า 7:30/กม. มิฉะนั้นดาเมจลด 50% และบอสจะฮีล';
       } else {
         bossGimmickTagEl.textContent = '⏳ ผนึกหมอก';
-        bossGimmickTextEl.textContent = 'หมอกคำสาปจะปะทุเมื่อเลือดบอสต่ำกว่า 65%';
+        bossGimmickTextEl.textContent = 'หมอกคำสาปจะปะทุเมื่อเลือดบอสต่ำกว่า 75%';
       }
     } else if (boss.gimmick === 'carapace') {
       bossGimmickBannerEl.style.display = 'flex';
@@ -2025,8 +2072,8 @@
         bossGimmickTextEl.textContent = 'ดันชีพจรแตะ Zone 3 เพื่อเคาน์เตอร์ดาเมจสวนกลับ x1.5';
       } else {
         bossGimmickBannerEl.classList.add('active-carapace');
-        bossGimmickTagEl.textContent = '🗿 เกราะศิลา';
-        bossGimmickTextEl.textContent = 'ลดดาเมจ 35% (กะเทาะเกราะด้วยคริติคอล หรือ Shadow Slash)';
+        bossGimmickTagEl.textContent = '🗿 เกราะศิลาหนา';
+        bossGimmickTextEl.textContent = 'ลดดาเมจ 45% (กะเทาะเกราะด้วยคริติคอล หรือ Shadow Slash)';
       }
     } else if (boss.gimmick === 'empress') {
       bossGimmickBannerEl.style.display = 'flex';
@@ -2036,7 +2083,7 @@
       } else if (bossHpPct > 0.25) {
         bossGimmickBannerEl.classList.add('active-vulnerable');
         bossGimmickTagEl.textContent = '⚡ เฟส 2: เรโซแนนซ์';
-        bossGimmickTextEl.textContent = 'วิ่ง Zone 2-3 ชาร์จไม้ตาย Shadow Slash ไวขึ้น 3 เท่า!';
+        bossGimmickTextEl.textContent = 'วิ่ง Zone 2-3 ชาร์จไม้ตาย Shadow Slash ไวขึ้น 2 เท่า!';
       } else {
         bossGimmickBannerEl.classList.add('active-eclipse');
         bossCardEl.classList.add('eclipse-active');
@@ -2053,7 +2100,7 @@
         bossGimmickBannerEl.classList.add('active-supernova');
         bossCardEl.classList.add('supernova-active');
         bossGimmickTagEl.textContent = '💥 SUPERNOVA';
-        bossGimmickTextEl.textContent = 'สภาวะซูเปอร์โนวา! เกจไม้ตายชาร์จไว x2 ปลดปล่อย Shadow Slash สังหาร!';
+        bossGimmickTextEl.textContent = 'สภาวะซูเปอร์โนวา! เกจไม้ตายชาร์จไว x1.5 ปลดปล่อย Shadow Slash สังหาร!';
       }
     } else if (boss.gimmick === 'singularity') {
       bossGimmickBannerEl.style.display = 'flex';
@@ -2071,6 +2118,18 @@
         bossGimmickTagEl.textContent = '🌀 SINGULARITY';
         bossGimmickTextEl.textContent = 'ซิงกูลาริตียุบตัว! วิ่ง Zone 3-4 หรือคริติคอล ดาเมจทะลวง x2.5!';
       }
+    } else if (boss.gimmick === 'chrono') {
+      bossGimmickBannerEl.style.display = 'flex';
+      bossCardEl.classList.add('chrono-active');
+      bossGimmickBannerEl.classList.add('active-chrono');
+      const rollingPace = getRecentRollingPace();
+      if (rollingPace !== null && rollingPace <= 6.5) {
+        bossGimmickTagEl.textContent = '⚡ TIME SHATTER';
+        bossGimmickTextEl.textContent = 'ทะลวงมิติเวลาสำเร็จ (เพซ < 6:30)! ดาเมจทะลวง x3.0 & คริติคอล +30%';
+      } else {
+        bossGimmickTagEl.textContent = '⏳ CHRONO DISTORTION';
+        bossGimmickTextEl.textContent = 'เร่งเพซให้ต่ำกว่า 6:30 เพื่อทำดาเมจ x3! หากช้ากว่า 8:00 บอสจะสูบเวลาฮีลเลือดคืน';
+      }
     } else {
       bossGimmickBannerEl.style.display = 'none';
     }
@@ -2087,13 +2146,11 @@
     calValEl.textContent = `${calValue} kcal`;
     updatePace();
 
-    // จัดการเกจไม้ตาย 3 สต็อก (0 - 300%)
     const ultCharge = Math.min(300, Math.floor(gameState.ultimateCharge));
     const stockCount = Math.floor(ultCharge / 100);
     ultPctValEl.textContent = `${ultCharge}% (สต็อก: ${stockCount}/3)`;
     ultBarFillEl.style.width = `${Math.min(100, (ultCharge / 300) * 100)}%`;
 
-    // อัปเดตสถานะปุ่มทั้ง 3 ระดับ
     if (isRunning) {
       btnCastUlt1.disabled = ultCharge < 100;
       btnCastUlt1.className = `btn-cast-ult ${ultCharge >= 100 ? 'ready' : ''}`;
@@ -2264,7 +2321,6 @@
     }
   });
 
-  // อัปเกรดดาบเงาพิฆาต (มีโอกาสสำเร็จลดลงตามเลเวล ล็อกต่ำสุด 20%)
   btnBuyBlade.addEventListener('click', () => {
     const cost = getBladePrice();
     if (gameState.gold >= cost) {
@@ -2285,7 +2341,6 @@
     }
   });
 
-  // อัปเกรดเครื่องรางล่าโลหิต (มีโอกาสสำเร็จลดลงตามเลเวล ล็อกต่ำสุด 20%)
   btnBuyCharm.addEventListener('click', () => {
     const cost = getCharmPrice();
     if (gameState.gold >= cost) {
@@ -2306,7 +2361,6 @@
     }
   });
 
-  // อัปเกรดเนตรอเวจี (มีโอกาสสำเร็จลดลงตามเลเวล ล็อกต่ำสุด 20%)
   btnBuyEye.addEventListener('click', () => {
     const cost = getEyePrice();
     if (gameState.gold >= cost) {
@@ -2408,13 +2462,13 @@
   });
 
   async function startRunEngine() {
-    // เมื่อเริ่มออกล่ารอบใหม่ ให้เริ่มที่ Boss Tier 1 เสมอทุกครั้ง
     if (runSeconds === 0) {
       gameState.bossIndex = 0;
       gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
       bossVulnerableTimer = 0;
       gimmickAnnounced = {};
       mistHealingTick = 0;
+      chronoHealingTick = 0;
       isGoblinActive = false;
       goblinCooldownSeconds = 0;
       lastGoblinTriggerKm = 0.0;
@@ -2437,12 +2491,12 @@
       pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
 
+      // ปรับ Passive Charge เมื่ออยู่ใน Frenzy/Zone 3 ให้ช้าลงเหลือเพียง 0.1% ต่อวินาที
       if (isFrenzyActive || currentHrZone === 3) {
         const currentBoss = BOSS_DATABASE[gameState.bossIndex];
         const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
-        // หากสู้เลเวียธานแล้วเลือดต่ำกว่า 50% หลุมดำจะดูดกลืนการชาร์จตามเวลา ต้องวิ่งเพื่อชาร์จเท่านั้น
         if (!(currentBoss.gimmick === 'singularity' && bossHpPct <= 0.50)) {
-          const ultTimeRate = isFlowStateActive ? 1.0 : 0.5;
+          const ultTimeRate = isFlowStateActive ? 0.2 : 0.1;
           addUltimateCharge(ultTimeRate);
         }
       }
@@ -2467,7 +2521,6 @@
         goblinCooldownSeconds--;
       }
 
-      // ตรวจสอบสถานะการไล่ล่าโกบลินเงา
       if (isGoblinActive) {
         goblinSecondsLeft--;
         goblinTimerEl.textContent = `${goblinSecondsLeft}s`;
@@ -2492,17 +2545,32 @@
 
       const currentBoss = BOSS_DATABASE[gameState.bossIndex];
       const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
-      if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.65) {
+      if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.75) {
         const rollingPace = getRecentRollingPace();
         if (rollingPace === null || rollingPace > 7.5) {
           mistHealingTick++;
-          if (mistHealingTick >= 15) { // ดูดเลือดไวขึ้นทุก 15 วิ
+          if (mistHealingTick >= 15) {
             mistHealingTick = 0;
             gameState.bossHpRemain = Math.min(currentBoss.maxHpKm, gameState.bossHpRemain + 0.02);
             showToast('🌫️ หมอกคำสาปสูบพลัง! บอสฟื้นฟูเลือด +0.02 กม.');
           }
         } else {
           mistHealingTick = 0;
+        }
+      }
+
+      // กลไกบอส Tier IX: มิติเวลาหมุนกลับ หากเพซช้ากว่า 8:00 บอสจะฟื้นฟูเลือดทีละ 0.05 กม. ทุก 15 วิ
+      if (currentBoss.gimmick === 'chrono') {
+        const rollingPace = getRecentRollingPace();
+        if (rollingPace === null || rollingPace > 8.0) {
+          chronoHealingTick++;
+          if (chronoHealingTick >= 15) {
+            chronoHealingTick = 0;
+            gameState.bossHpRemain = Math.min(currentBoss.maxHpKm, gameState.bossHpRemain + 0.05);
+            showToast('⏳ นาฬิกาทรายทมิฬหมุนกลับ! บอสฟื้นฟูเลือด +0.05 กม.');
+          }
+        } else {
+          chronoHealingTick = 0;
         }
       }
 
@@ -2524,9 +2592,10 @@
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           gpsStatusEl.textContent = 'GPS: ล็อกพิกัดแล้ว 🟢';
-          const { latitude, longitude, accuracy, altitude } = pos.coords;
+          const { latitude, longitude, accuracy, altitude, speed } = pos.coords;
 
-          if (accuracy > 25) return;
+          // กรองสัญญาณที่ accuracy ต่ำเกินไป
+          if (accuracy > 20) return;
 
           const now = Date.now();
           if (!lastCoord) {
@@ -2538,18 +2607,27 @@
           const deltaKm = calculateDistance(lastCoord.latitude, lastCoord.longitude, latitude, longitude);
           const timeDeltaSec = (now - (lastCoord.time || now)) / 1000;
 
-          if (deltaKm >= 0.003 && timeDeltaSec >= 1) {
-            const speedKmh = deltaKm / (timeDeltaSec / 3600);
+          if (timeDeltaSec < 1) return;
 
-            if (speedKmh >= 1.5 && speedKmh <= 35) {
-              runDistanceKm += deltaKm;
-              recordPaceSample(now, runDistanceKm);
-              currentGpxTrack.push({ lat: latitude, lon: longitude, ele: altitude || 0, time: now });
-              applyDistanceDamage(deltaKm);
-              lastCoord = { latitude, longitude, time: now };
-            } else if (speedKmh > 35) {
-              lastCoord = { latitude, longitude, time: now };
-            }
+          const speedKmh = deltaKm / (timeDeltaSec / 3600);
+          const deltaMeters = deltaKm * 1000;
+          const isHardwareStationary = (typeof speed === 'number' && speed !== null && speed < 0.5);
+
+          // แก้ไขบั๊ก GPS Drift: กรองจังหวะที่หยุดนิ่งหรือระยะกระโดดน้อยกว่าความคลาดเคลื่อน
+          if (isHardwareStationary || deltaMeters < Math.max(4, accuracy * 0.4) || speedKmh < 1.8) {
+            lastCoord = { latitude, longitude, time: now };
+            return;
+          }
+
+          // ความเร็ววิ่งปกติ (1.8 ถึง 26.0 กม./ชม.) เกินนี้ถือเป็น GPS กระโดดหรือนั่งรถ
+          if (speedKmh >= 1.8 && speedKmh <= 26.0) {
+            runDistanceKm += deltaKm;
+            recordPaceSample(now, runDistanceKm);
+            currentGpxTrack.push({ lat: latitude, lon: longitude, ele: altitude || 0, time: now });
+            applyDistanceDamage(deltaKm);
+            lastCoord = { latitude, longitude, time: now };
+          } else if (speedKmh > 26.0) {
+            lastCoord = { latitude, longitude, time: now };
           }
 
           renderHUD();
@@ -2607,12 +2685,12 @@
         btnRunText.textContent = 'เริ่มออกล่า';
         btnFinishRun.setAttribute('disabled', 'true');
 
-        // รีเซ็ตบอสกลับเป็น Tier 1 เสมอ
         gameState.bossIndex = 0;
         gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
         bossVulnerableTimer = 0;
         gimmickAnnounced = {};
         mistHealingTick = 0;
+        chronoHealingTick = 0;
         isGoblinActive = false;
         goblinBannerEl.style.display = 'none';
 
@@ -2678,12 +2756,12 @@
     btnRunText.textContent = 'เริ่มออกล่า';
     btnFinishRun.setAttribute('disabled', 'true');
 
-    // รีเซ็ตบอสกลับเป็น Tier 1 เสมอสำหรับการเริ่มออกล่ารอบถัดไป
     gameState.bossIndex = 0;
     gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
     bossVulnerableTimer = 0;
     gimmickAnnounced = {};
     mistHealingTick = 0;
+    chronoHealingTick = 0;
     isGoblinActive = false;
     goblinBannerEl.style.display = 'none';
 
