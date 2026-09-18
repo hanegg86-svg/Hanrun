@@ -284,7 +284,6 @@
     }
   ];
 
-  // สูตรคำนวณโอกาสสำเร็จของคลังสรรพาวุธเงา: ขั้นต่ำล็อกไว้ที่ 20%
   function getUpgradeSuccessRate(currentLevel) {
     return Math.max(20, 100 - (currentLevel * 2));
   }
@@ -336,7 +335,7 @@
     nextExp: 1000,
     gold: 0,
     statPoints: 0,
-    ultimateCharge: 0, // สะสมได้สูงสุด 300 (3 สต็อก)
+    ultimateCharge: 0,
     stats: { str: 10, sta: 10, agi: 10 },
     upgrades: { blade: 0, charm: 0, eye: 0 },
     equipment: { weapon: null, armor: null, boots: null, relic: null },
@@ -837,15 +836,14 @@
     const oldest = paceSamples[0];
     const newest = paceSamples[paceSamples.length - 1];
 
-    // ตรวจจับหากไม่ได้ขยับเกิน 5 วินาที ตัดสถานะเพซออกเพื่อไม่ให้ค้าง
-    if (now - newest.time > 5000) {
+    if (now - newest.time > 6000) {
       return null;
     }
 
     const dDist = newest.dist - oldest.dist;
     const dTimeSec = (newest.time - oldest.time) / 1000;
 
-    if (dDist >= 0.010 && dTimeSec >= 3) {
+    if (dDist >= 0.005 && dTimeSec >= 3) {
       return (dTimeSec / 60) / dDist;
     }
     return null;
@@ -1161,7 +1159,6 @@
       ultChargeBonusMult *= 1.5;
     }
 
-    // ชาร์จเกจไม้ตายจากระยะทางช้าลง (1 กม. ได้เกจประมาณ 8-10%)
     addUltimateCharge((distanceDeltaKm * 8) * ultChargeBonusMult);
 
     const flowThresholdKm = setCounts.voidwalker >= 2 ? 0.20 : 0.40;
@@ -1229,7 +1226,6 @@
 
     let bossDamageMultiplier = 1.0;
 
-    // Shadow Lich หมอกคำสาปทำงานที่ 75%
     if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.75) {
       if (rollingPace === null || rollingPace > 7.5) {
         bossDamageMultiplier *= 0.5;
@@ -1246,7 +1242,6 @@
       }
     }
 
-    // Void Behemoth เกราะศิลาหนาลดดาเมจ 45% (คูณ 0.55)
     if (currentBoss.gimmick === 'carapace') {
       if (bossVulnerableTimer > 0) {
         bossDamageMultiplier *= 2.0;
@@ -1266,7 +1261,6 @@
       }
     }
 
-    // Empress ร่างลวงตาลดดาเมจ 45% (คูณ 0.55)
     if (currentBoss.gimmick === 'empress') {
       if (bossHpPct > 0.65) {
         if (isFlowStateActive) {
@@ -1340,7 +1334,6 @@
       }
     }
 
-    // บอส Tier IX: Chrono-Abyss Overlord (กลไกบิดผันกาลเวลา: เช็กเพซต่ำกว่า 6.5 ทะลวงมิติดาเมจ x3)
     if (currentBoss.gimmick === 'chrono') {
       if (rollingPace !== null && rollingPace <= 6.5) {
         bossDamageMultiplier *= 3.0;
@@ -1377,7 +1370,6 @@
     const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? 1.8 : 1.0) * bossDamageMultiplier;
 
     if (isCrit) {
-      // คริติคอลชาร์จไม้ตายเพียง 1% เพื่อไม่ให้เกจเด้งไวเกิน
       addUltimateCharge(1);
       const questCrit = gameState.dailyQuests.find(q => q.id === 'dq_crit');
       if (questCrit) questCrit.current = Math.min(questCrit.target, questCrit.current + 1);
@@ -2108,7 +2100,7 @@
         bossGimmickBannerEl.classList.add('active-carapace');
         bossGimmickTagEl.textContent = '🌌 สนามแรงโน้มถ่วง';
         bossGimmickTextEl.textContent = 'ฝ่าแรงดึงดูดมิติอเวจี สะสมระยะทางกดดันเลเวียธาน';
-      } else if (bossHpPct > 0.20) {
+      } else if (bossHpPct <= 0.50 && bossHpPct > 0.20) {
         bossGimmickBannerEl.classList.add('active-mist');
         bossGimmickTagEl.textContent = '🕳️ หลุมดำดูดกลืน';
         bossGimmickTextEl.textContent = 'หลุมดำดูดกลืนพลัง เกจไม้ตายไม่ชาร์จตามเวลา ต้องอาศัยก้าววิ่ง!';
@@ -2491,7 +2483,6 @@
       pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
 
-      // ปรับ Passive Charge เมื่ออยู่ใน Frenzy/Zone 3 ให้ช้าลงเหลือเพียง 0.1% ต่อวินาที
       if (isFrenzyActive || currentHrZone === 3) {
         const currentBoss = BOSS_DATABASE[gameState.bossIndex];
         const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
@@ -2559,7 +2550,6 @@
         }
       }
 
-      // กลไกบอส Tier IX: มิติเวลาหมุนกลับ หากเพซช้ากว่า 8:00 บอสจะฟื้นฟูเลือดทีละ 0.05 กม. ทุก 15 วิ
       if (currentBoss.gimmick === 'chrono') {
         const rollingPace = getRecentRollingPace();
         if (rollingPace === null || rollingPace > 8.0) {
@@ -2594,8 +2584,7 @@
           gpsStatusEl.textContent = 'GPS: ล็อกพิกัดแล้ว 🟢';
           const { latitude, longitude, accuracy, altitude, speed } = pos.coords;
 
-          // กรองสัญญาณที่ accuracy ต่ำเกินไป
-          if (accuracy > 20) return;
+          if (accuracy > 35) return;
 
           const now = Date.now();
           if (!lastCoord) {
@@ -2609,24 +2598,30 @@
 
           if (timeDeltaSec < 1) return;
 
-          const speedKmh = deltaKm / (timeDeltaSec / 3600);
           const deltaMeters = deltaKm * 1000;
-          const isHardwareStationary = (typeof speed === 'number' && speed !== null && speed < 0.5);
+          const speedKmh = deltaKm / (timeDeltaSec / 3600);
 
-          // แก้ไขบั๊ก GPS Drift: กรองจังหวะที่หยุดนิ่งหรือระยะกระโดดน้อยกว่าความคลาดเคลื่อน
-          if (isHardwareStationary || deltaMeters < Math.max(4, accuracy * 0.4) || speedKmh < 1.8) {
-            lastCoord = { latitude, longitude, time: now };
+          // ตรวจจับการหยุดนิ่งจริง (Idle Timeout เกิน 8 วิ หรือฮาร์ดแวร์ยืนยันความเร็วต่ำมาก)
+          if ((typeof speed === 'number' && speed !== null && speed < 0.3 && deltaMeters < 3) || timeDeltaSec >= 8) {
+            if (deltaMeters < 3) {
+              lastCoord = { latitude, longitude, time: now };
+              return;
+            }
+          }
+
+          // สะสมระยะทางจนกว่าจะก้าวหน้าเกิน 3.5 เมตรเพื่อป้องกันการรีเซ็ตหมุดทิ้งทุกวินาที
+          if (deltaMeters < 3.5) {
             return;
           }
 
-          // ความเร็ววิ่งปกติ (1.8 ถึง 26.0 กม./ชม.) เกินนี้ถือเป็น GPS กระโดดหรือนั่งรถ
-          if (speedKmh >= 1.8 && speedKmh <= 26.0) {
+          // ตรวจสอบความเร็วการวิ่งที่เป็นไปได้ของมนุษย์ (1.5 ถึง 28.0 กม./ชม.)
+          if (speedKmh >= 1.5 && speedKmh <= 28.0) {
             runDistanceKm += deltaKm;
             recordPaceSample(now, runDistanceKm);
             currentGpxTrack.push({ lat: latitude, lon: longitude, ele: altitude || 0, time: now });
             applyDistanceDamage(deltaKm);
             lastCoord = { latitude, longitude, time: now };
-          } else if (speedKmh > 26.0) {
+          } else if (speedKmh > 28.0) {
             lastCoord = { latitude, longitude, time: now };
           }
 
