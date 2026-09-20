@@ -181,7 +181,7 @@
     }
   };
 
-  // --- Boss List Database (ปรับสเกลเลือดฐานเพิ่มทุก Tier และเพิ่มบอสระดับ TIER IX) ---
+  // --- Boss List Database ---
   const BOSS_DATABASE = [
     {
       id: 'boss_1',
@@ -284,6 +284,12 @@
     }
   ];
 
+  // คำนวณพลังชีวิตสูงสุดของบอสตามจำนวนรอบลูป (+15% ต่อรอบลูป)
+  function getBossMaxHp(bossIndex, loopCycle = 0) {
+    const base = BOSS_DATABASE[bossIndex].maxHpKm;
+    return parseFloat((base * (1 + (loopCycle * 0.15))).toFixed(2));
+  }
+
   function getUpgradeSuccessRate(currentLevel) {
     return Math.max(20, 100 - (currentLevel * 2));
   }
@@ -355,6 +361,7 @@
     streak: { count: 1, lastDate: new Date().toDateString() },
     bossIndex: 0,
     bossHpRemain: 2.00,
+    bossLoopCycle: 0,
     totalDistanceKm: 0.0,
     maxHr: 178,
     lastBleDeviceName: null,
@@ -374,13 +381,14 @@
   let gameState = defaultState;
   let currentInvFilter = 'all';
 
-  // --- Boss Gimmick State Runtime Variables ---
+  // Boss Gimmick Runtime Variables
   let bossVulnerableTimer = 0;
   let mistHealingTick = 0;
   let chronoHealingTick = 0;
+  let bloodKnightStallTick = 0;
   let gimmickAnnounced = {};
 
-  // --- Shadow Goblin Chase Event Runtime Variables ---
+  // Mini-Event Variables
   let isGoblinActive = false;
   let goblinSecondsLeft = 0;
   let goblinTargetPaceDec = null;
@@ -415,6 +423,7 @@
       gameState.dailyQuests = saved.dailyQuests || generateDailyQuests();
       gameState.achievements = saved.achievements || generateAchievements();
       gameState.ultimateCharge = typeof saved.ultimateCharge === 'number' ? Math.min(300, saved.ultimateCharge) : 0;
+      gameState.bossLoopCycle = typeof saved.bossLoopCycle === 'number' ? saved.bossLoopCycle : 0;
       gameState.isHistoryCollapsed = typeof saved.isHistoryCollapsed === 'boolean' ? saved.isHistoryCollapsed : false;
     } else {
       gameState = defaultState;
@@ -434,12 +443,14 @@
     });
 
     if (!isRunning) {
+      gameState.bossLoopCycle = 0;
       gameState.bossIndex = 0;
-      gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
+      gameState.bossHpRemain = getBossMaxHp(0, 0);
       bossVulnerableTimer = 0;
       gimmickAnnounced = {};
       mistHealingTick = 0;
       chronoHealingTick = 0;
+      bloodKnightStallTick = 0;
     }
 
     verifyDailyAndStreakReset();
@@ -502,39 +513,80 @@
   let rhythmBaselinePace = null;
   let rhythmConsistentDistance = 0.0;
 
-  // --- Item Generator with Set Affinity ---
+  // --- Item Generator with Mythic Tier & Loop Scaling ---
   const ITEM_NAMES = {
-    weapon: ['ดาบสั้น', 'ดาบใหญ่ทมิฬ', 'เคียวมรณะ', 'ดาบโบราณ'],
-    armor: ['เสื้อเกราะหนัง', 'เกราะเหล็กอสูร', 'ผ้าคลุมวิญญาณ', 'เกราะเพลทอเวจี'],
-    boots: ['รองเท้าก้าวเงา', 'รองเท้าเกราะทมิฬ', 'รองเท้าลมกรด', 'สนับแข้งสายลม'],
-    relic: ['แหวนวิญญาณ', 'จี้หยดโลหิต', 'เครื่องรางตาเหยี่ยว', 'หินมนตราโบราณ']
+    weapon: ['ดาบสั้น', 'ดาบใหญ่ทมิฬ', 'เคียวมรณะ', 'ดาบโบราณ', 'หอกพิฆาตมิติ'],
+    armor: ['เสื้อเกราะหนัง', 'เกราะเหล็กอสูร', 'ผ้าคลุมวิญญาณ', 'เกราะเพลทอเวจี', 'เกราะมหาอสูร'],
+    boots: ['รองเท้าก้าวเงา', 'รองเท้าเกราะทมิฬ', 'รองเท้าลมกรด', 'สนับแข้งสายลม', 'รองเท้าล่องหน'],
+    relic: ['แหวนวิญญาณ', 'จี้หยดโลหิต', 'เครื่องรางตาเหยี่ยว', 'หินมนตราโบราณ', 'ดวงใจมิติอเวจี']
   };
 
-  function rollRandomItem() {
+  function rollRandomItem(isBossDrop = false, loopCount = 0) {
     const types = ['weapon', 'armor', 'boots', 'relic'];
     const type = types[Math.floor(Math.random() * types.length)];
     const roll = Math.random();
 
     let rarity = 'common';
-    let mainStatVal = 6;
-    let subStatVal = 0;
+    let baseMain = 6;
+    let baseSub = 0;
+    let sub2Val = 0;
 
-    if (roll < 0.06) {
-      rarity = 'legendary';
-      mainStatVal = 25;
-      subStatVal = 10;
-    } else if (roll < 0.22) {
-      rarity = 'epic';
-      mainStatVal = 18;
-      subStatVal = 6;
-    } else if (roll < 0.52) {
-      rarity = 'rare';
-      mainStatVal = 12;
-      subStatVal = 3;
+    if (loopCount > 0 || isBossDrop) {
+      const mythicThreshold = Math.min(0.25, 0.06 + (loopCount * 0.04));
+      const legThreshold = mythicThreshold + 0.22;
+      const epicThreshold = legThreshold + 0.35;
+
+      if (roll < mythicThreshold) {
+        rarity = 'mythic';
+        baseMain = 45;
+        baseSub = 20;
+        sub2Val = 15;
+      } else if (roll < legThreshold) {
+        rarity = 'legendary';
+        baseMain = 32;
+        baseSub = 14;
+      } else if (roll < epicThreshold) {
+        rarity = 'epic';
+        baseMain = 22;
+        baseSub = 8;
+      } else if (roll < 0.88) {
+        rarity = 'rare';
+        baseMain = 14;
+        baseSub = 4;
+      } else {
+        rarity = 'common';
+        baseMain = 6;
+        baseSub = 0;
+      }
     } else {
-      rarity = 'common';
-      mainStatVal = 6;
+      if (roll < 0.03) {
+        rarity = 'mythic';
+        baseMain = 45;
+        baseSub = 20;
+        sub2Val = 15;
+      } else if (roll < 0.12) {
+        rarity = 'legendary';
+        baseMain = 32;
+        baseSub = 14;
+      } else if (roll < 0.35) {
+        rarity = 'epic';
+        baseMain = 22;
+        baseSub = 8;
+      } else if (roll < 0.68) {
+        rarity = 'rare';
+        baseMain = 14;
+        baseSub = 4;
+      } else {
+        rarity = 'common';
+        baseMain = 6;
+        baseSub = 0;
+      }
     }
+
+    const loopScale = 1 + (loopCount * 0.15);
+    const mainStatVal = Math.round(baseMain * loopScale);
+    const subStatVal = baseSub > 0 ? Math.round(baseSub * loopScale) : 0;
+    const subStat2Val = sub2Val > 0 ? Math.round(sub2Val * loopScale) : 0;
 
     const setKeys = Object.keys(SET_DATABASE);
     const setId = setKeys[Math.floor(Math.random() * setKeys.length)];
@@ -544,6 +596,14 @@
     const baseName = nameList[Math.floor(Math.random() * nameList.length)];
     const icons = { weapon: '🗡️', armor: '🛡️', boots: '🥾', relic: '🧿' };
 
+    const goldValues = {
+      mythic: 1500,
+      legendary: 600,
+      epic: 250,
+      rare: 100,
+      common: 30
+    };
+
     return {
       id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       name: `${baseName}แห่ง${setInfo.name.replace('เซ็ต', '')}`,
@@ -552,8 +612,10 @@
       setId,
       mainStatVal,
       subStatVal,
+      subStat2Val,
+      loopLevel: loopCount,
       icon: icons[type],
-      goldValue: rarity === 'legendary' ? 400 : rarity === 'epic' ? 180 : rarity === 'rare' ? 80 : 30
+      goldValue: goldValues[rarity] || 30
     };
   }
 
@@ -573,25 +635,29 @@
     let bonusDmg = 0;
     let bonusSta = 0;
     let bonusCrit = 0;
+    let bonusCritDmg = 0;
     let bonusGold = 0;
 
     const eq = gameState.equipment;
-    if (eq.weapon) {
-      bonusDmg += eq.weapon.mainStatVal;
-      if (eq.weapon.subStatVal) bonusCrit += eq.weapon.subStatVal;
-    }
-    if (eq.armor) {
-      bonusSta += eq.armor.mainStatVal;
-      if (eq.armor.subStatVal) bonusDmg += eq.armor.subStatVal;
-    }
-    if (eq.boots) {
-      bonusDmg += eq.boots.mainStatVal;
-      if (eq.boots.subStatVal) bonusCrit += eq.boots.subStatVal;
-    }
-    if (eq.relic) {
-      bonusGold += eq.relic.mainStatVal;
-      if (eq.relic.subStatVal) bonusSta += eq.relic.subStatVal;
-    }
+    ['weapon', 'armor', 'boots', 'relic'].forEach(slot => {
+      const item = eq[slot];
+      if (!item) return;
+
+      if (slot === 'weapon') bonusDmg += item.mainStatVal;
+      if (slot === 'armor') bonusSta += item.mainStatVal;
+      if (slot === 'boots') bonusDmg += item.mainStatVal;
+      if (slot === 'relic') bonusGold += item.mainStatVal;
+
+      if (item.subStatVal) {
+        if (slot === 'weapon' || slot === 'boots') bonusCrit += item.subStatVal;
+        if (slot === 'armor') bonusDmg += item.subStatVal;
+        if (slot === 'relic') bonusSta += item.subStatVal;
+      }
+
+      if (item.subStat2Val) {
+        bonusCritDmg += (item.subStat2Val * 0.01);
+      }
+    });
 
     const setCounts = getActiveEquippedSets();
     if (setCounts.shadowstalker >= 2) {
@@ -602,7 +668,29 @@
       bonusGold += 20;
     }
 
-    return { bonusDmg, bonusSta, bonusCrit, bonusGold, setCounts };
+    return { bonusDmg, bonusSta, bonusCrit, bonusCritDmg, bonusGold, setCounts };
+  }
+
+  // คำนวณ Agility และการแปลงโอกาสคริติคอลส่วนเกินเป็น Critical Damage
+  function calculateCritStats() {
+    const eqBonus = calculateEquipmentBonuses();
+    const rawCrit = (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit;
+    const cap = 75;
+    let effectiveChance = Math.min(cap, rawCrit);
+    let critMultiplier = 1.8;
+
+    if (rawCrit > cap) {
+      const overflow = rawCrit - cap;
+      critMultiplier = parseFloat((1.8 + (overflow * 0.02) + (eqBonus.bonusCritDmg || 0)).toFixed(2));
+    } else {
+      critMultiplier = parseFloat((1.8 + (eqBonus.bonusCritDmg || 0)).toFixed(2));
+    }
+
+    if (isFrenzyActive) {
+      effectiveChance = 100;
+    }
+
+    return { rawCrit, effectiveChance, critMultiplier, cap };
   }
 
   // --- DOM Elements ---
@@ -735,6 +823,7 @@
   const modalItemSetEl = document.getElementById('modal-item-set');
   const modalMainStatEl = document.getElementById('modal-main-stat');
   const modalSubStatEl = document.getElementById('modal-sub-stat');
+  const modalSubStat2El = document.getElementById('modal-sub-stat-2');
   const modalSetBonus2El = document.getElementById('modal-set-bonus-2');
   const modalSetBonus4El = document.getElementById('modal-set-bonus-4');
   const btnModalEquip = document.getElementById('btn-modal-equip');
@@ -836,14 +925,14 @@
     const oldest = paceSamples[0];
     const newest = paceSamples[paceSamples.length - 1];
 
-    if (now - newest.time > 6000) {
+    if (now - newest.time > 5000) {
       return null;
     }
 
     const dDist = newest.dist - oldest.dist;
     const dTimeSec = (newest.time - oldest.time) / 1000;
 
-    if (dDist >= 0.005 && dTimeSec >= 3) {
+    if (dDist >= 0.010 && dTimeSec >= 3) {
       return (dTimeSec / 60) / dDist;
     }
     return null;
@@ -937,7 +1026,7 @@
     }
   }
 
-  // --- Mini-Event: Shadow Goblin Chase Logic ---
+  // Mini-Event: Shadow Goblin
   function startGoblinChaseEvent() {
     if (isGoblinActive || !isRunning) return;
 
@@ -1115,7 +1204,6 @@
     }
   });
 
-  // --- Accordion Toggle Handlers for Run History ---
   function updateHistoryAccordionUI() {
     if (gameState.isHistoryCollapsed) {
       historySectionEl.classList.add('collapsed');
@@ -1138,14 +1226,99 @@
     saveGame();
   });
 
-  // --- Battle Damage Calculation with Boss Gimmick & Set Logic ---
+  // --- Boss Defeat & Loop System Handler ---
+  function handleBossDefeat(currentBoss, isUltimateTier = 0) {
+    sessionBossKills += 1;
+    gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
+    gameState.chestsAvailable += 1;
+
+    if (!gameState.bestiary[currentBoss.id]) {
+      gameState.bestiary[currentBoss.id] = { kills: 0, name: currentBoss.name };
+    }
+    gameState.bestiary[currentBoss.id].kills += 1;
+
+    const eqBonus = calculateEquipmentBonuses();
+    const setCounts = eqBonus.setCounts;
+    let setExpBonus = 1.0;
+    if (setCounts.bloodknight >= 4 && (currentHrZone === 2 || currentHrZone === 3 || isFrenzyActive)) {
+      setExpBonus = 1.4;
+    }
+
+    const zone2ExpBonus = currentHrZone === 2 ? 1.5 : 1.0;
+    const flowExpBonus = isFlowStateActive ? 1.5 : 1.0;
+    const loopRewardMult = 1 + ((gameState.bossLoopCycle || 0) * 0.20);
+
+    const staMultiplier = (1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01)) * zone2ExpBonus * flowExpBonus * setExpBonus;
+    const charmMultiplier = 1 + (gameState.upgrades.charm * 0.10) + (eqBonus.bonusGold * 0.01);
+    const streakMultiplier = 1 + Math.min(0.20, (gameState.streak.count - 1) * 0.02);
+    const overdriveGoldMult = isOverdriveActive ? 2.0 : 1.0;
+    const totalGoldMultiplier = staMultiplier * charmMultiplier * streakMultiplier * overdriveGoldMult;
+
+    const ultBonusMult = isUltimateTier > 0 ? (1 + (isUltimateTier * 0.35)) : 1.0;
+    const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier * loopRewardMult * ultBonusMult);
+    const rewardGold = Math.floor(currentBoss.rewardGold * totalGoldMultiplier * loopRewardMult * ultBonusMult);
+
+    showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} ทอง & 📦 1 หีบ`);
+    speakVoice(`สยบ ${currentBoss.name} สำเร็จแล้ว ปิดผนึกชัยชนะ!`, true);
+    addExp(rewardExp);
+    gameState.gold += rewardGold;
+
+    const questBoss = gameState.dailyQuests.find(q => q.id === 'dq_boss');
+    if (questBoss) questBoss.current = Math.min(questBoss.target, questBoss.current + 1);
+
+    if (currentBoss.tier === 'TIER III') {
+      const ach = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
+      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+    } else if (currentBoss.tier === 'TIER IV') {
+      const ach = gameState.achievements.find(a => a.id === 'ach_boss_malakor');
+      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+    } else if (currentBoss.tier === 'TIER V') {
+      const ach = gameState.achievements.find(a => a.id === 'ach_boss_titan');
+      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+    } else if (currentBoss.tier === 'TIER VI') {
+      const ach = gameState.achievements.find(a => a.id === 'ach_boss_empress');
+      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+    } else if (currentBoss.tier === 'TIER VII') {
+      const ach = gameState.achievements.find(a => a.id === 'ach_boss_ignis');
+      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+    } else if (currentBoss.tier === 'TIER VIII') {
+      const ach = gameState.achievements.find(a => a.id === 'ach_boss_leviathan');
+      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+    } else if (currentBoss.tier === 'TIER IX') {
+      const ach = gameState.achievements.find(a => a.id === 'ach_boss_chronos');
+      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+    }
+
+    bossVulnerableTimer = 0;
+    gimmickAnnounced = {};
+    mistHealingTick = 0;
+    chronoHealingTick = 0;
+    bloodKnightStallTick = 0;
+
+    const nextBossIndex = (gameState.bossIndex + 1) % BOSS_DATABASE.length;
+    if (nextBossIndex === 0) {
+      gameState.bossLoopCycle = (gameState.bossLoopCycle || 0) + 1;
+      showToast(`🔥 วนลูปสังเวียน AWAKENED LOOP ${gameState.bossLoopCycle}! บอสเลือด +${gameState.bossLoopCycle * 15}% และปลดล็อกท่าไม้ตายใหม่!`);
+      speakVoice(`พิชิตบอสครบทุกเทียร์แล้ว! เข้าสู่สังเวียนอเวจีรอบที่ ${gameState.bossLoopCycle} บอสทุกตัวตื่นขึ้นพร้อมพลังและความโหดเหี้ยมใหม่!`, true);
+    }
+
+    gameState.bossIndex = nextBossIndex;
+    gameState.bossHpRemain = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
+
+    saveGame();
+    renderUI();
+  }
+
+  // --- Battle Damage Calculation with Awakened Boss Ultimates ---
   function applyDistanceDamage(distanceDeltaKm) {
     if (distanceDeltaKm <= 0) return;
 
     const currentBoss = BOSS_DATABASE[gameState.bossIndex];
-    const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
+    const bossMaxHp = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
+    const bossHpPct = gameState.bossHpRemain / bossMaxHp;
     const eqBonus = calculateEquipmentBonuses();
     const setCounts = eqBonus.setCounts;
+    const isLoop = (gameState.bossLoopCycle || 0) >= 1;
 
     let ultChargeBonusMult = isFlowStateActive ? 1.5 : 1.0;
     
@@ -1211,7 +1384,7 @@
 
     if (runDistanceKm >= nextKmAnnounceCheckpoint) {
       const currentPace = calculatePace(runSeconds, runDistanceKm);
-      const bossRemainPct = Math.round((gameState.bossHpRemain / currentBoss.maxHpKm) * 100);
+      const bossRemainPct = Math.round((gameState.bossHpRemain / bossMaxHp) * 100);
       speakVoice(`ผ่านไปแล้ว ${Math.floor(runDistanceKm)} กิโลเมตร เพซเฉลี่ย ${currentPace} เลือดบอสเหลืออีก ${bossRemainPct} เปอร์เซ็นต์`);
       nextKmAnnounceCheckpoint += 1.0;
     }
@@ -1219,14 +1392,36 @@
     const frenzyDmgBonus = isFrenzyActive ? 1.5 : 1.0;
     const strMultiplier = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01)) * frenzyDmgBonus;
 
-    let critChance = Math.min(75, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit);
-    if (isFrenzyActive) {
-      critChance = 100;
-    }
-
+    const critStats = calculateCritStats();
+    let critChance = critStats.effectiveChance;
+    let critDmgMultiplier = critStats.critMultiplier;
     let bossDamageMultiplier = 1.0;
 
-    if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.75) {
+    // ท่าไม้ตายบอสรอบลูป (Awakened Mechanics)
+    if (isLoop && currentBoss.id === 'boss_1') {
+      if (rollingPace === null || rollingPace > 6.75) {
+        bossDamageMultiplier *= 0.65;
+        if (!gimmickAnnounced.gargoyleTremor) {
+          gimmickAnnounced.gargoyleTremor = true;
+          speakVoice('แผ่นดินไหวศิลาทำงาน! เร่งสปีดให้เร็วกว่าเพซ 6:45 มิฉะนั้นดาเมจลด 35%');
+          showToast('🌋 Seismic Tremor: พื้นดินสั่นสะเทือน! เร่งเพซให้ต่ำกว่า 6:45 เพื่อฝ่าดาเมจ');
+        }
+      }
+    }
+
+    if (isLoop && currentBoss.id === 'boss_3' && bossHpPct <= 0.50 && !gimmickAnnounced.dragonRoar) {
+      gimmickAnnounced.dragonRoar = true;
+      const siphoned = Math.floor(gameState.ultimateCharge * 0.5);
+      gameState.ultimateCharge = Math.max(0, gameState.ultimateCharge - siphoned);
+      showToast(`🐉 NECROTIC ROAR! มังกรคำรามเผาผลาญเกจไม้ตาย -${siphoned}%!`);
+      speakVoice('มังกรกระดูกคำรามสังหาร สลายเกจไม้ตายของคุณไปครึ่งหนึ่ง', true);
+    }
+
+    const mistThreshold = isLoop ? 0.85 : 0.75;
+    if (currentBoss.gimmick === 'mist' && bossHpPct <= mistThreshold) {
+      if (isLoop) {
+        critChance = Math.max(0, critChance - 15);
+      }
       if (rollingPace === null || rollingPace > 7.5) {
         bossDamageMultiplier *= 0.5;
         if (!gimmickAnnounced.mistWarn) {
@@ -1243,10 +1438,11 @@
     }
 
     if (currentBoss.gimmick === 'carapace') {
+      const baseCarapaceReduction = isLoop ? 0.40 : 0.55;
       if (bossVulnerableTimer > 0) {
         bossDamageMultiplier *= 2.0;
       } else {
-        bossDamageMultiplier *= 0.55;
+        bossDamageMultiplier *= baseCarapaceReduction;
       }
 
       if (bossHpPct <= 0.30) {
@@ -1262,16 +1458,17 @@
     }
 
     if (currentBoss.gimmick === 'empress') {
+      const empressReduction = isLoop ? 0.40 : 0.55;
       if (bossHpPct > 0.65) {
         if (isFlowStateActive) {
           critChance = Math.min(100, critChance + 20);
           bossDamageMultiplier *= 1.2;
         } else {
-          bossDamageMultiplier *= 0.55;
+          bossDamageMultiplier *= empressReduction;
           if (!gimmickAnnounced.empressP1) {
             gimmickAnnounced.empressP1 = true;
             speakVoice('จักรพรรดินีแยกร่างเงาหลอก วิ่งคุมเพซสม่ำเสมอเพื่อเข้าสู่โฟลว์สเตท');
-            showToast('👑 ร่างเงาลวง: ดาเมจลด 45% (เข้าสู่ Flow State เพื่อทลายร่างแยก)');
+            showToast(`👑 ร่างเงาลวง: ดาเมจลด ${Math.round((1 - empressReduction) * 100)}% (เข้าสู่ Flow State เพื่อทลายร่างแยก)`);
           }
         }
       } else if (bossHpPct <= 0.65 && bossHpPct > 0.25) {
@@ -1335,14 +1532,17 @@
     }
 
     if (currentBoss.gimmick === 'chrono') {
-      if (rollingPace !== null && rollingPace <= 6.5) {
-        bossDamageMultiplier *= 3.0;
+      const paceTarget = isLoop ? 6.25 : 6.5;
+      const boostMult = isLoop ? 3.5 : 3.0;
+
+      if (rollingPace !== null && rollingPace <= paceTarget) {
+        bossDamageMultiplier *= boostMult;
         critChance = Math.min(100, critChance + 30);
         if (!gimmickAnnounced.chronoBreak) {
           gimmickAnnounced.chronoBreak = true;
           gimmickAnnounced.chronoRewind = false;
-          speakVoice('มิติเวลาแตกสลาย! เพซต่ำกว่า 6:30 ดาเมจทะลวงสามเท่า', true);
-          showToast('⏳ TIME SHATTER! เพซเร็วกว่า 6:30 ทะลวงมิติดาเมจ x3.0!');
+          speakVoice('มิติเวลาแตกสลาย! เพซทะลวงมิติดาเมจทวีคูณ', true);
+          showToast(`⏳ TIME SHATTER! เพซเร็วกว่า 6:15 ทะลวงมิติดาเมจ x${boostMult.toFixed(1)}!`);
         }
       } else if (rollingPace === null || rollingPace > 8.0) {
         bossDamageMultiplier *= 0.6;
@@ -1364,91 +1564,29 @@
     const isCrit = (Math.random() * 100) < critChance;
 
     if (currentBoss.gimmick === 'carapace' && bossVulnerableTimer <= 0 && isCrit) {
-      bossDamageMultiplier = (bossDamageMultiplier / 0.55);
+      bossDamageMultiplier = (bossDamageMultiplier / (isLoop ? 0.40 : 0.55));
     }
 
-    const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? 1.8 : 1.0) * bossDamageMultiplier;
+    const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? critDmgMultiplier : 1.0) * bossDamageMultiplier;
 
     if (isCrit) {
       addUltimateCharge(1);
       const questCrit = gameState.dailyQuests.find(q => q.id === 'dq_crit');
       if (questCrit) questCrit.current = Math.min(questCrit.target, questCrit.current + 1);
-      showToast(`💥 CRITICAL! ดาเมจทะลวง x1.8`);
+      showToast(`💥 CRITICAL! ดาเมจทะลวง x${critDmgMultiplier.toFixed(2)}`);
     }
 
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - effectiveDamage);
 
     if (gameState.bossHpRemain <= 0.001) {
-      sessionBossKills += 1;
-      gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
-      gameState.chestsAvailable += 1;
-
-      if (!gameState.bestiary[currentBoss.id]) {
-        gameState.bestiary[currentBoss.id] = { kills: 0, name: currentBoss.name };
-      }
-      gameState.bestiary[currentBoss.id].kills += 1;
-
-      let setExpBonus = 1.0;
-      if (setCounts.bloodknight >= 4 && (currentHrZone === 2 || currentHrZone === 3 || isFrenzyActive)) {
-        setExpBonus = 1.4;
-      }
-
-      const zone2ExpBonus = currentHrZone === 2 ? 1.5 : 1.0;
-      const flowExpBonus = isFlowStateActive ? 1.5 : 1.0;
-
-      const staMultiplier = (1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01)) * zone2ExpBonus * flowExpBonus * setExpBonus;
-      const charmMultiplier = 1 + (gameState.upgrades.charm * 0.10) + (eqBonus.bonusGold * 0.01);
-      const streakMultiplier = 1 + Math.min(0.20, (gameState.streak.count - 1) * 0.02);
-      const overdriveGoldMult = isOverdriveActive ? 2.0 : 1.0;
-      const totalGoldMultiplier = staMultiplier * charmMultiplier * streakMultiplier * overdriveGoldMult;
-
-      const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier);
-      const rewardGold = Math.floor(currentBoss.rewardGold * totalGoldMultiplier);
-
-      showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} ทอง & 📦 1 หีบ`);
-      speakVoice(`สยบ ${currentBoss.name} สำเร็จแล้ว ปิดผนึกชัยชนะ!`, true);
-      addExp(rewardExp);
-      gameState.gold += rewardGold;
-
-      const questBoss = gameState.dailyQuests.find(q => q.id === 'dq_boss');
-      if (questBoss) questBoss.current = Math.min(questBoss.target, questBoss.current + 1);
-
-      if (currentBoss.tier === 'TIER III') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER IV') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_malakor');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER V') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_titan');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER VI') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_empress');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER VII') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_ignis');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER VIII') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_leviathan');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER IX') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_chronos');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      }
-
-      bossVulnerableTimer = 0;
-      gimmickAnnounced = {};
-
-      gameState.bossIndex = (gameState.bossIndex + 1) % BOSS_DATABASE.length;
-      const nextBoss = BOSS_DATABASE[gameState.bossIndex];
-      gameState.bossHpRemain = nextBoss.maxHpKm;
+      handleBossDefeat(currentBoss, 0);
     }
 
     saveGame();
     renderHUD();
   }
 
-  // --- Ultimate Skill Execution: 3-Tier Multi-Stock System ---
+  // --- Ultimate Skill Execution ---
   function activateUltimateSkill(tier = 1) {
     const cost = tier * 100;
     if (gameState.ultimateCharge < cost || !isRunning) {
@@ -1488,51 +1626,7 @@
     overdriveTimeLeftEl.textContent = overdriveSecondsRemaining;
 
     if (gameState.bossHpRemain <= 0.001) {
-      sessionBossKills += 1;
-      gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
-      gameState.chestsAvailable += 1;
-
-      if (!gameState.bestiary[currentBoss.id]) {
-        gameState.bestiary[currentBoss.id] = { kills: 0, name: currentBoss.name };
-      }
-      gameState.bestiary[currentBoss.id].kills += 1;
-
-      const rewardExp = Math.floor(currentBoss.rewardExp * (1 + (tier * 0.4)));
-      const rewardGold = Math.floor(currentBoss.rewardGold * (1 + (tier * 0.5)));
-
-      showToast(`🏆 ฟันสังหาร ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} เหรียญ`);
-      addExp(rewardExp);
-      gameState.gold += rewardGold;
-
-      if (currentBoss.tier === 'TIER III') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER IV') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_malakor');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER V') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_titan');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER VI') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_empress');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER VII') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_ignis');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER VIII') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_leviathan');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      } else if (currentBoss.tier === 'TIER IX') {
-        const ach = gameState.achievements.find(a => a.id === 'ach_boss_chronos');
-        if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-      }
-
-      bossVulnerableTimer = 0;
-      gimmickAnnounced = {};
-
-      gameState.bossIndex = (gameState.bossIndex + 1) % BOSS_DATABASE.length;
-      const nextBoss = BOSS_DATABASE[gameState.bossIndex];
-      gameState.bossHpRemain = nextBoss.maxHpKm;
+      handleBossDefeat(currentBoss, tier);
     }
 
     saveGame();
@@ -1549,14 +1643,20 @@
     gameState.chestsAvailable -= 1;
 
     const roll = Math.random();
-    if (roll < 0.40 && gameState.inventory.length < 20) {
-      const newItem = rollRandomItem();
+    if (roll < 0.45 && gameState.inventory.length < 20) {
+      const newItem = rollRandomItem(true, gameState.bossLoopCycle || 0);
       gameState.inventory.push(newItem);
       const setLabel = SET_DATABASE[newItem.setId] ? ` [${SET_DATABASE[newItem.setId].name}]` : '';
-      showToast(`🎁 พบอุปกรณ์: [${newItem.rarity.toUpperCase()}] ${newItem.name}${setLabel}!`);
-      speakVoice(`ได้รับอุปกรณ์ระดับ ${newItem.rarity}`);
-    } else if (roll < 0.70) {
-      const goldDrop = Math.floor(120 + Math.random() * 220);
+      if (newItem.rarity === 'mythic') {
+        showToast(`🌟 JACKPOT MYTHIC! [${newItem.name}]${setLabel}!`);
+        speakVoice('ค้นพบอุปกรณ์ระดับอเวจีโบราณ มิธทิค', true);
+      } else {
+        showToast(`🎁 พบอุปกรณ์: [${newItem.rarity.toUpperCase()}] ${newItem.name}${setLabel}!`);
+        speakVoice(`ได้รับอุปกรณ์ระดับ ${newItem.rarity}`);
+      }
+    } else if (roll < 0.72) {
+      const loopGoldBonus = 1 + ((gameState.bossLoopCycle || 0) * 0.2);
+      const goldDrop = Math.floor((120 + Math.random() * 220) * loopGoldBonus);
       gameState.gold += goldDrop;
       showToast(`🎁 พบถุงทองโบราณ +${goldDrop} 🪙`);
     } else if (roll < 0.92) {
@@ -1579,7 +1679,8 @@
   function renderEquipmentAndInventory() {
     const eq = gameState.equipment;
     const eqBonus = calculateEquipmentBonuses();
-    equipSummaryEl.textContent = `ดาเมจ +${eqBonus.bonusDmg}% | STA +${eqBonus.bonusSta}% | คริ +${eqBonus.bonusCrit}%`;
+    const critBonusText = eqBonus.bonusCritDmg > 0 ? ` | คริแรง +${Math.round(eqBonus.bonusCritDmg * 100)}%` : '';
+    equipSummaryEl.textContent = `ดาเมจ +${eqBonus.bonusDmg}% | STA +${eqBonus.bonusSta}% | คริ +${eqBonus.bonusCrit}%${critBonusText}`;
 
     const slots = ['weapon', 'armor', 'boots', 'relic'];
     slots.forEach(slotType => {
@@ -1687,7 +1788,9 @@
     selectedInventoryItem = item;
     modalItemIconEl.textContent = item.icon;
     modalItemNameEl.textContent = item.name;
-    modalItemRarityEl.textContent = `ระดับ: ${item.rarity.toUpperCase()}`;
+    const loopText = item.loopLevel ? ` [Loop ${item.loopLevel}]` : '';
+    modalItemRarityEl.className = `modal-item-rarity rarity-${item.rarity}`;
+    modalItemRarityEl.textContent = `ระดับ: ${item.rarity.toUpperCase()}${loopText}`;
     modalItemRarityEl.style.color = `var(--rarity-${item.rarity})`;
 
     if (item.setId && SET_DATABASE[item.setId]) {
@@ -1707,8 +1810,17 @@
 
     modalMainStatEl.textContent = `ค่าพลังหลัก: +${item.mainStatVal}% (ตามชิ้นส่วน)`;
     modalSubStatEl.textContent = item.subStatVal ? `ออปชันเสริม: +${item.subStatVal}% คริติคอล/ดาเมจ` : 'ไม่มีออปชันเสริม';
-    btnModalSalvage.textContent = `ย่อยเป็น +${item.goldValue} 🪙`;
 
+    if (modalSubStat2El) {
+      if (item.subStat2Val) {
+        modalSubStat2El.style.display = 'block';
+        modalSubStat2El.textContent = `✨ ออปชันโบราณ: +${item.subStat2Val}% คริติคอลดาเมจ (Crit DMG)`;
+      } else {
+        modalSubStat2El.style.display = 'none';
+      }
+    }
+
+    btnModalSalvage.textContent = `ย่อยเป็น +${item.goldValue} 🪙`;
     itemModalEl.style.display = 'flex';
   }
 
@@ -1866,7 +1978,6 @@
     showToast('🗺️ ส่งออกไฟล์ GPX สำเร็จ! นำเข้า Strava ได้');
   };
 
-  // --- Render Run History & Sessions with Accordion & Mini Summary ---
   async function renderHistoryAndDailyUI() {
     const history = await DB.getAllRunHistory();
     historyCountEl.textContent = `${history.length} รอบ`;
@@ -2021,36 +2132,49 @@
     strMultEl.textContent = currentStrMult;
     staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2) + eqBonus.bonusSta);
     
-    let baseCrit = Math.min(75, (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit).toFixed(1);
+    // แสดงผล AGI (คริติคอล + ตัวคูณดาเมจคริติคอลที่สเกลตามส่วนเกิน)
+    const critStats = calculateCritStats();
     if (isFrenzyActive) {
-      agiCritEl.textContent = '100 (ZONE 3)';
+      agiCritEl.textContent = `100% (แรง x${critStats.critMultiplier.toFixed(2)})`;
+    } else if (critStats.rawCrit >= critStats.cap) {
+      agiCritEl.textContent = `MAX ${critStats.cap}% (แรง x${critStats.critMultiplier.toFixed(2)})`;
     } else {
-      agiCritEl.textContent = baseCrit;
+      agiCritEl.textContent = `${critStats.effectiveChance.toFixed(1)}% (แรง x${critStats.critMultiplier.toFixed(2)})`;
     }
 
     const boss = BOSS_DATABASE[gameState.bossIndex];
-    bossTierEl.textContent = boss.tier;
+    const isLoop = (gameState.bossLoopCycle || 0) >= 1;
+    const currentBossMaxHp = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
+
+    bossTierEl.textContent = isLoop ? `${boss.tier} [LOOP ${gameState.bossLoopCycle}]` : boss.tier;
+    bossTierEl.classList.toggle('loop-active', isLoop);
+    bossCardEl.classList.toggle('awakened-active', isLoop);
     bossAvatarEl.textContent = boss.avatar;
-    bossNameEl.textContent = boss.name;
+    bossNameEl.textContent = isLoop ? `Awakened ${boss.name}` : boss.name;
     bossDescEl.textContent = boss.desc;
-    bossHpMaxEl.textContent = boss.maxHpKm.toFixed(2);
+    bossHpMaxEl.textContent = currentBossMaxHp.toFixed(2);
     bossHpRemainEl.textContent = gameState.bossHpRemain.toFixed(2);
-    const hpPercent = Math.max(0, Math.min(100, (gameState.bossHpRemain / boss.maxHpKm) * 100));
+    const hpPercent = Math.max(0, Math.min(100, (gameState.bossHpRemain / currentBossMaxHp) * 100));
     bossHpBarEl.style.width = `${hpPercent}%`;
 
-    const bossHpPct = gameState.bossHpRemain / boss.maxHpKm;
+    const bossHpPct = gameState.bossHpRemain / currentBossMaxHp;
     bossGimmickBannerEl.className = 'boss-gimmick-banner';
     bossCardEl.classList.remove('eclipse-active', 'supernova-active', 'singularity-active', 'chrono-active');
 
+    if (isLoop) {
+      bossGimmickBannerEl.classList.add('active-awakened');
+    }
+
     if (boss.gimmick === 'mist') {
       bossGimmickBannerEl.style.display = 'flex';
-      if (bossHpPct <= 0.75) {
+      const mistThresh = isLoop ? 0.85 : 0.75;
+      if (bossHpPct <= mistThresh) {
         bossGimmickBannerEl.classList.add('active-mist');
-        bossGimmickTagEl.textContent = '🌫️ หมอกสูบวิญญาณ';
-        bossGimmickTextEl.textContent = 'คุมเพซให้เร็วกว่า 7:30/กม. มิฉะนั้นดาเมจลด 50% และบอสจะฮีล';
+        bossGimmickTagEl.textContent = isLoop ? '🌫️ หมอกอเวจีกลืนแสง' : '🌫️ หมอกสูบวิญญาณ';
+        bossGimmickTextEl.textContent = isLoop ? 'หมอกทำงานที่ 85% คริติคอล -15% และสูบเลือดหากช้ากว่า 7:30' : 'คุมเพซให้เร็วกว่า 7:30/กม. มิฉะนั้นดาเมจลด 50% และบอสจะฮีล';
       } else {
         bossGimmickTagEl.textContent = '⏳ ผนึกหมอก';
-        bossGimmickTextEl.textContent = 'หมอกคำสาปจะปะทุเมื่อเลือดบอสต่ำกว่า 75%';
+        bossGimmickTextEl.textContent = `หมอกคำสาปจะปะทุเมื่อเลือดบอสต่ำกว่า ${Math.round(mistThresh * 100)}%`;
       }
     } else if (boss.gimmick === 'carapace') {
       bossGimmickBannerEl.style.display = 'flex';
@@ -2064,14 +2188,14 @@
         bossGimmickTextEl.textContent = 'ดันชีพจรแตะ Zone 3 เพื่อเคาน์เตอร์ดาเมจสวนกลับ x1.5';
       } else {
         bossGimmickBannerEl.classList.add('active-carapace');
-        bossGimmickTagEl.textContent = '🗿 เกราะศิลาหนา';
-        bossGimmickTextEl.textContent = 'ลดดาเมจ 45% (กะเทาะเกราะด้วยคริติคอล หรือ Shadow Slash)';
+        bossGimmickTagEl.textContent = isLoop ? '🗿 ปราการศิลาสมบูรณ์' : '🗿 เกราะศิลาหนา';
+        bossGimmickTextEl.textContent = isLoop ? 'เกราะลดดาเมจ 60% (ต้องทำคริติคอลหรือ Shadow Slash ทลายเกราะ)' : 'ลดดาเมจ 45% (กะเทาะเกราะด้วยคริติคอล หรือ Shadow Slash)';
       }
     } else if (boss.gimmick === 'empress') {
       bossGimmickBannerEl.style.display = 'flex';
       if (bossHpPct > 0.65) {
-        bossGimmickTagEl.textContent = '👑 เฟส 1: ร่างเงาหลอก';
-        bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทลายร่างลวงตาแล้ว!' : 'วิ่งคุมเพซเพื่อเข้าสู่ Flow State ไม่เช่นนั้นดาเมจลด 45%';
+        bossGimmickTagEl.textContent = isLoop ? '👑 เพลงสวดเงาลวง' : '👑 เฟส 1: ร่างเงาหลอก';
+        bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทลายร่างลวงตาแล้ว!' : `วิ่งคุมเพซเพื่อเข้าสู่ Flow State มิฉะนั้นดาเมจลด ${isLoop ? 60 : 45}%`;
       } else if (bossHpPct > 0.25) {
         bossGimmickBannerEl.classList.add('active-vulnerable');
         bossGimmickTagEl.textContent = '⚡ เฟส 2: เรโซแนนซ์';
@@ -2100,7 +2224,7 @@
         bossGimmickBannerEl.classList.add('active-carapace');
         bossGimmickTagEl.textContent = '🌌 สนามแรงโน้มถ่วง';
         bossGimmickTextEl.textContent = 'ฝ่าแรงดึงดูดมิติอเวจี สะสมระยะทางกดดันเลเวียธาน';
-      } else if (bossHpPct <= 0.50 && bossHpPct > 0.20) {
+      } else if (bossHpPct > 0.20) {
         bossGimmickBannerEl.classList.add('active-mist');
         bossGimmickTagEl.textContent = '🕳️ หลุมดำดูดกลืน';
         bossGimmickTextEl.textContent = 'หลุมดำดูดกลืนพลัง เกจไม้ตายไม่ชาร์จตามเวลา ต้องอาศัยก้าววิ่ง!';
@@ -2115,13 +2239,29 @@
       bossCardEl.classList.add('chrono-active');
       bossGimmickBannerEl.classList.add('active-chrono');
       const rollingPace = getRecentRollingPace();
-      if (rollingPace !== null && rollingPace <= 6.5) {
+      const paceTarget = isLoop ? 6.25 : 6.5;
+      if (rollingPace !== null && rollingPace <= paceTarget) {
         bossGimmickTagEl.textContent = '⚡ TIME SHATTER';
-        bossGimmickTextEl.textContent = 'ทะลวงมิติเวลาสำเร็จ (เพซ < 6:30)! ดาเมจทะลวง x3.0 & คริติคอล +30%';
+        bossGimmickTextEl.textContent = `ทะลวงมิติเวลาสำเร็จ (เพซ < ${isLoop ? '6:15' : '6:30'})! ดาเมจ x${isLoop ? '3.5' : '3.0'}`;
       } else {
         bossGimmickTagEl.textContent = '⏳ CHRONO DISTORTION';
-        bossGimmickTextEl.textContent = 'เร่งเพซให้ต่ำกว่า 6:30 เพื่อทำดาเมจ x3! หากช้ากว่า 8:00 บอสจะสูบเวลาฮีลเลือดคืน';
+        bossGimmickTextEl.textContent = `เร่งเพซต่ำกว่า ${isLoop ? '6:15' : '6:30'} เพื่อทำดาเมจ x${isLoop ? '3.5' : '3.0'}! ช้ากว่า 8:00 บอสจะฮีล`;
       }
+    } else if (isLoop && boss.id === 'boss_1') {
+      bossGimmickBannerEl.style.display = 'flex';
+      bossGimmickBannerEl.classList.add('active-carapace');
+      bossGimmickTagEl.textContent = '🌋 Seismic Tremor';
+      bossGimmickTextEl.textContent = 'แผ่นดินไหวศิลา: วิ่งช้ากว่า 6:45 ดาเมจลด 35%';
+    } else if (isLoop && boss.id === 'boss_2') {
+      bossGimmickBannerEl.style.display = 'flex';
+      bossGimmickBannerEl.classList.add('active-mist');
+      bossGimmickTagEl.textContent = '🩸 Vampiric Drain';
+      bossGimmickTextEl.textContent = 'หากหยุดนิ่งหรือเพซช้าเกิน 8:30 นาน 12 วินาที อัศวินจะดูดเลือดคืน';
+    } else if (isLoop && boss.id === 'boss_3') {
+      bossGimmickBannerEl.style.display = 'flex';
+      bossGimmickBannerEl.classList.add('active-awakened');
+      bossGimmickTagEl.textContent = '🐉 Necrotic Roar';
+      bossGimmickTextEl.textContent = 'คำรามสูบเกจ: เมื่อเลือดแตะ 50% เกจไม้ตายจะถูกเผาผลาญ 50%';
     } else {
       bossGimmickBannerEl.style.display = 'none';
     }
@@ -2455,12 +2595,14 @@
 
   async function startRunEngine() {
     if (runSeconds === 0) {
+      gameState.bossLoopCycle = 0;
       gameState.bossIndex = 0;
-      gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
+      gameState.bossHpRemain = getBossMaxHp(0, 0);
       bossVulnerableTimer = 0;
       gimmickAnnounced = {};
       mistHealingTick = 0;
       chronoHealingTick = 0;
+      bloodKnightStallTick = 0;
       isGoblinActive = false;
       goblinCooldownSeconds = 0;
       lastGoblinTriggerKm = 0.0;
@@ -2485,7 +2627,8 @@
 
       if (isFrenzyActive || currentHrZone === 3) {
         const currentBoss = BOSS_DATABASE[gameState.bossIndex];
-        const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
+        const bossMaxHp = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
+        const bossHpPct = gameState.bossHpRemain / bossMaxHp;
         if (!(currentBoss.gimmick === 'singularity' && bossHpPct <= 0.50)) {
           const ultTimeRate = isFlowStateActive ? 0.2 : 0.1;
           addUltimateCharge(ultTimeRate);
@@ -2535,14 +2678,19 @@
       }
 
       const currentBoss = BOSS_DATABASE[gameState.bossIndex];
-      const bossHpPct = gameState.bossHpRemain / currentBoss.maxHpKm;
-      if (currentBoss.gimmick === 'mist' && bossHpPct <= 0.75) {
+      const bossMaxHp = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
+      const bossHpPct = gameState.bossHpRemain / bossMaxHp;
+      const isLoop = (gameState.bossLoopCycle || 0) >= 1;
+
+      // Mist Boss Healing
+      const mistThresh = isLoop ? 0.85 : 0.75;
+      if (currentBoss.gimmick === 'mist' && bossHpPct <= mistThresh) {
         const rollingPace = getRecentRollingPace();
         if (rollingPace === null || rollingPace > 7.5) {
           mistHealingTick++;
           if (mistHealingTick >= 15) {
             mistHealingTick = 0;
-            gameState.bossHpRemain = Math.min(currentBoss.maxHpKm, gameState.bossHpRemain + 0.02);
+            gameState.bossHpRemain = Math.min(bossMaxHp, gameState.bossHpRemain + 0.02);
             showToast('🌫️ หมอกคำสาปสูบพลัง! บอสฟื้นฟูเลือด +0.02 กม.');
           }
         } else {
@@ -2550,13 +2698,31 @@
         }
       }
 
+      // Awakened Tier 2: Blood Knight Vampiric Drain
+      if (isLoop && currentBoss.id === 'boss_2') {
+        const rollingPace = getRecentRollingPace();
+        if (rollingPace === null || rollingPace > 8.5) {
+          bloodKnightStallTick++;
+          if (bloodKnightStallTick >= 12) {
+            bloodKnightStallTick = 0;
+            const drainHp = parseFloat((bossMaxHp * 0.03).toFixed(2));
+            gameState.bossHpRemain = Math.min(bossMaxHp, gameState.bossHpRemain + drainHp);
+            showToast(`🩸 Vampiric Drain: อัศวินโลหิตสูบเลือดฟื้นฟู +${drainHp} กม.!`);
+            speakVoice('อัศวินโลหิตใช้ท่าสูบพลัง ฟื้นฟูเลือดตนเอง');
+          }
+        } else {
+          bloodKnightStallTick = 0;
+        }
+      }
+
+      // Chrono Boss Healing
       if (currentBoss.gimmick === 'chrono') {
         const rollingPace = getRecentRollingPace();
         if (rollingPace === null || rollingPace > 8.0) {
           chronoHealingTick++;
           if (chronoHealingTick >= 15) {
             chronoHealingTick = 0;
-            gameState.bossHpRemain = Math.min(currentBoss.maxHpKm, gameState.bossHpRemain + 0.05);
+            gameState.bossHpRemain = Math.min(bossMaxHp, gameState.bossHpRemain + 0.05);
             showToast('⏳ นาฬิกาทรายทมิฬหมุนกลับ! บอสฟื้นฟูเลือด +0.05 กม.');
           }
         } else {
@@ -2584,7 +2750,7 @@
           gpsStatusEl.textContent = 'GPS: ล็อกพิกัดแล้ว 🟢';
           const { latitude, longitude, accuracy, altitude, speed } = pos.coords;
 
-          if (accuracy > 35) return;
+          if (accuracy > 20) return;
 
           const now = Date.now();
           if (!lastCoord) {
@@ -2598,30 +2764,22 @@
 
           if (timeDeltaSec < 1) return;
 
-          const deltaMeters = deltaKm * 1000;
           const speedKmh = deltaKm / (timeDeltaSec / 3600);
+          const deltaMeters = deltaKm * 1000;
+          const isHardwareStationary = (typeof speed === 'number' && speed !== null && speed < 0.5);
 
-          // ตรวจจับการหยุดนิ่งจริง (Idle Timeout เกิน 8 วิ หรือฮาร์ดแวร์ยืนยันความเร็วต่ำมาก)
-          if ((typeof speed === 'number' && speed !== null && speed < 0.3 && deltaMeters < 3) || timeDeltaSec >= 8) {
-            if (deltaMeters < 3) {
-              lastCoord = { latitude, longitude, time: now };
-              return;
-            }
-          }
-
-          // สะสมระยะทางจนกว่าจะก้าวหน้าเกิน 3.5 เมตรเพื่อป้องกันการรีเซ็ตหมุดทิ้งทุกวินาที
-          if (deltaMeters < 3.5) {
+          if (isHardwareStationary || deltaMeters < Math.max(4, accuracy * 0.4) || speedKmh < 1.8) {
+            lastCoord = { latitude, longitude, time: now };
             return;
           }
 
-          // ตรวจสอบความเร็วการวิ่งที่เป็นไปได้ของมนุษย์ (1.5 ถึง 28.0 กม./ชม.)
-          if (speedKmh >= 1.5 && speedKmh <= 28.0) {
+          if (speedKmh >= 1.8 && speedKmh <= 26.0) {
             runDistanceKm += deltaKm;
             recordPaceSample(now, runDistanceKm);
             currentGpxTrack.push({ lat: latitude, lon: longitude, ele: altitude || 0, time: now });
             applyDistanceDamage(deltaKm);
             lastCoord = { latitude, longitude, time: now };
-          } else if (speedKmh > 28.0) {
+          } else if (speedKmh > 26.0) {
             lastCoord = { latitude, longitude, time: now };
           }
 
@@ -2680,12 +2838,14 @@
         btnRunText.textContent = 'เริ่มออกล่า';
         btnFinishRun.setAttribute('disabled', 'true');
 
+        gameState.bossLoopCycle = 0;
         gameState.bossIndex = 0;
-        gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
+        gameState.bossHpRemain = getBossMaxHp(0, 0);
         bossVulnerableTimer = 0;
         gimmickAnnounced = {};
         mistHealingTick = 0;
         chronoHealingTick = 0;
+        bloodKnightStallTick = 0;
         isGoblinActive = false;
         goblinBannerEl.style.display = 'none';
 
@@ -2751,12 +2911,14 @@
     btnRunText.textContent = 'เริ่มออกล่า';
     btnFinishRun.setAttribute('disabled', 'true');
 
+    gameState.bossLoopCycle = 0;
     gameState.bossIndex = 0;
-    gameState.bossHpRemain = BOSS_DATABASE[0].maxHpKm;
+    gameState.bossHpRemain = getBossMaxHp(0, 0);
     bossVulnerableTimer = 0;
     gimmickAnnounced = {};
     mistHealingTick = 0;
     chronoHealingTick = 0;
+    bloodKnightStallTick = 0;
     isGoblinActive = false;
     goblinBannerEl.style.display = 'none';
 
