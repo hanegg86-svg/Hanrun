@@ -144,6 +144,28 @@
     window.speechSynthesis.speak(utterance);
   }
 
+  // --- Debounced Batch Voice System (รวบยอดเสียงพูดตอนอัปเกรดรัวๆ) ---
+  const voiceDebounceTimers = {};
+  const voiceBatchState = {
+    elixirCount: 0,
+    bladeAttempts: 0,
+    bladeSuccessLevel: null,
+    charmAttempts: 0,
+    charmSuccessLevel: null,
+    eyeAttempts: 0,
+    eyeSuccessLevel: null
+  };
+
+  function scheduleBatchVoice(key, callback, delay = 850) {
+    if (voiceDebounceTimers[key]) {
+      clearTimeout(voiceDebounceTimers[key]);
+    }
+    voiceDebounceTimers[key] = setTimeout(() => {
+      callback();
+      delete voiceDebounceTimers[key];
+    }, delay);
+  }
+
   // --- Equipment Set System Database ---
   const SET_DATABASE = {
     shadowstalker: {
@@ -284,7 +306,7 @@
     }
   ];
 
-  // คำนวณพลังชีวิตสูงสุดของบอสตามจำนวนรอบลูป (+15% ต่อรอบลูป)
+  // คำนวณพลังชีวิตสูงสุดของบอสตามจำนวนรอบลูป (+15% ต่อลูป)
   function getBossMaxHp(bossIndex, loopCycle = 0) {
     const base = BOSS_DATABASE[bossIndex].maxHpKm;
     return parseFloat((base * (1 + (loopCycle * 0.15))).toFixed(2));
@@ -343,7 +365,7 @@
     statPoints: 0,
     ultimateCharge: 0,
     stats: { str: 10, sta: 10, agi: 10 },
-    upgrades: { blade: 0, charm: 0, eye: 0 },
+    upgrades: { blade: 0, charm: 0, eye: 0, elixir: 0 },
     equipment: { weapon: null, armor: null, boots: null, relic: null },
     inventory: [],
     bestiary: {
@@ -414,7 +436,7 @@
     if (saved) {
       gameState = Object.assign({}, defaultState, saved);
       gameState.stats = Object.assign({}, defaultState.stats, saved.stats || {});
-      gameState.upgrades = Object.assign({}, defaultState.upgrades, saved.upgrades || {});
+      gameState.upgrades = Object.assign({ elixir: 0 }, defaultState.upgrades, saved.upgrades || {});
       gameState.equipment = Object.assign({}, defaultState.equipment, saved.equipment || {});
       gameState.inventory = saved.inventory || [];
       gameState.bestiary = Object.assign({}, defaultState.bestiary, saved.bestiary || {});
@@ -671,7 +693,7 @@
     return { bonusDmg, bonusSta, bonusCrit, bonusCritDmg, bonusGold, setCounts };
   }
 
-  // คำนวณ Agility และการแปลงโอกาสคริติคอลส่วนเกินเป็น Critical Damage
+  // คำนวณ Agility และแปลงโอกาสคริส่วนเกินเป็น Critical Damage
   function calculateCritStats() {
     const eqBonus = calculateEquipmentBonuses();
     const rawCrit = (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit;
@@ -866,6 +888,10 @@
   function getEyePrice() {
     return 350 + (gameState.upgrades.eye * 180);
   }
+  // ราคาน้ำยาจิตวิญญาณ: สเกลเพิ่มขึ้นขวดละ 50 🪙
+  function getElixirPrice() {
+    return 150 + ((gameState.upgrades.elixir || 0) * 50);
+  }
 
   function addExp(amount) {
     gameState.currentExp += amount;
@@ -877,10 +903,11 @@
       gameState.statPoints = (gameState.statPoints || 0) + 3;
       leveledUp = true;
       showToast(`⭐ เลเวลอัป! สู่ระดับ LV. ${gameState.level} (+3 แต้มสเตตัส)`);
-      speakVoice(`เลเวลอัป สู่ระดับ ${gameState.level}`);
     }
     if (leveledUp) {
       gameState.title = getTitleForLevel(gameState.level);
+      // พูดสรุปเฉพาะเลเวลล่าสุดเพียงครั้งเดียว
+      speakVoice(`เลเวลอัป สู่ระดับ ${gameState.level}`, true);
     }
     saveGame();
     renderUI();
@@ -2132,7 +2159,7 @@
     strMultEl.textContent = currentStrMult;
     staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2) + eqBonus.bonusSta);
     
-    // แสดงผล AGI (คริติคอล + ตัวคูณดาเมจคริติคอลที่สเกลตามส่วนเกิน)
+    // AGI: แสดงผลตัวคูณ Critical Damage ที่เพิ่มขึ้นตามค่า Overflow
     const critStats = calculateCritStats();
     if (isFrenzyActive) {
       agiCritEl.textContent = `100% (แรง x${critStats.critMultiplier.toFixed(2)})`;
@@ -2313,7 +2340,7 @@
     btnBuyBlade.disabled = gameState.gold < getBladePrice();
     btnBuyCharm.disabled = gameState.gold < getCharmPrice();
     btnBuyEye.disabled = gameState.gold < getEyePrice();
-    btnBuyElixir.disabled = gameState.gold < 150;
+    btnBuyElixir.disabled = gameState.gold < getElixirPrice();
   }
 
   function renderShop() {
@@ -2331,6 +2358,9 @@
     eyeBonusEl.textContent = gameState.upgrades.eye * 2;
     priceEyeEl.textContent = getEyePrice();
     rateEyeEl.textContent = getUpgradeSuccessRate(gameState.upgrades.eye);
+
+    // แสดงราคาน้ำยาจิตวิญญาณที่ไต่ระดับขึ้น
+    priceElixirEl.textContent = getElixirPrice();
   }
 
   function renderQuestsList() {
@@ -2442,17 +2472,32 @@
     renderCareerUI();
   }
 
+  // ซื้อน้ำยาจิตวิญญาณ พร้อมคำนวณราคาไต่ระดับ และรวบยอดเสียงพูด
   btnBuyElixir.addEventListener('click', () => {
-    if (gameState.gold >= 150) {
-      gameState.gold -= 150;
+    const cost = getElixirPrice();
+    if (gameState.gold >= cost) {
+      gameState.gold -= cost;
+      gameState.upgrades.elixir = (gameState.upgrades.elixir || 0) + 1;
       gameState.statPoints = (gameState.statPoints || 0) + 1;
-      showToast('🧪 ดื่มน้ำยาจิตวิญญาณ: ได้รับ +1 แต้มสเตตัส!');
-      speakVoice('ดื่มน้ำยาจิตวิญญาณ ได้รับหนึ่งแต้มสเตตัส');
+      showToast(`🧪 ดื่มน้ำยาจิตวิญญาณ: ได้รับ +1 แต้มสเตตัส! (ราคาขวดถัดไป: ${getElixirPrice()} 🪙)`);
+
+      voiceBatchState.elixirCount++;
+      scheduleBatchVoice('elixir', () => {
+        const count = voiceBatchState.elixirCount;
+        voiceBatchState.elixirCount = 0;
+        if (count === 1) {
+          speakVoice('ดื่มน้ำยาจิตวิญญาณ ได้รับหนึ่งแต้มสเตตัส', true);
+        } else {
+          speakVoice(`ดื่มน้ำยาจิตวิญญาณ ${count} ขวด ได้รับ ${count} แต้มสเตตัส`, true);
+        }
+      }, 900);
+
       saveGame();
       renderUI();
     }
   });
 
+  // ตีบวกดาบเงา พร้อมระบบตัดเสียงพูดซ้ำ
   btnBuyBlade.addEventListener('click', () => {
     const cost = getBladePrice();
     if (gameState.gold >= cost) {
@@ -2463,16 +2508,28 @@
       if (roll < rate) {
         gameState.upgrades.blade += 1;
         showToast(`🗡️ ตีบวกดาบเงาสำเร็จเป็น Lv.${gameState.upgrades.blade} (+${gameState.upgrades.blade * 5}% ดาเมจ)!`);
-        speakVoice(`ตีบวกดาบเงาสำเร็จ เลเวล ${gameState.upgrades.blade}`);
+        voiceBatchState.bladeSuccessLevel = gameState.upgrades.blade;
       } else {
         showToast(`❌ ตีบวกดาบเงาล้มเหลว! (โอกาส ${rate}%) เสียเหรียญทอง`);
-        speakVoice('การตีบวกล้มเหลว');
       }
+      voiceBatchState.bladeAttempts++;
+
+      scheduleBatchVoice('blade', () => {
+        if (voiceBatchState.bladeSuccessLevel !== null) {
+          speakVoice(`ตีบวกดาบเงาสำเร็จ เลเวล ${voiceBatchState.bladeSuccessLevel}`, true);
+        } else {
+          speakVoice('การตีบวกล้มเหลว', true);
+        }
+        voiceBatchState.bladeAttempts = 0;
+        voiceBatchState.bladeSuccessLevel = null;
+      }, 850);
+
       saveGame();
       renderUI();
     }
   });
 
+  // เสริมพลังเครื่องราง พร้อมระบบตัดเสียงพูดซ้ำ
   btnBuyCharm.addEventListener('click', () => {
     const cost = getCharmPrice();
     if (gameState.gold >= cost) {
@@ -2483,16 +2540,28 @@
       if (roll < rate) {
         gameState.upgrades.charm += 1;
         showToast(`🧿 เสริมพลังเครื่องรางสำเร็จเป็น Lv.${gameState.upgrades.charm} (+${gameState.upgrades.charm * 10}% ทอง)!`);
-        speakVoice(`เสริมพลังเครื่องรางสำเร็จ เลเวล ${gameState.upgrades.charm}`);
+        voiceBatchState.charmSuccessLevel = gameState.upgrades.charm;
       } else {
         showToast(`❌ เสริมพลังเครื่องรางล้มเหลว! (โอกาส ${rate}%) เสียเหรียญทอง`);
-        speakVoice('การอัปเกรดล้มเหลว');
       }
+      voiceBatchState.charmAttempts++;
+
+      scheduleBatchVoice('charm', () => {
+        if (voiceBatchState.charmSuccessLevel !== null) {
+          speakVoice(`เสริมพลังเครื่องรางสำเร็จ เลเวล ${voiceBatchState.charmSuccessLevel}`, true);
+        } else {
+          speakVoice('การอัปเกรดล้มเหลว', true);
+        }
+        voiceBatchState.charmAttempts = 0;
+        voiceBatchState.charmSuccessLevel = null;
+      }, 850);
+
       saveGame();
       renderUI();
     }
   });
 
+  // เบิกเนตรอเวจี พร้อมระบบตัดเสียงพูดซ้ำ
   btnBuyEye.addEventListener('click', () => {
     const cost = getEyePrice();
     if (gameState.gold >= cost) {
@@ -2503,11 +2572,22 @@
       if (roll < rate) {
         gameState.upgrades.eye += 1;
         showToast(`👁️ เบิกเนตรอเวจีสำเร็จเป็น Lv.${gameState.upgrades.eye} (+${gameState.upgrades.eye * 2}% คริติคอล)!`);
-        speakVoice(`เบิกเนตรอเวจีสำเร็จ เลเวล ${gameState.upgrades.eye}`);
+        voiceBatchState.eyeSuccessLevel = gameState.upgrades.eye;
       } else {
         showToast(`❌ เบิกเนตรอเวจีล้มเหลว! (โอกาส ${rate}%) เสียเหรียญทอง`);
-        speakVoice('การอัปเกรดล้มเหลว');
       }
+      voiceBatchState.eyeAttempts++;
+
+      scheduleBatchVoice('eye', () => {
+        if (voiceBatchState.eyeSuccessLevel !== null) {
+          speakVoice(`เบิกเนตรอเวจีสำเร็จ เลเวล ${voiceBatchState.eyeSuccessLevel}`, true);
+        } else {
+          speakVoice('การอัปเกรดล้มเหลว', true);
+        }
+        voiceBatchState.eyeAttempts = 0;
+        voiceBatchState.eyeSuccessLevel = null;
+      }, 850);
+
       saveGame();
       renderUI();
     }
