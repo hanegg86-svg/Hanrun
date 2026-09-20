@@ -306,7 +306,6 @@
     }
   ];
 
-  // คำนวณพลังชีวิตสูงสุดของบอสตามจำนวนรอบลูป (+15% ต่อลูป)
   function getBossMaxHp(bossIndex, loopCycle = 0) {
     const base = BOSS_DATABASE[bossIndex].maxHpKm;
     return parseFloat((base * (1 + (loopCycle * 0.15))).toFixed(2));
@@ -888,7 +887,6 @@
   function getEyePrice() {
     return 350 + (gameState.upgrades.eye * 180);
   }
-  // ราคาน้ำยาจิตวิญญาณ: สเกลเพิ่มขึ้นขวดละ 50 🪙
   function getElixirPrice() {
     return 150 + ((gameState.upgrades.elixir || 0) * 50);
   }
@@ -906,7 +904,6 @@
     }
     if (leveledUp) {
       gameState.title = getTitleForLevel(gameState.level);
-      // พูดสรุปเฉพาะเลเวลล่าสุดเพียงครั้งเดียว
       speakVoice(`เลเวลอัป สู่ระดับ ${gameState.level}`, true);
     }
     saveGame();
@@ -2251,7 +2248,7 @@
         bossGimmickBannerEl.classList.add('active-carapace');
         bossGimmickTagEl.textContent = '🌌 สนามแรงโน้มถ่วง';
         bossGimmickTextEl.textContent = 'ฝ่าแรงดึงดูดมิติอเวจี สะสมระยะทางกดดันเลเวียธาน';
-      } else if (bossHpPct > 0.20) {
+      } else if (bossHpPct <= 0.50 && bossHpPct > 0.20) {
         bossGimmickBannerEl.classList.add('active-mist');
         bossGimmickTagEl.textContent = '🕳️ หลุมดำดูดกลืน';
         bossGimmickTextEl.textContent = 'หลุมดำดูดกลืนพลัง เกจไม้ตายไม่ชาร์จตามเวลา ต้องอาศัยก้าววิ่ง!';
@@ -2359,7 +2356,6 @@
     priceEyeEl.textContent = getEyePrice();
     rateEyeEl.textContent = getUpgradeSuccessRate(gameState.upgrades.eye);
 
-    // แสดงราคาน้ำยาจิตวิญญาณที่ไต่ระดับขึ้น
     priceElixirEl.textContent = getElixirPrice();
   }
 
@@ -2472,7 +2468,6 @@
     renderCareerUI();
   }
 
-  // ซื้อน้ำยาจิตวิญญาณ พร้อมคำนวณราคาไต่ระดับ และรวบยอดเสียงพูด
   btnBuyElixir.addEventListener('click', () => {
     const cost = getElixirPrice();
     if (gameState.gold >= cost) {
@@ -2497,7 +2492,6 @@
     }
   });
 
-  // ตีบวกดาบเงา พร้อมระบบตัดเสียงพูดซ้ำ
   btnBuyBlade.addEventListener('click', () => {
     const cost = getBladePrice();
     if (gameState.gold >= cost) {
@@ -2529,7 +2523,6 @@
     }
   });
 
-  // เสริมพลังเครื่องราง พร้อมระบบตัดเสียงพูดซ้ำ
   btnBuyCharm.addEventListener('click', () => {
     const cost = getCharmPrice();
     if (gameState.gold >= cost) {
@@ -2561,7 +2554,6 @@
     }
   });
 
-  // เบิกเนตรอเวจี พร้อมระบบตัดเสียงพูดซ้ำ
   btnBuyEye.addEventListener('click', () => {
     const cost = getEyePrice();
     if (gameState.gold >= cost) {
@@ -2828,9 +2820,10 @@
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           gpsStatusEl.textContent = 'GPS: ล็อกพิกัดแล้ว 🟢';
-          const { latitude, longitude, accuracy, altitude, speed } = pos.coords;
+          const { latitude, longitude, accuracy, altitude } = pos.coords;
 
-          if (accuracy > 20) return;
+          // ขยายเพดานความคลาดเคลื่อน GPS ให้รองรับการวิ่งกลางแจ้งได้ต่อเนื่อง (ไม่ตัดทิ้งเมื่อความแม่นยำต่ำกว่า 35 เมตร)
+          if (accuracy > 35) return;
 
           const now = Date.now();
           if (!lastCoord) {
@@ -2842,24 +2835,24 @@
           const deltaKm = calculateDistance(lastCoord.latitude, lastCoord.longitude, latitude, longitude);
           const timeDeltaSec = (now - (lastCoord.time || now)) / 1000;
 
-          if (timeDeltaSec < 1) return;
+          // ป้องกันการคำนวณซ้ำซ้อนในเสี้ยววินาทีเดียวกัน
+          if (timeDeltaSec < 0.8) return;
 
           const speedKmh = deltaKm / (timeDeltaSec / 3600);
-          const deltaMeters = deltaKm * 1000;
-          const isHardwareStationary = (typeof speed === 'number' && speed !== null && speed < 0.5);
 
-          if (isHardwareStationary || deltaMeters < Math.max(4, accuracy * 0.4) || speedKmh < 1.8) {
-            lastCoord = { latitude, longitude, time: now };
-            return;
-          }
-
-          if (speedKmh >= 1.8 && speedKmh <= 26.0) {
+          // แก้ไขบั๊กระยะไม่ขึ้น: ปลดล็อกเงื่อนไข 4 เมตรทิ้ง เพื่อให้ตรวจจับก้าววิ่ง 1.5 - 3 เมตรต่อวินาทีได้ตามจริง
+          // ความเร็ววิ่งปกติ (1.2 ถึง 26.0 กม./ชม.)
+          if (speedKmh >= 1.2 && speedKmh <= 26.0) {
             runDistanceKm += deltaKm;
             recordPaceSample(now, runDistanceKm);
             currentGpxTrack.push({ lat: latitude, lon: longitude, ele: altitude || 0, time: now });
             applyDistanceDamage(deltaKm);
             lastCoord = { latitude, longitude, time: now };
+          } else if (speedKmh < 1.2) {
+            // หยุดนิ่งหรือยืนพัก: อัปเดตพิกัดเพื่อกันสัญญาณแกว่ง (Drift) แต่ไม่สะสมระยะทาง
+            lastCoord = { latitude, longitude, time: now };
           } else if (speedKmh > 26.0) {
+            // ความเร็วเกินจริง (นั่งรถหรือ GPS กระโดดไกล): ละเว้นไม่นับระยะ
             lastCoord = { latitude, longitude, time: now };
           }
 
