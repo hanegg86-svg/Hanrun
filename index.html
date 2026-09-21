@@ -21,9 +21,11 @@
         </div>
         <div class="player-info">
           <div class="name-row">
-            <span class="player-title" id="player-title">Abyss Stalker</span>
+            <span class="player-name-txt" id="player-name">Abyss Stalker</span>
+            <button class="btn-char-icon" id="btn-char-manage" type="button" title="จัดการตัวละคร">⚙️</button>
             <span class="badge-level" id="player-level">LV. 1</span>
           </div>
+          <div class="player-title" id="player-title">Shadow Initiate</div>
           <div class="exp-bar-container">
             <div class="exp-bar-fill" id="exp-bar-fill" style="width: 0%;"></div>
           </div>
@@ -68,7 +70,7 @@
       </div>
       <div class="stat-divider"></div>
       <div class="stat-item">
-        <span class="stat-label">AGI (คริติคอล <span id="agi-crit">5</span>%)</span>
+        <span class="stat-label">AGI (<span id="agi-crit">คริติคอล 7.0%</span>)</span>
         <div class="stat-val-row">
           <span class="stat-val" id="stat-agi">10</span>
           <button class="btn-stat-add" id="btn-add-agi" type="button" title="อัปเกรด AGI">+</button>
@@ -97,7 +99,6 @@
           </div>
         </div>
       </div>
-      <!-- Boss Gimmick Alert Banner -->
       <div class="boss-gimmick-banner" id="boss-gimmick-banner" style="display: none;">
         <span class="gimmick-tag" id="boss-gimmick-tag">🔥 กลไกบอส</span>
         <span class="gimmick-desc" id="boss-gimmick-text">รายละเอียดลูกเล่น</span>
@@ -118,7 +119,6 @@
 
     <!-- Run Tracker HUD -->
     <section class="run-hud" id="run-hud">
-      <!-- Shadow Goblin Chase Mini-Event Banner -->
       <div class="goblin-banner" id="goblin-banner" style="display: none;">
         <div class="goblin-header-row">
           <span class="goblin-tag">👺 โกบลินเงาหลบหนี!</span>
@@ -133,12 +133,10 @@
         <div class="goblin-hint-text" id="goblin-status-hint">รักษาเพซเป้าหมายเพื่อจับกุม!</div>
       </div>
 
-      <!-- Berserk Frenzy Banner -->
       <div class="frenzy-banner" id="frenzy-banner" style="display: none;">
         ⚡ BERSERK FRENZY: ชีพจร Zone 3 ล็อกเป้า! คริติคอล 100% ดาเมจ x1.5 ⚡
       </div>
 
-      <!-- Overdrive Active Banner -->
       <div class="overdrive-banner" id="overdrive-banner" style="display: none;">
         🔥 OVERDRIVE SURGE: โบนัสทองคำ x2 & ดูดซับ EXP เร่งด่วน (<span id="overdrive-time-left">45</span>s) 🔥
       </div>
@@ -152,7 +150,6 @@
         </div>
       </div>
 
-      <!-- Bluetooth Heart Rate Widget -->
       <div class="hr-panel">
         <div class="hr-display" id="hr-display">
           <span class="hr-icon">❤️</span>
@@ -184,7 +181,6 @@
         </div>
       </div>
 
-      <!-- Ultimate Gauge & 3-Tier Action Buttons Container -->
       <div class="ultimate-container">
         <div class="ultimate-header">
           <span class="ult-label">⚡ เกจไม้ตาย: SHADOW SLASH (3 สต็อก)</span>
@@ -206,7 +202,6 @@
         </div>
       </div>
 
-      <!-- Action Buttons -->
       <div class="hud-controls">
         <button class="btn-primary-action" id="btn-toggle-run" type="button">
           <span class="btn-icon">⚡</span>
@@ -217,7 +212,6 @@
         </button>
       </div>
 
-      <!-- Simulation Controller -->
       <div class="sim-controls" id="sim-controls" style="display: none;">
         <span class="sim-hint">กดเพื่อเพิ่มระยะทดสอบ:</span>
         <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.2)">+200 ม.</button>
@@ -234,7 +228,6 @@
         <span class="equip-summary" id="equip-summary">โบนัส: ดาเมจ +0%</span>
       </div>
 
-      <!-- 4 Active Slots -->
       <div class="equip-slots-grid">
         <div class="slot-box" id="slot-weapon" data-slottype="weapon">
           <span class="slot-label">อาวุธ</span>
@@ -262,17 +255,14 @@
         </div>
       </div>
 
-      <!-- Active Set Bonuses Container -->
       <div class="set-bonuses-container" id="set-bonuses-container"></div>
 
-      <!-- Inventory Storage Grid with Category Tabs -->
       <div class="inventory-container">
         <div class="inv-header">
           <span class="inv-title">คลังไอเทม (<span id="inv-count">0</span>/20)</span>
           <span class="inv-hint">แตะเพื่อดู/สวมใส่</span>
         </div>
 
-        <!-- Inventory Filter Tabs -->
         <div class="inv-tabs">
           <button class="inv-tab-btn active" data-filter="all" type="button">ทั้งหมด</button>
           <button class="inv-tab-btn" data-filter="weapon" type="button">อาวุธ</button>
@@ -289,7 +279,7 @@
     <section class="codex-section">
       <div class="section-title-row">
         <h2 class="section-title">สมุดภาพมอนสเตอร์ (Bestiary Codex)</h2>
-        <span class="codex-counter" id="codex-counter">บันทึก 8 อสูร</span>
+        <span class="codex-counter" id="codex-counter">บันทึก 9 อสูร</span>
       </div>
       <div class="codex-list" id="codex-list"></div>
     </section>
@@ -310,7 +300,7 @@
             </div>
           </div>
           <div class="item-footer">
-            <span class="item-price">🪙 <span id="price-elixir">150</span></span>
+            <span class="item-price">🪙 <span id="price-elixir">200</span></span>
             <button class="btn-buy-item" id="btn-buy-elixir" type="button">ซื้อ</button>
           </div>
         </div>
@@ -325,7 +315,7 @@
             </div>
           </div>
           <div class="item-footer">
-            <span class="item-price">🪙 <span id="price-blade">300</span></span>
+            <span class="item-price">🪙 <span id="price-blade">400</span></span>
             <button class="btn-buy-item" id="btn-buy-blade" type="button">อัปเกรด</button>
           </div>
         </div>
@@ -340,7 +330,7 @@
             </div>
           </div>
           <div class="item-footer">
-            <span class="item-price">🪙 <span id="price-charm">250</span></span>
+            <span class="item-price">🪙 <span id="price-charm">350</span></span>
             <button class="btn-buy-item" id="btn-buy-charm" type="button">อัปเกรด</button>
           </div>
         </div>
@@ -350,12 +340,13 @@
             <span class="item-icon">👁️</span>
             <div class="item-info">
               <span class="item-name">เนตรอเวจี (Lv.<span id="lvl-eye">0</span>)</span>
-              <span class="item-buff">โอกาสคริติคอล +<span id="eye-bonus">0</span>%</span>
+              <!-- ปรับเป็น Critical Damage -->
+              <span class="item-buff">ดาเมจคริติคอล +<span id="eye-bonus">0</span>%</span>
               <span class="item-rate">โอกาสสำเร็จ: <strong id="rate-eye">100</strong>%</span>
             </div>
           </div>
           <div class="item-footer">
-            <span class="item-price">🪙 <span id="price-eye">350</span></span>
+            <span class="item-price">🪙 <span id="price-eye">500</span></span>
             <button class="btn-buy-item" id="btn-buy-eye" type="button">อัปเกรด</button>
           </div>
         </div>
@@ -375,7 +366,7 @@
     <section class="achievements-section">
       <div class="section-title-row">
         <h2 class="section-title">เกียรติยศแห่งเงา (Milestones)</h2>
-        <span class="achievements-counter" id="achievements-counter">0/9 สำเร็จ</span>
+        <span class="achievements-counter" id="achievements-counter">0/10 สำเร็จ</span>
       </div>
       <div class="achievements-list" id="achievements-list"></div>
     </section>
@@ -405,7 +396,7 @@
       </div>
     </section>
 
-    <!-- History & Daily Stats Section (Accordion Toggle) -->
+    <!-- History & Daily Stats Section -->
     <section class="history-section" id="history-section">
       <div class="section-title-row">
         <div class="title-with-badge">
@@ -415,26 +406,21 @@
         <button class="btn-toggle-history" id="btn-toggle-history" type="button">▾ พับเก็บ</button>
       </div>
 
-      <!-- Mini summary displayed only when collapsed -->
       <div class="history-collapsed-summary" id="history-collapsed-summary" style="display: none;">
         <span class="history-mini-icon">📜</span>
         <span class="history-mini-text" id="history-mini-text">มีประวัติการล่าสะสม แตะ "กางออก" เพื่อเปิดดู</span>
       </div>
 
-      <!-- Collapsible Container -->
       <div class="history-collapsible-content" id="history-collapsible-content">
-        <!-- Tab Navigation Switcher -->
         <div class="tab-control">
           <button class="tab-btn active" id="tab-btn-daily" type="button">📊 สถิติรายวัน (Daily)</button>
           <button class="tab-btn" id="tab-btn-sessions" type="button">📜 ประวัติรายรอบ (Sessions)</button>
         </div>
 
-        <!-- Tab View 1: สถิติรายวัน -->
         <div class="tab-view" id="view-daily">
           <div class="daily-list" id="daily-list"></div>
         </div>
 
-        <!-- Tab View 2: ประวัติรายรอบ -->
         <div class="tab-view" id="view-sessions" style="display: none;">
           <div class="history-list" id="history-list"></div>
         </div>
@@ -444,10 +430,11 @@
     <!-- Runner Utility & Data Management -->
     <section class="utility-section">
       <div class="section-title-row">
-        <h2 class="section-title">การจัดการข้อมูล & สำรอง (Data Backup)</h2>
+        <h2 class="section-title">การจัดการตัวละคร & สำรองข้อมูล</h2>
       </div>
-      <p class="utility-desc">สำรองข้อมูลทั้งหมดใน IndexedDB เป็นไฟล์ JSON เพื่อย้ายเครื่อง หรือกู้คืนข้อมูล</p>
+      <p class="utility-desc">จัดการโปรไฟล์ตัวละคร หรือสำรองข้อมูลทั้งหมดใน IndexedDB เป็นไฟล์ JSON</p>
       <div class="utility-actions">
+        <button class="btn-utility btn-utility-char" id="btn-utility-character" type="button">👤 จัดการตัวละคร (สร้าง / ลบ / ตั้งชื่อ)</button>
         <button class="btn-utility" id="btn-export-backup" type="button">📥 ส่งออกไฟล์สำรอง (Backup JSON)</button>
         <label class="btn-utility btn-utility-import">
           📤 กู้คืนข้อมูล (Restore JSON)
@@ -455,6 +442,35 @@
         </label>
       </div>
     </section>
+
+    <!-- Character Management Modal -->
+    <div class="modal-overlay" id="char-modal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-item-icon">👤</span>
+          <div class="modal-header-info">
+            <h3 class="modal-item-name">ระบบจัดการตัวละคร</h3>
+            <span class="modal-item-rarity" style="color: var(--gold-glow);">Shadow Persona</span>
+          </div>
+        </div>
+        <div class="modal-body">
+          <label class="char-input-label">ชื่อตัวละครของคุณ:</label>
+          <input type="text" id="input-char-name" class="char-name-input" maxlength="20" placeholder="กรอกชื่อตัวละคร...">
+          <button class="btn-char-action btn-save-name" id="btn-save-char-name" type="button">💾 บันทึกชื่อตัวละคร</button>
+          
+          <div class="char-modal-divider"></div>
+          
+          <p class="char-modal-subhint">สร้างการผจญภัยใหม่ หรือรีเซ็ตข้อมูลเดิม:</p>
+          <div class="char-danger-actions">
+            <button class="btn-char-action btn-create-char" id="btn-modal-create-char" type="button">✨ สร้างตัวละครใหม่ (เริ่ม LV.1)</button>
+            <button class="btn-char-action btn-delete-char" id="btn-modal-delete-char" type="button">🗑️ ลบตัวละครเดิมทิ้ง</button>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-action btn-cancel" id="btn-char-modal-close" type="button">ปิดหน้าต่าง</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Pocket Mode / Screen Saver Overlay -->
     <div class="pocket-overlay" id="pocket-overlay" style="display: none;">

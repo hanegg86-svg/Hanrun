@@ -2,7 +2,7 @@
 (async function () {
   'use strict';
 
-  // --- IndexedDB Database Layer (จัดเก็บข้อมูลไม่จำกัดขนาด) ---
+  // --- IndexedDB Database Layer ---
   const DB_NAME = 'ShadowStriderDB';
   const DB_VERSION = 1;
   const STORE_PLAYER = 'player_state';
@@ -144,7 +144,7 @@
     window.speechSynthesis.speak(utterance);
   }
 
-  // --- Debounced Batch Voice System (รวบยอดเสียงพูดตอนอัปเกรดรัวๆ) ---
+  // --- Debounced Batch Voice System ---
   const voiceDebounceTimers = {};
   const voiceBatchState = {
     elixirCount: 0,
@@ -311,6 +311,7 @@
     return parseFloat((base * (1 + (loopCycle * 0.15))).toFixed(2));
   }
 
+  // คงระบบโอกาสสำเร็จเดิมของ Shadow Armory ไว้ตามที่กำหนด
   function getUpgradeSuccessRate(currentLevel) {
     return Math.max(20, 100 - (currentLevel * 2));
   }
@@ -356,6 +357,7 @@
 
   // --- Game State Object ---
   const defaultState = {
+    playerName: 'Abyss Stalker',
     level: 1,
     title: 'Shadow Initiate',
     currentExp: 0,
@@ -434,6 +436,7 @@
 
     if (saved) {
       gameState = Object.assign({}, defaultState, saved);
+      gameState.playerName = saved.playerName || defaultState.playerName;
       gameState.stats = Object.assign({}, defaultState.stats, saved.stats || {});
       gameState.upgrades = Object.assign({ elixir: 0 }, defaultState.upgrades, saved.upgrades || {});
       gameState.equipment = Object.assign({}, defaultState.equipment, saved.equipment || {});
@@ -447,7 +450,7 @@
       gameState.bossLoopCycle = typeof saved.bossLoopCycle === 'number' ? saved.bossLoopCycle : 0;
       gameState.isHistoryCollapsed = typeof saved.isHistoryCollapsed === 'boolean' ? saved.isHistoryCollapsed : false;
     } else {
-      gameState = defaultState;
+      gameState = JSON.parse(JSON.stringify(defaultState));
     }
 
     BOSS_DATABASE.forEach(b => {
@@ -515,7 +518,6 @@
   let sessionBossKills = 0;
   let currentGpxTrack = [];
 
-  // Heart Rate & Zone Variables
   let bluetoothDevice = null;
   let hrCharacteristic = null;
   let currentHeartRate = 0;
@@ -534,7 +536,6 @@
   let rhythmBaselinePace = null;
   let rhythmConsistentDistance = 0.0;
 
-  // --- Item Generator with Mythic Tier & Loop Scaling ---
   const ITEM_NAMES = {
     weapon: ['ดาบสั้น', 'ดาบใหญ่ทมิฬ', 'เคียวมรณะ', 'ดาบโบราณ', 'หอกพิฆาตมิติ'],
     armor: ['เสื้อเกราะหนัง', 'เกราะเหล็กอสูร', 'ผ้าคลุมวิญญาณ', 'เกราะเพลทอเวจี', 'เกราะมหาอสูร'],
@@ -692,29 +693,44 @@
     return { bonusDmg, bonusSta, bonusCrit, bonusCritDmg, bonusGold, setCounts };
   }
 
-  // คำนวณ Agility และแปลงโอกาสคริส่วนเกินเป็น Critical Damage
+  // AGI Cap 70% ที่ AGI 100 + ส่วนเกิน AGI แปลงเป็น Crit DMG + เนตรอเวจี (+10% คริดาเมจ/Lv)
   function calculateCritStats() {
     const eqBonus = calculateEquipmentBonuses();
-    const rawCrit = (gameState.stats.agi * 0.5) + (gameState.upgrades.eye * 2) + eqBonus.bonusCrit;
-    const cap = 75;
-    let effectiveChance = Math.min(cap, rawCrit);
-    let critMultiplier = 1.8;
+    const baseAgi = gameState.stats.agi;
 
-    if (rawCrit > cap) {
-      const overflow = rawCrit - cap;
-      critMultiplier = parseFloat((1.8 + (overflow * 0.02) + (eqBonus.bonusCritDmg || 0)).toFixed(2));
-    } else {
-      critMultiplier = parseFloat((1.8 + (eqBonus.bonusCritDmg || 0)).toFixed(2));
-    }
+    const agiCritRate = Math.min(70, baseAgi * 0.7);
+    const agiOverflowCritDmg = Math.max(0, (baseAgi - 100) * 0.01);
+    const eyeCritDmgBonus = (gameState.upgrades.eye || 0) * 0.10;
 
-    if (isFrenzyActive) {
-      effectiveChance = 100;
-    }
+    const rawCrit = agiCritRate + eqBonus.bonusCrit;
+    const cap = 70;
+    let effectiveChance = isFrenzyActive ? 100 : Math.min(100, rawCrit);
 
-    return { rawCrit, effectiveChance, critMultiplier, cap };
+    let critMultiplier = 1.80 + agiOverflowCritDmg + eyeCritDmgBonus + (eqBonus.bonusCritDmg || 0);
+    critMultiplier = parseFloat(critMultiplier.toFixed(2));
+
+    return {
+      rawCrit,
+      effectiveChance,
+      critMultiplier,
+      cap,
+      agiCritRate,
+      agiOverflowCritDmg,
+      eyeCritDmgBonus
+    };
   }
 
   // --- DOM Elements ---
+  const playerNameEl = document.getElementById('player-name');
+  const btnCharManage = document.getElementById('btn-char-manage');
+  const btnUtilityCharacter = document.getElementById('btn-utility-character');
+  const charModalEl = document.getElementById('char-modal');
+  const inputCharNameEl = document.getElementById('input-char-name');
+  const btnSaveCharName = document.getElementById('btn-save-char-name');
+  const btnModalCreateChar = document.getElementById('btn-modal-create-char');
+  const btnModalDeleteChar = document.getElementById('btn-modal-delete-char');
+  const btnCharModalClose = document.getElementById('btn-char-modal-close');
+
   const playerTitleEl = document.getElementById('player-title');
   const playerLevelEl = document.getElementById('player-level');
   const expBarFillEl = document.getElementById('exp-bar-fill');
@@ -878,17 +894,18 @@
     }, 2800);
   }
 
+  // สูตรราคาทวีคูณเพื่อลดปัญหาเงินเฟ้อ (Compound Growth)
   function getBladePrice() {
-    return 300 + (gameState.upgrades.blade * 150);
+    return Math.floor(400 * Math.pow(1.25, gameState.upgrades.blade || 0));
   }
   function getCharmPrice() {
-    return 250 + (gameState.upgrades.charm * 120);
+    return Math.floor(350 * Math.pow(1.30, gameState.upgrades.charm || 0));
   }
   function getEyePrice() {
-    return 350 + (gameState.upgrades.eye * 180);
+    return Math.floor(500 * Math.pow(1.32, gameState.upgrades.eye || 0));
   }
   function getElixirPrice() {
-    return 150 + ((gameState.upgrades.elixir || 0) * 50);
+    return Math.floor(200 * Math.pow(1.28, gameState.upgrades.elixir || 0));
   }
 
   function addExp(amount) {
@@ -1050,7 +1067,6 @@
     }
   }
 
-  // Mini-Event: Shadow Goblin
   function startGoblinChaseEvent() {
     if (isGoblinActive || !isRunning) return;
 
@@ -1250,7 +1266,6 @@
     saveGame();
   });
 
-  // --- Boss Defeat & Loop System Handler ---
   function handleBossDefeat(currentBoss, isUltimateTier = 0) {
     sessionBossKills += 1;
     gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
@@ -1333,7 +1348,6 @@
     renderUI();
   }
 
-  // --- Battle Damage Calculation with Awakened Boss Ultimates ---
   function applyDistanceDamage(distanceDeltaKm) {
     if (distanceDeltaKm <= 0) return;
 
@@ -1421,7 +1435,6 @@
     let critDmgMultiplier = critStats.critMultiplier;
     let bossDamageMultiplier = 1.0;
 
-    // ท่าไม้ตายบอสรอบลูป (Awakened Mechanics)
     if (isLoop && currentBoss.id === 'boss_1') {
       if (rollingPace === null || rollingPace > 6.75) {
         bossDamageMultiplier *= 0.65;
@@ -1610,7 +1623,6 @@
     renderHUD();
   }
 
-  // --- Ultimate Skill Execution ---
   function activateUltimateSkill(tier = 1) {
     const cost = tier * 100;
     if (gameState.ultimateCharge < cost || !isRunning) {
@@ -1661,7 +1673,6 @@
   btnCastUlt2.addEventListener('click', () => activateUltimateSkill(2));
   btnCastUlt3.addEventListener('click', () => activateUltimateSkill(3));
 
-  // --- Open Mystery Chest Logic ---
   function openMysteryChest() {
     if (gameState.chestsAvailable <= 0) return;
     gameState.chestsAvailable -= 1;
@@ -1699,7 +1710,6 @@
 
   btnOpenChest.addEventListener('click', openMysteryChest);
 
-  // --- Equipment & Inventory UI Renderer ---
   function renderEquipmentAndInventory() {
     const eq = gameState.equipment;
     const eqBonus = calculateEquipmentBonuses();
@@ -2129,6 +2139,9 @@
 
   // --- Modular UI Renderers ---
   function renderHUD() {
+    if (playerNameEl) {
+      playerNameEl.textContent = gameState.playerName || 'Abyss Stalker';
+    }
     playerTitleEl.textContent = gameState.title || getTitleForLevel(gameState.level);
     playerLevelEl.textContent = `LV. ${gameState.level}`;
     const expPercent = Math.min(100, Math.round((gameState.currentExp / gameState.nextExp) * 100));
@@ -2156,14 +2169,15 @@
     strMultEl.textContent = currentStrMult;
     staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2) + eqBonus.bonusSta);
     
-    // AGI: แสดงผลตัวคูณ Critical Damage ที่เพิ่มขึ้นตามค่า Overflow
+    // AGI: แสดงผลคริติคอล 0.7% ต่อแต้ม (Cap 70% ที่ 100 AGI) และส่วนเกินแปลงเป็น Crit DMG
     const critStats = calculateCritStats();
     if (isFrenzyActive) {
       agiCritEl.textContent = `100% (แรง x${critStats.critMultiplier.toFixed(2)})`;
-    } else if (critStats.rawCrit >= critStats.cap) {
-      agiCritEl.textContent = `MAX ${critStats.cap}% (แรง x${critStats.critMultiplier.toFixed(2)})`;
+    } else if (gameState.stats.agi > 100) {
+      const extraCritDmgPct = Math.round(critStats.agiOverflowCritDmg * 100);
+      agiCritEl.textContent = `คริ 70% MAX (แรง +${extraCritDmgPct}%)`;
     } else {
-      agiCritEl.textContent = `${critStats.effectiveChance.toFixed(1)}% (แรง x${critStats.critMultiplier.toFixed(2)})`;
+      agiCritEl.textContent = `คริติคอล ${critStats.agiCritRate.toFixed(1)}% (แรง x${critStats.critMultiplier.toFixed(2)})`;
     }
 
     const boss = BOSS_DATABASE[gameState.bossIndex];
@@ -2352,7 +2366,8 @@
     rateCharmEl.textContent = getUpgradeSuccessRate(gameState.upgrades.charm);
 
     lvlEyeEl.textContent = gameState.upgrades.eye;
-    eyeBonusEl.textContent = gameState.upgrades.eye * 2;
+    // ปรับแสดงผลโบนัสเนตรอเวจีเป็น Critical Damage (+10% ต่อ Lv)
+    eyeBonusEl.textContent = (gameState.upgrades.eye || 0) * 10;
     priceEyeEl.textContent = getEyePrice();
     rateEyeEl.textContent = getUpgradeSuccessRate(gameState.upgrades.eye);
 
@@ -2468,6 +2483,113 @@
     renderCareerUI();
   }
 
+  // --- Character Management Handlers ---
+  function openCharacterModal() {
+    if (inputCharNameEl) {
+      inputCharNameEl.value = gameState.playerName || 'Abyss Stalker';
+    }
+    if (charModalEl) {
+      charModalEl.style.display = 'flex';
+    }
+  }
+
+  function closeCharacterModal() {
+    if (charModalEl) {
+      charModalEl.style.display = 'none';
+    }
+  }
+
+  if (btnCharManage) btnCharManage.addEventListener('click', openCharacterModal);
+  if (btnUtilityCharacter) btnUtilityCharacter.addEventListener('click', openCharacterModal);
+  if (btnCharModalClose) btnCharModalClose.addEventListener('click', closeCharacterModal);
+
+  if (btnSaveCharName) {
+    btnSaveCharName.addEventListener('click', () => {
+      const trimmed = inputCharNameEl.value.trim();
+      if (!trimmed) {
+        showToast('กรุณากรอกชื่อตัวละคร');
+        return;
+      }
+      gameState.playerName = trimmed;
+      saveGame();
+      renderUI();
+      showToast(`💾 บันทึกชื่อตัวละครเป็น "${trimmed}" เรียบร้อย`);
+      speakVoice(`เปลี่ยนชื่อตัวละครเป็น ${trimmed}`);
+      closeCharacterModal();
+    });
+  }
+
+  if (btnModalCreateChar) {
+    btnModalCreateChar.addEventListener('click', () => {
+      const enteredName = (inputCharNameEl ? inputCharNameEl.value.trim() : '') || 'Abyss Stalker';
+      const confirmCreate = confirm(`คุณต้องการสร้างตัวละครใหม่ "${enteredName}" ใช่หรือไม่?\n(เลเวล, สเตตัส, ไอเทม และการผจญภัยจะเริ่มใหม่ทั้งหมด)`);
+      if (!confirmCreate) return;
+
+      if (isRunning) {
+        pauseRunEngine();
+      }
+
+      const fresh = JSON.parse(JSON.stringify(defaultState));
+      fresh.playerName = enteredName;
+      fresh.lastDailyDate = new Date().toDateString();
+      fresh.streak.lastDate = new Date().toDateString();
+
+      gameState = fresh;
+      bossVulnerableTimer = 0;
+      gimmickAnnounced = {};
+      mistHealingTick = 0;
+      chronoHealingTick = 0;
+      bloodKnightStallTick = 0;
+      isGoblinActive = false;
+      runDistanceKm = 0.0;
+      runSeconds = 0;
+      sessionBossKills = 0;
+
+      saveGame();
+      renderUI();
+      closeCharacterModal();
+      showToast(`✨ สร้างตัวละครใหม่ "${enteredName}" สำเร็จ! เริ่มต้นการเดินทาง`);
+      speakVoice(`สร้างตัวละครใหม่ ${enteredName} เริ่มต้นการล่า`, true);
+    });
+  }
+
+  if (btnModalDeleteChar) {
+    btnModalDeleteChar.addEventListener('click', async () => {
+      const currentName = gameState.playerName || 'ตัวละครนี้';
+      const confirmDelete = confirm(`⚠️ คำเตือน: คุณแน่ใจหรือไม่ว่าต้องการลบ "${currentName}"?\nข้อมูลสถิติ เลเวล ไอเทม และอุปกรณ์ทั้งหมดจะถูกลบถาวร!`);
+      if (!confirmDelete) return;
+
+      if (isRunning) {
+        pauseRunEngine();
+      }
+
+      const fresh = JSON.parse(JSON.stringify(defaultState));
+      fresh.playerName = 'Shadow Initiate';
+      fresh.lastDailyDate = new Date().toDateString();
+      fresh.streak.lastDate = new Date().toDateString();
+
+      gameState = fresh;
+      bossVulnerableTimer = 0;
+      gimmickAnnounced = {};
+      mistHealingTick = 0;
+      chronoHealingTick = 0;
+      bloodKnightStallTick = 0;
+      isGoblinActive = false;
+      runDistanceKm = 0.0;
+      runSeconds = 0;
+      sessionBossKills = 0;
+
+      await DB.savePlayerState(gameState);
+      renderUI();
+      closeCharacterModal();
+      showToast(`🗑️ ลบตัวละครเดิมเรียบร้อยแล้ว กรุณาตั้งชื่อตัวละครใหม่`);
+      speakVoice('ลบตัวละครเดิมเรียบร้อยแล้ว');
+      setTimeout(() => {
+        openCharacterModal();
+      }, 500);
+    });
+  }
+
   btnBuyElixir.addEventListener('click', () => {
     const cost = getElixirPrice();
     if (gameState.gold >= cost) {
@@ -2563,7 +2685,7 @@
 
       if (roll < rate) {
         gameState.upgrades.eye += 1;
-        showToast(`👁️ เบิกเนตรอเวจีสำเร็จเป็น Lv.${gameState.upgrades.eye} (+${gameState.upgrades.eye * 2}% คริติคอล)!`);
+        showToast(`👁️ เบิกเนตรอเวจีสำเร็จเป็น Lv.${gameState.upgrades.eye} (+${gameState.upgrades.eye * 10}% ดาเมจคริติคอล)!`);
         voiceBatchState.eyeSuccessLevel = gameState.upgrades.eye;
       } else {
         showToast(`❌ เบิกเนตรอเวจีล้มเหลว! (โอกาส ${rate}%) เสียเหรียญทอง`);
@@ -2754,7 +2876,6 @@
       const bossHpPct = gameState.bossHpRemain / bossMaxHp;
       const isLoop = (gameState.bossLoopCycle || 0) >= 1;
 
-      // Mist Boss Healing
       const mistThresh = isLoop ? 0.85 : 0.75;
       if (currentBoss.gimmick === 'mist' && bossHpPct <= mistThresh) {
         const rollingPace = getRecentRollingPace();
@@ -2770,7 +2891,6 @@
         }
       }
 
-      // Awakened Tier 2: Blood Knight Vampiric Drain
       if (isLoop && currentBoss.id === 'boss_2') {
         const rollingPace = getRecentRollingPace();
         if (rollingPace === null || rollingPace > 8.5) {
@@ -2787,7 +2907,6 @@
         }
       }
 
-      // Chrono Boss Healing
       if (currentBoss.gimmick === 'chrono') {
         const rollingPace = getRecentRollingPace();
         if (rollingPace === null || rollingPace > 8.0) {
@@ -2822,7 +2941,6 @@
           gpsStatusEl.textContent = 'GPS: ล็อกพิกัดแล้ว 🟢';
           const { latitude, longitude, accuracy, altitude } = pos.coords;
 
-          // ขยายเพดานความคลาดเคลื่อน GPS ให้รองรับการวิ่งกลางแจ้งได้ต่อเนื่อง (ไม่ตัดทิ้งเมื่อความแม่นยำต่ำกว่า 35 เมตร)
           if (accuracy > 35) return;
 
           const now = Date.now();
@@ -2835,13 +2953,10 @@
           const deltaKm = calculateDistance(lastCoord.latitude, lastCoord.longitude, latitude, longitude);
           const timeDeltaSec = (now - (lastCoord.time || now)) / 1000;
 
-          // ป้องกันการคำนวณซ้ำซ้อนในเสี้ยววินาทีเดียวกัน
           if (timeDeltaSec < 0.8) return;
 
           const speedKmh = deltaKm / (timeDeltaSec / 3600);
 
-          // แก้ไขบั๊กระยะไม่ขึ้น: ปลดล็อกเงื่อนไข 4 เมตรทิ้ง เพื่อให้ตรวจจับก้าววิ่ง 1.5 - 3 เมตรต่อวินาทีได้ตามจริง
-          // ความเร็ววิ่งปกติ (1.2 ถึง 26.0 กม./ชม.)
           if (speedKmh >= 1.2 && speedKmh <= 26.0) {
             runDistanceKm += deltaKm;
             recordPaceSample(now, runDistanceKm);
@@ -2849,10 +2964,8 @@
             applyDistanceDamage(deltaKm);
             lastCoord = { latitude, longitude, time: now };
           } else if (speedKmh < 1.2) {
-            // หยุดนิ่งหรือยืนพัก: อัปเดตพิกัดเพื่อกันสัญญาณแกว่ง (Drift) แต่ไม่สะสมระยะทาง
             lastCoord = { latitude, longitude, time: now };
           } else if (speedKmh > 26.0) {
-            // ความเร็วเกินจริง (นั่งรถหรือ GPS กระโดดไกล): ละเว้นไม่นับระยะ
             lastCoord = { latitude, longitude, time: now };
           }
 

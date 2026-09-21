@@ -118,9 +118,40 @@ body {
   min-width: 0;
 }
 
+.player-name-txt {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.btn-char-icon {
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid var(--border-gold);
+  color: var(--gold-glow);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+  transition: transform 0.1s ease, background 0.2s ease;
+}
+
+.btn-char-icon:active {
+  transform: scale(0.92);
+  background: var(--gold-dark);
+}
+
 .player-title {
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: 0.72rem;
   color: var(--gold-glow);
   letter-spacing: 0.3px;
   white-space: nowrap;
@@ -2183,6 +2214,89 @@ body {
 .btn-modal-action.btn-cancel {
   background: #1f1e29;
   color: #a1a1aa;
+}
+
+/* Character Management UI Additions */
+.btn-utility-char {
+  background: linear-gradient(180deg, #272233 0%, #171520 100%) !important;
+  border-color: #c084fc !important;
+  color: #e9d5ff !important;
+}
+
+.char-input-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.char-name-input {
+  width: 100%;
+  background: #100f14;
+  border: 1px solid var(--border-gold);
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  outline: none;
+  font-family: inherit;
+  margin-bottom: 6px;
+}
+
+.char-name-input:focus {
+  border-color: var(--gold-glow);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+.char-modal-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 8px 0;
+}
+
+.char-modal-subhint {
+  font-size: 0.62rem;
+  color: #a1a1aa;
+  margin-bottom: 4px;
+}
+
+.char-danger-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btn-char-action {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.btn-char-action:active {
+  transform: scale(0.98);
+}
+
+.btn-save-name {
+  background: linear-gradient(180deg, #d4af37 0%, #8c6d1f 100%);
+  color: #000;
+}
+
+.btn-create-char {
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #fff;
+  border: 1px solid #60a5fa;
+}
+
+.btn-delete-char {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
 }
 
 /* Pocket Mode Overlay */
