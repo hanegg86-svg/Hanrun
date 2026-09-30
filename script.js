@@ -54,6 +54,36 @@
         req.onerror = (e) => reject(e.target.error);
       });
     },
+    async getActiveRun() {
+      const db = await this.init();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_PLAYER, 'readonly');
+        const store = tx.objectStore(STORE_PLAYER);
+        const req = store.get('active_run');
+        req.onsuccess = () => resolve(req.result ? req.result.data : null);
+        req.onerror = () => resolve(null);
+      });
+    },
+    async saveActiveRun(runData) {
+      const db = await this.init();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_PLAYER, 'readwrite');
+        const store = tx.objectStore(STORE_PLAYER);
+        const req = store.put({ key: 'active_run', data: runData, updatedAt: Date.now() });
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e.target.error);
+      });
+    },
+    async clearActiveRun() {
+      const db = await this.init();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_PLAYER, 'readwrite');
+        const store = tx.objectStore(STORE_PLAYER);
+        const req = store.delete('active_run');
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e.target.error);
+      });
+    },
     async addRunRecord(record) {
       const db = await this.init();
       return new Promise((resolve, reject) => {
@@ -128,6 +158,34 @@
       await acquireWakeLock();
     }
   });
+
+  // --- Pull-to-Refresh & Accident Reload Prevention ---
+  window.addEventListener('beforeunload', (e) => {
+    if (isRunning || runDistanceKm > 0.02) {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    }
+  });
+
+  let touchStartY = 0;
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      touchStartY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (!e.cancelable) return;
+    const touchY = e.touches[0].clientY;
+    const touchDiff = touchY - touchStartY;
+    if (window.scrollY <= 0 && touchDiff > 0) {
+      const scrollable = e.target.closest('.inventory-grid, .daily-list, .history-list');
+      if (!scrollable || scrollable.scrollTop <= 0) {
+        e.preventDefault();
+      }
+    }
+  }, { passive: false });
 
   // --- Web Speech Synthesis Narrative Engine ---
   let isVoiceEnabled = true;
@@ -275,7 +333,7 @@
       id: 'boss_7',
       tier: 'TIER VII',
       name: 'Eclipse Harbinger: Ignis-Vorax',
-      avatar: '☄️',
+      avatar: '☄️️',
       maxHpKm: 36.00,
       desc: 'เทพอสูรเพลิงสุริยคราส เลือด 36 กม. ครึ่งแรกคลื่นความร้อนแผดเผา ครึ่งหลังระเบิดซูเปอร์โนวา ชาร์จไม้ตายไว x2!',
       rewardExp: 95000,
@@ -311,7 +369,6 @@
     return parseFloat((base * (1 + (loopCycle * 0.15))).toFixed(2));
   }
 
-  // คงระบบโอกาสสำเร็จเดิมของ Shadow Armory ไว้ตามที่กำหนด
   function getUpgradeSuccessRate(currentLevel) {
     return Math.max(20, 100 - (currentLevel * 2));
   }
@@ -466,7 +523,8 @@
       }
     });
 
-    if (!isRunning) {
+    const activeRun = await DB.getActiveRun();
+    if (!isRunning && !activeRun) {
       gameState.bossLoopCycle = 0;
       gameState.bossIndex = 0;
       gameState.bossHpRemain = getBossMaxHp(0, 0);
@@ -475,6 +533,11 @@
       mistHealingTick = 0;
       chronoHealingTick = 0;
       bloodKnightStallTick = 0;
+    } else if (activeRun) {
+      if (typeof activeRun.bossIndex === 'number') gameState.bossIndex = activeRun.bossIndex;
+      if (typeof activeRun.bossHpRemain === 'number') gameState.bossHpRemain = activeRun.bossHpRemain;
+      if (typeof activeRun.bossLoopCycle === 'number') gameState.bossLoopCycle = activeRun.bossLoopCycle;
+      bossVulnerableTimer = activeRun.bossVulnerableTimer || 0;
     }
 
     verifyDailyAndStreakReset();
@@ -693,7 +756,6 @@
     return { bonusDmg, bonusSta, bonusCrit, bonusCritDmg, bonusGold, setCounts };
   }
 
-  // AGI Cap 70% ที่ AGI 100 + ส่วนเกิน AGI แปลงเป็น Crit DMG + เนตรอเวจี (+10% คริดาเมจ/Lv)
   function calculateCritStats() {
     const eqBonus = calculateEquipmentBonuses();
     const baseAgi = gameState.stats.agi;
@@ -894,7 +956,6 @@
     }, 2800);
   }
 
-  // สูตรราคาทวีคูณเพื่อลดปัญหาเงินเฟ้อ (Compound Growth)
   function getBladePrice() {
     return Math.floor(400 * Math.pow(1.25, gameState.upgrades.blade || 0));
   }
@@ -2027,7 +2088,7 @@
 
     historyListEl.innerHTML = '';
     if (history.length === 0) {
-      historyListEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!</div>';
+      historyListEl.innerHTML = '<div class="history-empty">ยังไม่มีประวัติการล่า จงเริ่มออกวิ่งรอบแรก!';
     } else {
       history.slice(0, 25).forEach(item => {
         const hasGpx = item.gpxTrack && item.gpxTrack.length > 0;
@@ -2169,7 +2230,6 @@
     strMultEl.textContent = currentStrMult;
     staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2) + eqBonus.bonusSta);
     
-    // AGI: แสดงผลคริติคอล 0.7% ต่อแต้ม (Cap 70% ที่ 100 AGI) และส่วนเกินแปลงเป็น Crit DMG
     const critStats = calculateCritStats();
     if (isFrenzyActive) {
       agiCritEl.textContent = `100% (แรง x${critStats.critMultiplier.toFixed(2)})`;
@@ -2366,7 +2426,6 @@
     rateCharmEl.textContent = getUpgradeSuccessRate(gameState.upgrades.charm);
 
     lvlEyeEl.textContent = gameState.upgrades.eye;
-    // ปรับแสดงผลโบนัสเนตรอเวจีเป็น Critical Damage (+10% ต่อ Lv)
     eyeBonusEl.textContent = (gameState.upgrades.eye || 0) * 10;
     priceEyeEl.textContent = getEyePrice();
     rateEyeEl.textContent = getUpgradeSuccessRate(gameState.upgrades.eye);
@@ -2529,6 +2588,8 @@
         pauseRunEngine();
       }
 
+      DB.clearActiveRun().catch(() => {});
+
       const fresh = JSON.parse(JSON.stringify(defaultState));
       fresh.playerName = enteredName;
       fresh.lastDailyDate = new Date().toDateString();
@@ -2562,6 +2623,8 @@
       if (isRunning) {
         pauseRunEngine();
       }
+
+      await DB.clearActiveRun();
 
       const fresh = JSON.parse(JSON.stringify(defaultState));
       fresh.playerName = 'Shadow Initiate';
@@ -2787,6 +2850,63 @@
     showToast('🔒 เปิดโหมดพักจอ (แตะค้างเพื่อปลดล็อก)');
   });
 
+  // --- Real-Time Active Run Persistence Layer ---
+  function saveCurrentActiveRun() {
+    if (runDistanceKm <= 0 && runSeconds <= 0) {
+      DB.clearActiveRun().catch(() => {});
+      return;
+    }
+    const runSnapshot = {
+      runDistanceKm,
+      runSeconds,
+      sessionBossKills,
+      currentGpxTrack: currentGpxTrack.slice(-300),
+      isFrenzyActive,
+      isOverdriveActive,
+      overdriveSecondsRemaining,
+      bossVulnerableTimer,
+      nextChestKmCheckpoint,
+      nextKmAnnounceCheckpoint,
+      bossIndex: gameState.bossIndex,
+      bossHpRemain: gameState.bossHpRemain,
+      bossLoopCycle: gameState.bossLoopCycle,
+      savedAt: Date.now()
+    };
+    DB.saveActiveRun(runSnapshot).catch(() => {});
+  }
+
+  async function checkAndRestoreActiveRun() {
+    const activeRun = await DB.getActiveRun();
+    if (activeRun && (activeRun.runDistanceKm > 0.02 || activeRun.runSeconds > 5)) {
+      runDistanceKm = activeRun.runDistanceKm || 0.0;
+      runSeconds = activeRun.runSeconds || 0;
+      sessionBossKills = activeRun.sessionBossKills || 0;
+      currentGpxTrack = activeRun.currentGpxTrack || [];
+      isOverdriveActive = activeRun.isOverdriveActive || false;
+      overdriveSecondsRemaining = activeRun.overdriveSecondsRemaining || 0;
+      bossVulnerableTimer = activeRun.bossVulnerableTimer || 0;
+      nextChestKmCheckpoint = activeRun.nextChestKmCheckpoint || 1.0;
+      nextKmAnnounceCheckpoint = activeRun.nextKmAnnounceCheckpoint || 1.0;
+
+      if (typeof activeRun.bossIndex === 'number') gameState.bossIndex = activeRun.bossIndex;
+      if (typeof activeRun.bossHpRemain === 'number') gameState.bossHpRemain = activeRun.bossHpRemain;
+      if (typeof activeRun.bossLoopCycle === 'number') gameState.bossLoopCycle = activeRun.bossLoopCycle;
+
+      timeValEl.textContent = formatTime(runSeconds);
+      pocketTimeVal.textContent = timeValEl.textContent;
+      distanceValEl.textContent = runDistanceKm.toFixed(2);
+      pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
+      updatePace();
+
+      btnToggleRun.classList.remove('running');
+      btnRunText.textContent = 'ออกล่าต่อ (กู้คืน)';
+      btnFinishRun.removeAttribute('disabled');
+
+      showToast(`⚡ กู้คืนข้อมูลการวิ่งล่าสุด (${runDistanceKm.toFixed(2)} กม.) สำเร็จ!`);
+      speakVoice('ตรวจพบข้อมูลการวิ่งเดิมที่ค้างอยู่ กู้คืนข้อมูลเรียบร้อย สามารถกดออกล่าต่อได้ทันที');
+    }
+  }
+
   async function startRunEngine() {
     if (runSeconds === 0) {
       gameState.bossLoopCycle = 0;
@@ -2818,6 +2938,10 @@
       timeValEl.textContent = formatTime(runSeconds);
       pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
+
+      if (runSeconds % 3 === 0) {
+        saveCurrentActiveRun();
+      }
 
       if (isFrenzyActive || currentHrZone === 3) {
         const currentBoss = BOSS_DATABASE[gameState.bossIndex];
@@ -2962,6 +3086,7 @@
             recordPaceSample(now, runDistanceKm);
             currentGpxTrack.push({ lat: latitude, lon: longitude, ele: altitude || 0, time: now });
             applyDistanceDamage(deltaKm);
+            saveCurrentActiveRun();
             lastCoord = { latitude, longitude, time: now };
           } else if (speedKmh < 1.2) {
             lastCoord = { latitude, longitude, time: now };
@@ -3003,6 +3128,7 @@
     rhythmConsistentDistance = 0.0;
     flowBadgeEl.style.display = 'none';
 
+    saveCurrentActiveRun();
     speakVoice('หยุดการล่าชั่วคราว');
     releaseWakeLock();
   }
@@ -3012,6 +3138,7 @@
       const confirmDiscard = confirm('ระยะทางวิ่งน้อยกว่า 0.05 กม. (50 เมตร) คุณต้องการยกเลิกรอบนี้โดยไม่บันทึกประวัติหรือไม่?');
       if (confirmDiscard) {
         pauseRunEngine();
+        await DB.clearActiveRun();
         cancelUnlockHold();
         pocketOverlay.style.display = 'none';
         runDistanceKm = 0.0;
@@ -3042,6 +3169,7 @@
     }
 
     pauseRunEngine();
+    await DB.clearActiveRun();
     cancelUnlockHold();
     pocketOverlay.style.display = 'none';
     showToast(`🏁 จบการออกล่า! สะสมระยะทางได้ ${runDistanceKm.toFixed(2)} กม.`);
@@ -3143,6 +3271,7 @@
         time: now
       });
       applyDistanceDamage(km);
+      saveCurrentActiveRun();
       renderHUD();
       showToast(`⚡ จำลองวิ่งก้าวหน้า +${(km * 1000).toFixed(0)} เมตร!`);
     },
@@ -3184,6 +3313,7 @@
   }
 
   await loadGameState();
+  await checkAndRestoreActiveRun();
   renderUI();
   await renderHistoryAndDailyUI();
 })();
