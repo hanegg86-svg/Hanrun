@@ -255,7 +255,7 @@
       icon: '🌌',
       color: '#38bdf8',
       bonuses: {
-        2: 'เข้าสู่ Flow State ง่ายขึ้น 50% (คุมเพซเพียง 200 เมตร)',
+        2: 'เข้าสู่ Flow State ง่ายขึ้น 50% (คุมเพซเพียง 150 เมตร)',
         4: 'เมื่ออยู่ใน Flow State การโจมตีจะทะลุเกราะบอส 100% (True Damage)'
       }
     },
@@ -269,10 +269,21 @@
         2: 'เกจไม้ตายชาร์จไวขึ้น +45% จากทุกแหล่ง',
         4: 'Shadow Slash แรงขึ้น +80% และรีฟันด์เกจคืน 30% ทันทีที่ร่าย'
       }
+    },
+    darktempest: {
+      id: 'darktempest',
+      name: 'เซ็ตพายุอัสนีอเวจี',
+      fullName: 'Dark Tempest Battlegear',
+      icon: '⚡',
+      color: '#f59e0b',
+      bonuses: {
+        2: 'ยืดเวลา Overdrive +20 วิ & ดาเมจ +20% เมื่ออยู่ใน Zone 3 ขึ้นไป',
+        4: 'Shadow Slash เรียกสายฟ้าทัณฑ์อัสนี +0.35 กม. และล็อกคริ 100% นาน 15 วิ'
+      }
     }
   };
 
-  // --- Boss List Database (Including Super Boss) ---
+  // --- Boss List Database (Including Major Tier II & Super Boss) ---
   const BOSS_DATABASE = [
     {
       id: 'boss_1',
@@ -295,6 +306,17 @@
       rewardExp: 5500,
       rewardGold: 600,
       gimmick: 'none'
+    },
+    {
+      id: 'boss_2_major',
+      tier: 'TIER II (MAJOR)',
+      name: 'Abyssal Juggernaut: Gorgoroth',
+      avatar: '🦏',
+      maxHpKm: 6.50,
+      desc: 'บอสใหญ่แห่งเทียร์สอง จอมพลังเกราะหนาทมิฬ ทลายเกราะเหล็กด้วย Flow State หรือ Shadow Slash!',
+      rewardExp: 8500,
+      rewardGold: 1200,
+      gimmick: 'juggernaut'
     },
     {
       id: 'boss_3',
@@ -391,8 +413,17 @@
     return parseFloat((base * (1 + (loopCycle * 0.15))).toFixed(2));
   }
 
-  function getUpgradeSuccessRate(currentLevel) {
+  // --- Upgrade Success Rate & Pity Step System ---
+  function getUpgradeBaseSuccessRate(currentLevel) {
     return Math.max(20, 100 - (currentLevel * 2));
+  }
+
+  function getUpgradeEffectiveSuccessRate(itemKey) {
+    const currentLevel = gameState.upgrades[itemKey] || 0;
+    const baseRate = getUpgradeBaseSuccessRate(currentLevel);
+    const failStreak = (gameState.upgradeFailStreak && gameState.upgradeFailStreak[itemKey]) || 0;
+    const bonusRate = failStreak * 10; // เพิ่มขึ้นทีละ +10% ต่อครั้งที่ล้มเหลว
+    return Math.min(100, baseRate + bonusRate);
   }
 
   function getTitleForLevel(level) {
@@ -421,12 +452,13 @@
     ];
   }
 
-  // --- 20 Milestones / Achievements ---
+  // --- 21 Milestones / Achievements ---
   function generateAchievements() {
     return [
       { id: 'ach_first', name: 'First Blood (การล่าครั้งแรก)', desc: 'จบเซสชันการล่าสำเร็จ 1 รอบ', target: 1, current: 0, unit: 'รอบ', rewardExp: 1000, rewardGold: 200, claimed: false },
       { id: 'ach_dist10', name: 'Shadow Nomad (เส้นทาง 10K)', desc: 'สะสมระยะทางรวมแตะ 10.0 กม.', target: 10.0, current: 0.0, unit: 'กม.', rewardExp: 3500, rewardGold: 600, claimed: false },
       { id: 'ach_dist50', name: 'Abyssal Walker (นักเดินทาง 50K)', desc: 'สะสมระยะทางรวมแตะ 50.0 กม.', target: 50.0, current: 0.0, unit: 'กม.', rewardExp: 12000, rewardGold: 2500, claimed: false },
+      { id: 'ach_boss_juggernaut', name: 'Juggernaut Crusher (ผู้สยบจอมอสูรเกราะเหล็ก)', desc: 'โค่น Abyssal Juggernaut: Gorgoroth (Tier II Major)', target: 1, current: 0, unit: 'ตัว', rewardExp: 5000, rewardGold: 1000, claimed: false },
       { id: 'ach_boss_dragon', name: 'Dragon Bane (ผู้สยบมังกร)', desc: 'โค่นมังกรกระดูก Ancient Bone Dragon (Tier III)', target: 1, current: 0, unit: 'ตัว', rewardExp: 6000, rewardGold: 1200, claimed: false },
       { id: 'ach_boss_malakor', name: 'Lich Bane (ผู้สยบจอมเวท)', desc: 'โค่นจอมเวทอเวจี Shadow Lich: Malakor (Tier IV)', target: 1, current: 0, unit: 'ตัว', rewardExp: 10000, rewardGold: 2000, claimed: false },
       { id: 'ach_boss_titan', name: 'Titan Breaker (ผู้กะเทาะศิลาไททัน)', desc: 'โค่น Void Behemoth: Titan of Ruin (Tier V)', target: 1, current: 0, unit: 'ตัว', rewardExp: 16000, rewardGold: 3500, claimed: false },
@@ -459,11 +491,13 @@
     ultimateCharge: 0,
     stats: { str: 10, sta: 10, agi: 10 },
     upgrades: { blade: 0, charm: 0, eye: 0, elixir: 0 },
-    equipment: { weapon: null, armor: null, boots: null, relic: null, ring: null },
+    upgradeFailStreak: { blade: 0, charm: 0, eye: 0 },
+    equipment: { weapon: null, armor: null, boots: null, relic: null, ring: null, bracelet: null },
     inventory: [],
     bestiary: {
       boss_1: { kills: 0, name: 'Gargoyle of the Crypt' },
       boss_2: { kills: 0, name: 'Abyssal Blood Knight' },
+      boss_2_major: { kills: 0, name: 'Abyssal Juggernaut: Gorgoroth' },
       boss_3: { kills: 0, name: 'Ancient Bone Dragon' },
       boss_4: { kills: 0, name: 'Shadow Lich: Malakor' },
       boss_5: { kills: 0, name: 'Void Behemoth: Titan of Ruin' },
@@ -541,7 +575,8 @@
       gameState.playerName = saved.playerName || defaultState.playerName;
       gameState.stats = Object.assign({}, defaultState.stats, saved.stats || {});
       gameState.upgrades = Object.assign({ elixir: 0 }, defaultState.upgrades, saved.upgrades || {});
-      gameState.equipment = Object.assign({ ring: null }, defaultState.equipment, saved.equipment || {});
+      gameState.upgradeFailStreak = Object.assign({ blade: 0, charm: 0, eye: 0 }, defaultState.upgradeFailStreak, saved.upgradeFailStreak || {});
+      gameState.equipment = Object.assign({ ring: null, bracelet: null }, defaultState.equipment, saved.equipment || {});
       gameState.inventory = saved.inventory || [];
       gameState.bestiary = Object.assign({}, defaultState.bestiary, saved.bestiary || {});
       gameState.streak = Object.assign({}, defaultState.streak, saved.streak || {});
@@ -561,6 +596,24 @@
       }, saved.statsTrack || {});
     } else {
       gameState = JSON.parse(JSON.stringify(defaultState));
+    }
+
+    // Migration: ปรับราคาขายของไอเทมเก่าให้เพิ่มขึ้น 100 เท่า
+    const updatedGoldValues = {
+      cosmic: 350000,
+      mythic: 150000,
+      legendary: 60000,
+      epic: 25000,
+      rare: 10000,
+      common: 3000
+    };
+
+    if (gameState.inventory && gameState.inventory.length > 0) {
+      gameState.inventory.forEach(item => {
+        if (item.goldValue < (updatedGoldValues[item.rarity] || 3000)) {
+          item.goldValue = updatedGoldValues[item.rarity] || 3000;
+        }
+      });
     }
 
     BOSS_DATABASE.forEach(b => {
@@ -652,17 +705,20 @@
   let isFlowStateActive = false;
   let rhythmBaselinePace = null;
   let rhythmConsistentDistance = 0.0;
+  let flowGraceStrikes = 0;
+  let tempestCritBuffSeconds = 0;
 
   const ITEM_NAMES = {
     weapon: ['ดาบสั้น', 'ดาบใหญ่ทมิฬ', 'เคียวมรณะ', 'ดาบโบราณ', 'หอกพิฆาตมิติ'],
     armor: ['เสื้อเกราะหนัง', 'เกราะเหล็กอสูร', 'ผ้าคลุมวิญญาณ', 'เกราะเพลทอเวจี', 'เกราะมหาอสูร'],
     boots: ['รองเท้าก้าวเงา', 'รองเท้าเกราะทมิฬ', 'รองเท้าลมกรด', 'สนับแข้งสายลม', 'รองเท้าล่องหน'],
     relic: ['แหวนวิญญาณ', 'จี้หยดโลหิต', 'เครื่องรางตาเหยี่ยว', 'หินมนตราโบราณ', 'ดวงใจมิติอเวจี'],
-    ring: ['แหวนเพลิงอเวจี', 'วงแหวนเงาบรรพกาล', 'แหวนวิญญาณสูบดวงดาว', 'ธำมรงค์มิติว่างเปล่า', 'แหวนราชาไร้นาม']
+    ring: ['แหวนเพลิงอเวจี', 'วงแหวนเงาบรรพกาล', 'แหวนวิญญาณสูบดวงดาว', 'ธำมรงค์มิติว่างเปล่า', 'แหวนราชาไร้นาม'],
+    bracelet: ['กำไลทมิฬ', 'กำไลผลึกวิญญาณ', 'กำไลอัสนีบาต', 'กำไลสายฟ้าราตรี', 'กำไลมิติว่างเปล่า']
   };
 
   function rollRandomItem(isBossDrop = false, loopCount = 0) {
-    const types = ['weapon', 'armor', 'boots', 'relic', 'ring'];
+    const types = ['weapon', 'armor', 'boots', 'relic', 'ring', 'bracelet'];
     const type = types[Math.floor(Math.random() * types.length)];
     const roll = Math.random();
 
@@ -672,11 +728,17 @@
     let sub2Val = 0;
 
     if (loopCount > 0 || isBossDrop) {
-      const mythicThreshold = Math.min(0.25, 0.06 + (loopCount * 0.04));
+      const cosmicThreshold = Math.min(0.08, 0.02 + (loopCount * 0.02));
+      const mythicThreshold = cosmicThreshold + Math.min(0.22, 0.06 + (loopCount * 0.04));
       const legThreshold = mythicThreshold + 0.22;
       const epicThreshold = legThreshold + 0.35;
 
-      if (roll < mythicThreshold) {
+      if (roll < cosmicThreshold) {
+        rarity = 'cosmic';
+        baseMain = 65;
+        baseSub = 28;
+        sub2Val = 25;
+      } else if (roll < mythicThreshold) {
         rarity = 'mythic';
         baseMain = 45;
         baseSub = 20;
@@ -699,20 +761,25 @@
         baseSub = 0;
       }
     } else {
-      if (roll < 0.03) {
+      if (roll < 0.01) {
+        rarity = 'cosmic';
+        baseMain = 65;
+        baseSub = 28;
+        sub2Val = 25;
+      } else if (roll < 0.04) {
         rarity = 'mythic';
         baseMain = 45;
         baseSub = 20;
         sub2Val = 15;
-      } else if (roll < 0.12) {
+      } else if (roll < 0.14) {
         rarity = 'legendary';
         baseMain = 32;
         baseSub = 14;
-      } else if (roll < 0.35) {
+      } else if (roll < 0.38) {
         rarity = 'epic';
         baseMain = 22;
         baseSub = 8;
-      } else if (roll < 0.68) {
+      } else if (roll < 0.70) {
         rarity = 'rare';
         baseMain = 14;
         baseSub = 4;
@@ -734,14 +801,16 @@
 
     const nameList = ITEM_NAMES[type];
     const baseName = nameList[Math.floor(Math.random() * nameList.length)];
-    const icons = { weapon: '🗡️', armor: '🛡️', boots: '🥾', relic: '🧿', ring: '💍' };
+    const icons = { weapon: '🗡️', armor: '🛡️', boots: '🥾', relic: '🧿', ring: '💍', bracelet: '📿' };
 
+    // ปรับราคาขายไอเทมแพงขึ้น 100 เท่า
     const goldValues = {
-      mythic: 1500,
-      legendary: 600,
-      epic: 250,
-      rare: 100,
-      common: 30
+      cosmic: 350000,
+      mythic: 150000,
+      legendary: 60000,
+      epic: 25000,
+      rare: 10000,
+      common: 3000
     };
 
     return {
@@ -755,14 +824,14 @@
       subStat2Val,
       loopLevel: loopCount,
       icon: icons[type],
-      goldValue: goldValues[rarity] || 30
+      goldValue: goldValues[rarity] || 3000
     };
   }
 
   function getActiveEquippedSets() {
-    const counts = { shadowstalker: 0, bloodknight: 0, voidwalker: 0, voidannihilator: 0 };
+    const counts = { shadowstalker: 0, bloodknight: 0, voidwalker: 0, voidannihilator: 0, darktempest: 0 };
     const eq = gameState.equipment;
-    ['weapon', 'armor', 'boots', 'relic', 'ring'].forEach(slot => {
+    ['weapon', 'armor', 'boots', 'relic', 'ring', 'bracelet'].forEach(slot => {
       const item = eq[slot];
       if (item && item.setId && counts[item.setId] !== undefined) {
         counts[item.setId]++;
@@ -778,9 +847,10 @@
     let bonusCritDmg = 0;
     let bonusGold = 0;
     let bonusUltDmg = 0;
+    let bonusArmorPierce = 0;
 
     const eq = gameState.equipment;
-    ['weapon', 'armor', 'boots', 'relic', 'ring'].forEach(slot => {
+    ['weapon', 'armor', 'boots', 'relic', 'ring', 'bracelet'].forEach(slot => {
       const item = eq[slot];
       if (!item) return;
 
@@ -789,15 +859,24 @@
       if (slot === 'boots') bonusDmg += item.mainStatVal;
       if (slot === 'relic') bonusGold += item.mainStatVal;
       if (slot === 'ring') bonusUltDmg += item.mainStatVal;
+      if (slot === 'bracelet') {
+        bonusCritDmg += (item.mainStatVal * 0.01);
+        bonusDmg += Math.floor(item.mainStatVal * 0.5);
+      }
 
       if (item.subStatVal) {
-        if (slot === 'weapon' || slot === 'boots' || slot === 'ring') bonusCrit += item.subStatVal;
+        if (slot === 'weapon' || slot === 'boots' || slot === 'ring' || slot === 'bracelet') bonusCrit += item.subStatVal;
         if (slot === 'armor') bonusDmg += item.subStatVal;
         if (slot === 'relic') bonusSta += item.subStatVal;
       }
 
       if (item.subStat2Val) {
         bonusCritDmg += (item.subStat2Val * 0.01);
+      }
+
+      // Cosmic Tier Innate: ทะลุเกราะชิ้นละ 10%
+      if (item.rarity === 'cosmic') {
+        bonusArmorPierce += 10;
       }
     });
 
@@ -812,8 +891,11 @@
     if (setCounts.voidannihilator >= 4) {
       bonusUltDmg += 80;
     }
+    if (setCounts.darktempest >= 2 && (currentHrZone >= 3 || isFrenzyActive)) {
+      bonusDmg += 20;
+    }
 
-    return { bonusDmg, bonusSta, bonusCrit, bonusCritDmg, bonusGold, bonusUltDmg, setCounts };
+    return { bonusDmg, bonusSta, bonusCrit, bonusCritDmg, bonusGold, bonusUltDmg, bonusArmorPierce, setCounts };
   }
 
   function calculateCritStats() {
@@ -826,7 +908,7 @@
 
     const rawCrit = agiCritRate + eqBonus.bonusCrit;
     const cap = 70;
-    let effectiveChance = isFrenzyActive ? 100 : Math.min(100, rawCrit);
+    let effectiveChance = (isFrenzyActive || tempestCritBuffSeconds > 0) ? 100 : Math.min(100, rawCrit);
 
     let critMultiplier = 1.80 + agiOverflowCritDmg + eyeCritDmgBonus + (eqBonus.bonusCritDmg || 0);
     critMultiplier = parseFloat(critMultiplier.toFixed(2));
@@ -989,6 +1071,7 @@
   const modalMainStatEl = document.getElementById('modal-main-stat');
   const modalSubStatEl = document.getElementById('modal-sub-stat');
   const modalSubStat2El = document.getElementById('modal-sub-stat-2');
+  const modalCosmicPerkEl = document.getElementById('modal-cosmic-perk');
   const modalSetBonus2El = document.getElementById('modal-set-bonus-2');
   const modalSetBonus4El = document.getElementById('modal-set-bonus-4');
   const btnModalEquip = document.getElementById('btn-modal-equip');
@@ -1103,7 +1186,7 @@
     const dDist = newest.dist - oldest.dist;
     const dTimeSec = (newest.time - oldest.time) / 1000;
 
-    if (dDist >= 0.010 && dTimeSec >= 3) {
+    if (dDist >= 0.010 && dTimeSec >= 1.5) {
       return (dTimeSec / 60) / dDist;
     }
     return null;
@@ -1439,7 +1522,10 @@
     const questBoss = gameState.dailyQuests.find(q => q.id === 'dq_boss');
     if (questBoss) questBoss.current = Math.min(questBoss.target, questBoss.current + 1);
 
-    if (currentBoss.tier === 'TIER III') {
+    if (currentBoss.id === 'boss_2_major') {
+      const ach = gameState.achievements.find(a => a.id === 'ach_boss_juggernaut');
+      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+    } else if (currentBoss.tier === 'TIER III') {
       const ach = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
       if (ach) ach.current = Math.min(ach.target, ach.current + 1);
     } else if (currentBoss.tier === 'TIER IV') {
@@ -1478,7 +1564,7 @@
     bloodKnightStallTick = 0;
     superbossSiphonTick = 0;
 
-    // Super Boss condition: appears in Loop >= 1 as the final boss (index 9)
+    // Super Boss condition: appears in Loop >= 1 as the final boss
     const maxBossIndexForCurrentLoop = (gameState.bossLoopCycle || 0) >= 1 ? BOSS_DATABASE.length - 1 : BOSS_DATABASE.length - 2;
 
     let nextBossIndex;
@@ -1526,17 +1612,26 @@
 
     addUltimateCharge((distanceDeltaKm * 8) * ultChargeBonusMult);
 
-    const flowThresholdKm = setCounts.voidwalker >= 2 ? 0.20 : 0.40;
-    const rollingPace = getRecentRollingPace();
+    // --- Flow State Detection Algorithm (EMA + Grace Period) ---
+    const flowThresholdKm = setCounts.voidwalker >= 2 ? 0.15 : 0.30;
+    let rollingPace = getRecentRollingPace();
 
-    if (rollingPace !== null) {
+    if (rollingPace === null && isSimMode && runDistanceKm >= 0.05) {
+      rollingPace = (runSeconds / 60) / runDistanceKm;
+    }
+
+    if (rollingPace !== null && rollingPace >= 2.5 && rollingPace <= 15.0) {
       if (rhythmBaselinePace === null) {
         rhythmBaselinePace = rollingPace;
         rhythmConsistentDistance = 0.0;
+        flowGraceStrikes = 0;
       } else {
         const paceDiff = Math.abs(rollingPace - rhythmBaselinePace);
-        if (paceDiff <= 0.25) {
+        if (paceDiff <= 0.45) { // กรอบ Tolerance กว้างขึ้นครอบคลุม GPS Jitter
           rhythmConsistentDistance += distanceDeltaKm;
+          flowGraceStrikes = 0;
+          rhythmBaselinePace = (rhythmBaselinePace * 0.75) + (rollingPace * 0.25); // EMA Update
+
           if (rhythmConsistentDistance >= flowThresholdKm && !isFlowStateActive) {
             isFlowStateActive = true;
             gameState.statsTrack.flowStateCount = (gameState.statsTrack.flowStateCount || 0) + 1;
@@ -1547,11 +1642,15 @@
             speakVoice('เข้าสู่สภาวะโฟลว์สเตท คุมจังหวะยอดเยี่ยม');
           }
         } else {
-          rhythmBaselinePace = rollingPace;
-          rhythmConsistentDistance = 0.0;
-          if (isFlowStateActive) {
-            isFlowStateActive = false;
-            showToast('หลุดจากสภาวะ Flow State');
+          flowGraceStrikes++;
+          if (flowGraceStrikes > 3) { // Grace Period 3 ครั้งก่อนรีเซ็ต
+            rhythmBaselinePace = rollingPace;
+            rhythmConsistentDistance = 0.0;
+            flowGraceStrikes = 0;
+            if (isFlowStateActive) {
+              isFlowStateActive = false;
+              showToast('หลุดจากสภาวะ Flow State');
+            }
           }
         }
       }
@@ -1564,7 +1663,8 @@
 
     if (runDistanceKm >= nextChestKmCheckpoint) {
       nextChestKmCheckpoint += 1.0;
-      if (Math.random() < 0.65) {
+      const chestChance = setCounts.darktempest >= 4 ? 0.85 : 0.65;
+      if (Math.random() < chestChance) {
         gameState.chestsAvailable += 1;
         showToast('📦 สัญชาตญาณเงาตรวจพบ: คุณค้นพบหีบสมบัติดันเจี้ยน!');
         speakVoice('ค้นพบหีบสมบัติใหม่');
@@ -1600,6 +1700,34 @@
           gimmickAnnounced.gargoyleTremor = true;
           speakVoice('แผ่นดินไหวศิลาทำงาน! เร่งสปีดให้เร็วกว่าเพซ 6:45 มิฉะนั้นดาเมจลด 35%');
           showToast('🌋 Seismic Tremor: พื้นดินสั่นสะเทือน! เร่งเพซให้ต่ำกว่า 6:45 เพื่อฝ่าดาเมจ');
+        }
+      }
+    }
+
+    // --- Major Tier II Boss: Abyssal Juggernaut Gimmick ---
+    if (currentBoss.gimmick === 'juggernaut') {
+      if (bossHpPct > 0.50) {
+        if (isFlowStateActive || bossVulnerableTimer > 0) {
+          bossDamageMultiplier *= 1.25;
+        } else {
+          bossDamageMultiplier *= 0.65;
+          if (!gimmickAnnounced.juggernautIron) {
+            gimmickAnnounced.juggernautIron = true;
+            speakVoice('จอมอสูรเกราะเหล็กเปิดปราการทมิฬ เข้าสู่โฟลว์สเตทเพื่อทลายเกราะ');
+            showToast('🦏 ปราการเหล็กทมิฬ: ดาเมจลด 35% (เข้าสู่ Flow State หรือใช้ท่าไม้ตายเพื่อทะลวง)');
+          }
+        }
+      } else {
+        if (!gimmickAnnounced.juggernautStomp) {
+          gimmickAnnounced.juggernautStomp = true;
+          speakVoice('จอมอสูรทุบแผ่นดินเดือด เร่งเพซและชีพจรแตะโซนสามเพื่อเคาน์เตอร์ดาเมจ', true);
+          showToast('💥 คลื่นทุบแผ่นดินเดือด: ดันชีพจร Zone 3 หรือเร่งเพซต่ำกว่า 6:00 ดาเมจทะยาน x1.75!');
+        }
+        if (isFrenzyActive || currentHrZone >= 3 || (rollingPace !== null && rollingPace <= 6.0)) {
+          bossDamageMultiplier *= 1.75;
+          critChance = Math.min(100, critChance + 25);
+        } else if (rollingPace === null || rollingPace > 7.0) {
+          bossDamageMultiplier *= 0.60;
         }
       }
     }
@@ -1767,7 +1895,7 @@
         if (!gimmickAnnounced.superbossP2) {
           gimmickAnnounced.superbossP2 = true;
           speakVoice('เข้าสู่เฟสสอง มิติว่างเปล่าดูดกลืน รักษาเพซให้เร็วกว่า 7:00');
-          showToast('🕳️️ Singularity Siphon: เพซช้ากว่า 7:00 บอสจะดูดเกจและฮีลเลือด!');
+          showToast('🕳 Singularity Siphon: เพซช้ากว่า 7:00 บอสจะดูดเกจและฮีลเลือด!');
         }
         if (rollingPace === null || rollingPace > 7.0) {
           bossDamageMultiplier *= 0.50;
@@ -1783,6 +1911,11 @@
           critDmgMultiplier *= 1.5;
         }
       }
+    }
+
+    // Cosmic Tier ทะลุเกราะตามโบนัสที่มี
+    if (eqBonus.bonusArmorPierce > 0 && bossDamageMultiplier < 1.0) {
+      bossDamageMultiplier = Math.min(1.0, bossDamageMultiplier + (eqBonus.bonusArmorPierce * 0.01));
     }
 
     if (setCounts.voidwalker >= 4 && isFlowStateActive) {
@@ -1834,8 +1967,15 @@
     const tierOverdriveSec = { 1: 30, 2: 60, 3: 90 };
     const tierVulnSec = { 1: 60, 2: 90, 3: 120 };
 
-    const burstDamageKm = tierBaseDamages[tier] * strMultiplier * shadowSetDmgMult * ringUltDmgMult;
+    let burstDamageKm = tierBaseDamages[tier] * strMultiplier * shadowSetDmgMult * ringUltDmgMult;
     const currentBoss = BOSS_DATABASE[gameState.bossIndex];
+
+    // Tempest 4-piece Bonus: สายฟ้าทัณฑ์อัสนี +0.35 กม. และล็อกคริ 15 วิ
+    if (setCounts.darktempest >= 4) {
+      burstDamageKm += 0.35;
+      tempestCritBuffSeconds = 15;
+      showToast('⚡ TEMPEST WRATH! สายฟ้าฟาด +0.35 กม. และล็อกคริติคอล 100% 15 วิ!');
+    }
 
     // Annihilator 4-piece gauge refund
     if (setCounts.voidannihilator >= 4) {
@@ -1849,7 +1989,7 @@
     const achUlt = gameState.achievements.find(a => a.id === 'ach_ult_cast');
     if (achUlt) achUlt.current = Math.min(achUlt.target, gameState.statsTrack.ultCastCount);
 
-    if (currentBoss.gimmick === 'carapace' || currentBoss.gimmick === 'superboss') {
+    if (currentBoss.gimmick === 'carapace' || currentBoss.gimmick === 'superboss' || currentBoss.gimmick === 'juggernaut') {
       const bonusVuln = setCounts.shadowstalker >= 4 ? 30 : 0;
       bossVulnerableTimer = tierVulnSec[tier] + bonusVuln;
       showToast(`💥 SHADOW SLASH (Lv.${tier}) กะเทาะเกราะแตก! บอสเปราะบาง (${bossVulnerableTimer} วิ)`);
@@ -1862,7 +2002,8 @@
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - burstDamageKm);
 
     isOverdriveActive = true;
-    overdriveSecondsRemaining = tierOverdriveSec[tier];
+    const tempestBonusSec = setCounts.darktempest >= 2 ? 20 : 0;
+    overdriveSecondsRemaining = tierOverdriveSec[tier] + tempestBonusSec;
     runHudEl.classList.add('overdrive-active');
     overdriveBannerEl.style.display = 'block';
     overdriveTimeLeftEl.textContent = overdriveSecondsRemaining;
@@ -1888,7 +2029,10 @@
       const newItem = rollRandomItem(true, gameState.bossLoopCycle || 0);
       gameState.inventory.push(newItem);
       const setLabel = SET_DATABASE[newItem.setId] ? ` [${SET_DATABASE[newItem.setId].name}]` : '';
-      if (newItem.rarity === 'mythic') {
+      if (newItem.rarity === 'cosmic') {
+        showToast(`🌌 ULTRA JACKPOT COSMIC! [${newItem.name}]${setLabel}!`);
+        speakVoice('ค้นพบอุปกรณ์ระดับจักรวาล คอสมิก', true);
+      } else if (newItem.rarity === 'mythic') {
         showToast(`🌟 JACKPOT MYTHIC! [${newItem.name}]${setLabel}!`);
         speakVoice('ค้นพบอุปกรณ์ระดับอเวจีโบราณ มิธทิค', true);
       } else {
@@ -1921,9 +2065,10 @@
     const eqBonus = calculateEquipmentBonuses();
     const critBonusText = eqBonus.bonusCritDmg > 0 ? ` | คริแรง +${Math.round(eqBonus.bonusCritDmg * 100)}%` : '';
     const ultBonusText = eqBonus.bonusUltDmg > 0 ? ` | ไม้ตาย +${eqBonus.bonusUltDmg}%` : '';
-    equipSummaryEl.textContent = `ดาเมจ +${eqBonus.bonusDmg}% | STA +${eqBonus.bonusSta}% | คริ +${eqBonus.bonusCrit}%${critBonusText}${ultBonusText}`;
+    const pierceText = eqBonus.bonusArmorPierce > 0 ? ` | ทะลุเกราะ +${eqBonus.bonusArmorPierce}%` : '';
+    equipSummaryEl.textContent = `ดาเมจ +${eqBonus.bonusDmg}% | STA +${eqBonus.bonusSta}% | คริ +${eqBonus.bonusCrit}%${critBonusText}${ultBonusText}${pierceText}`;
 
-    const slots = ['weapon', 'armor', 'boots', 'relic', 'ring'];
+    const slots = ['weapon', 'armor', 'boots', 'relic', 'ring', 'bracelet'];
     slots.forEach(slotType => {
       const slotBox = document.getElementById(`slot-${slotType}`);
       const iconEl = document.getElementById(`icon-slot-${slotType}`);
@@ -1948,7 +2093,7 @@
         }
       } else {
         slotBox.classList.remove('equipped', 'has-set');
-        const defaultIcons = { weapon: '🗡️', armor: '🛡️', boots: '🥾', relic: '🧿', ring: '💍' };
+        const defaultIcons = { weapon: '🗡️', armor: '🛡️', boots: '🥾', relic: '🧿', ring: '💍', bracelet: '📿' };
         iconEl.textContent = defaultIcons[slotType];
         nameEl.textContent = 'ว่างเปล่า';
       }
@@ -2032,7 +2177,12 @@
     const loopText = item.loopLevel ? ` [Loop ${item.loopLevel}]` : '';
     modalItemRarityEl.className = `modal-item-rarity rarity-${item.rarity}`;
     modalItemRarityEl.textContent = `ระดับ: ${item.rarity.toUpperCase()}${loopText}`;
-    modalItemRarityEl.style.color = `var(--rarity-${item.rarity})`;
+
+    if (item.rarity === 'cosmic') {
+      modalItemRarityEl.style.color = '#38bdf8';
+    } else {
+      modalItemRarityEl.style.color = `var(--rarity-${item.rarity})`;
+    }
 
     if (item.setId && SET_DATABASE[item.setId]) {
       const s = SET_DATABASE[item.setId];
@@ -2054,7 +2204,8 @@
       armor: 'ความอึด STA',
       boots: 'ดาเมจความเร็ว',
       relic: 'โบนัสเหรียญทอง',
-      ring: 'พลังทำลายล้างท่าไม้ตาย'
+      ring: 'พลังทำลายล้างท่าไม้ตาย',
+      bracelet: 'คริติคอลดาเมจ & ดาเมจ'
     };
 
     modalMainStatEl.textContent = `ค่าพลังหลัก: +${item.mainStatVal}% (${statTypeNames[item.type] || 'ตามชิ้นส่วน'})`;
@@ -2069,7 +2220,11 @@
       }
     }
 
-    btnModalSalvage.textContent = `ย่อยเป็น +${item.goldValue} 🪙`;
+    if (modalCosmicPerkEl) {
+      modalCosmicPerkEl.style.display = item.rarity === 'cosmic' ? 'block' : 'none';
+    }
+
+    btnModalSalvage.textContent = `ย่อยเป็น +${item.goldValue.toLocaleString()} 🪙`;
     itemModalEl.style.display = 'flex';
   }
 
@@ -2101,7 +2256,7 @@
     if (!selectedInventoryItem) return;
     gameState.inventory = gameState.inventory.filter(i => i.id !== selectedInventoryItem.id);
     gameState.gold += selectedInventoryItem.goldValue;
-    showToast(`♻️️ ย่อยสลายไอเทม ได้รับ +${selectedInventoryItem.goldValue} 🪙`);
+    showToast(`♻ ย่อยสลายไอเทม ได้รับ +${selectedInventoryItem.goldValue.toLocaleString()} 🪙`);
     closeItemModal();
     saveGame();
     renderUI();
@@ -2363,7 +2518,7 @@
     expBarFillEl.style.width = `${expPercent}%`;
     expCurrentEl.textContent = gameState.currentExp;
     expNextEl.textContent = gameState.nextExp;
-    goldValueEl.textContent = gameState.gold;
+    goldValueEl.textContent = gameState.gold.toLocaleString();
     streakValEl.textContent = gameState.streak.count || 1;
 
     const hasPoints = (gameState.statPoints || 0) > 0;
@@ -2385,7 +2540,7 @@
     staMultEl.textContent = Math.round(Math.max(0, (gameState.stats.sta - 10) * 2) + eqBonus.bonusSta);
     
     const critStats = calculateCritStats();
-    if (isFrenzyActive) {
+    if (isFrenzyActive || tempestCritBuffSeconds > 0) {
       agiCritEl.textContent = `100% (แรง x${critStats.critMultiplier.toFixed(2)})`;
     } else if (gameState.stats.agi > 100) {
       const extraCritDmgPct = Math.round(critStats.agiOverflowCritDmg * 100);
@@ -2411,13 +2566,24 @@
 
     const bossHpPct = gameState.bossHpRemain / currentBossMaxHp;
     bossGimmickBannerEl.className = 'boss-gimmick-banner';
-    bossCardEl.classList.remove('eclipse-active', 'supernova-active', 'singularity-active', 'chrono-active', 'superboss-active');
+    bossCardEl.classList.remove('eclipse-active', 'supernova-active', 'singularity-active', 'chrono-active', 'superboss-active', 'juggernaut-active');
 
     if (isLoop) {
       bossGimmickBannerEl.classList.add('active-awakened');
     }
 
-    if (boss.gimmick === 'mist') {
+    if (boss.gimmick === 'juggernaut') {
+      bossGimmickBannerEl.style.display = 'flex';
+      bossCardEl.classList.add('juggernaut-active');
+      if (bossHpPct > 0.50) {
+        bossGimmickTagEl.textContent = '🦏 ปราการเหล็กทมิฬ';
+        bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทะลวงเกราะเหล็กแล้ว!' : 'เกราะเหล็กลดดาเมจ 35% (เข้าสู่ Flow State หรือร่ายไม้ตายเพื่อเจาะเกราะ)';
+      } else {
+        bossGimmickBannerEl.classList.add('active-supernova');
+        bossGimmickTagEl.textContent = '💥 ทุบแผ่นดินเดือด';
+        bossGimmickTextEl.textContent = 'เร่งเพซ < 6:00 หรือดันชีพจร Zone 3 เคาน์เตอร์ดาเมจ x1.75! (ช้ากว่า 7:00 ดาเมจลด 40%)';
+      }
+    } else if (boss.gimmick === 'mist') {
       bossGimmickBannerEl.style.display = 'flex';
       const mistThresh = isLoop ? 0.85 : 0.75;
       if (bossHpPct <= mistThresh) {
@@ -2462,7 +2628,7 @@
       bossGimmickBannerEl.style.display = 'flex';
       if (bossHpPct > 0.50) {
         bossGimmickBannerEl.classList.add('active-carapace');
-        bossGimmickTagEl.textContent = '☄️️ สุริยะเพลิง';
+        bossGimmickTagEl.textContent = '☄ สุริยะเพลิง';
         bossGimmickTextEl.textContent = 'สะสมระยะทางฝ่าเปลวเพลิงสุริยะเพื่อบุกทะลวงครึ่งแรก';
       } else {
         bossGimmickBannerEl.classList.add('active-supernova');
@@ -2587,21 +2753,33 @@
     btnBuyElixir.disabled = gameState.gold < getElixirPrice();
   }
 
+  function renderShopRateText(el, itemKey) {
+    const effRate = getUpgradeEffectiveSuccessRate(itemKey);
+    const baseRate = getUpgradeBaseSuccessRate(gameState.upgrades[itemKey] || 0);
+    const failStreak = (gameState.upgradeFailStreak && gameState.upgradeFailStreak[itemKey]) || 0;
+
+    if (failStreak > 0 && baseRate < 100) {
+      el.innerHTML = `${effRate}% <span class="pity-bonus-tag">(+${failStreak * 10}% สะสม)</span>`;
+    } else {
+      el.textContent = `${effRate}%`;
+    }
+  }
+
   function renderShop() {
     lvlBladeEl.textContent = gameState.upgrades.blade;
     bladeBonusEl.textContent = gameState.upgrades.blade * 5;
     priceBladeEl.textContent = getBladePrice();
-    rateBladeEl.textContent = getUpgradeSuccessRate(gameState.upgrades.blade);
+    renderShopRateText(rateBladeEl, 'blade');
 
     lvlCharmEl.textContent = gameState.upgrades.charm;
     charmBonusEl.textContent = gameState.upgrades.charm * 10;
     priceCharmEl.textContent = getCharmPrice();
-    rateCharmEl.textContent = getUpgradeSuccessRate(gameState.upgrades.charm);
+    renderShopRateText(rateCharmEl, 'charm');
 
     lvlEyeEl.textContent = gameState.upgrades.eye;
     eyeBonusEl.textContent = (gameState.upgrades.eye || 0) * 10;
     priceEyeEl.textContent = getEyePrice();
-    rateEyeEl.textContent = getUpgradeSuccessRate(gameState.upgrades.eye);
+    renderShopRateText(rateEyeEl, 'eye');
 
     priceElixirEl.textContent = getElixirPrice();
   }
@@ -2907,15 +3085,17 @@
     const cost = getBladePrice();
     if (gameState.gold >= cost) {
       gameState.gold -= cost;
-      const rate = getUpgradeSuccessRate(gameState.upgrades.blade);
+      const rate = getUpgradeEffectiveSuccessRate('blade');
       const roll = Math.random() * 100;
 
       if (roll < rate) {
         gameState.upgrades.blade += 1;
+        gameState.upgradeFailStreak.blade = 0; // รีเซ็ตแต้มล้มเหลว
         showToast(`🗡️ ตีบวกดาบเงาสำเร็จเป็น Lv.${gameState.upgrades.blade} (+${gameState.upgrades.blade * 5}% ดาเมจ)!`);
         voiceBatchState.bladeSuccessLevel = gameState.upgrades.blade;
       } else {
-        showToast(`❌ ตีบวกดาบเงาล้มเหลว! (โอกาส ${rate}%) เสียเหรียญทอง`);
+        gameState.upgradeFailStreak.blade = (gameState.upgradeFailStreak.blade || 0) + 1;
+        showToast(`❌ ตีบวกล้มเหลว! ได้รับโบนัสโอกาสสำเร็จครั้งถัดไป +10% (สะสม: +${gameState.upgradeFailStreak.blade * 10}%)`);
       }
       voiceBatchState.bladeAttempts++;
 
@@ -2923,7 +3103,7 @@
         if (voiceBatchState.bladeSuccessLevel !== null) {
           speakVoice(`ตีบวกดาบเงาสำเร็จ เลเวล ${voiceBatchState.bladeSuccessLevel}`, true);
         } else {
-          speakVoice('การตีบวกล้มเหลว', true);
+          speakVoice('การตีบวกล้มเหลว ได้รับโบนัสก้าวหน้าเพิ่มโอกาสครั้งถัดไป', true);
         }
         voiceBatchState.bladeAttempts = 0;
         voiceBatchState.bladeSuccessLevel = null;
@@ -2938,15 +3118,17 @@
     const cost = getCharmPrice();
     if (gameState.gold >= cost) {
       gameState.gold -= cost;
-      const rate = getUpgradeSuccessRate(gameState.upgrades.charm);
+      const rate = getUpgradeEffectiveSuccessRate('charm');
       const roll = Math.random() * 100;
 
       if (roll < rate) {
         gameState.upgrades.charm += 1;
+        gameState.upgradeFailStreak.charm = 0; // รีเซ็ตแต้มล้มเหลว
         showToast(`🧿 เสริมพลังเครื่องรางสำเร็จเป็น Lv.${gameState.upgrades.charm} (+${gameState.upgrades.charm * 10}% ทอง)!`);
         voiceBatchState.charmSuccessLevel = gameState.upgrades.charm;
       } else {
-        showToast(`❌ เสริมพลังเครื่องรางล้มเหลว! (โอกาส ${rate}%) เสียเหรียญทอง`);
+        gameState.upgradeFailStreak.charm = (gameState.upgradeFailStreak.charm || 0) + 1;
+        showToast(`❌ เสริมพลังล้มเหลว! ได้รับโบนัสโอกาสสำเร็จครั้งถัดไป +10% (สะสม: +${gameState.upgradeFailStreak.charm * 10}%)`);
       }
       voiceBatchState.charmAttempts++;
 
@@ -2954,7 +3136,7 @@
         if (voiceBatchState.charmSuccessLevel !== null) {
           speakVoice(`เสริมพลังเครื่องรางสำเร็จ เลเวล ${voiceBatchState.charmSuccessLevel}`, true);
         } else {
-          speakVoice('การอัปเกรดล้มเหลว', true);
+          speakVoice('การอัปเกรดล้มเหลว ได้รับโบนัสก้าวหน้าเพิ่มโอกาสครั้งถัดไป', true);
         }
         voiceBatchState.charmAttempts = 0;
         voiceBatchState.charmSuccessLevel = null;
@@ -2969,15 +3151,17 @@
     const cost = getEyePrice();
     if (gameState.gold >= cost) {
       gameState.gold -= cost;
-      const rate = getUpgradeSuccessRate(gameState.upgrades.eye);
+      const rate = getUpgradeEffectiveSuccessRate('eye');
       const roll = Math.random() * 100;
 
       if (roll < rate) {
         gameState.upgrades.eye += 1;
+        gameState.upgradeFailStreak.eye = 0; // รีเซ็ตแต้มล้มเหลว
         showToast(`👁️ เบิกเนตรอเวจีสำเร็จเป็น Lv.${gameState.upgrades.eye} (+${gameState.upgrades.eye * 10}% ดาเมจคริติคอล)!`);
         voiceBatchState.eyeSuccessLevel = gameState.upgrades.eye;
       } else {
-        showToast(`❌ เบิกเนตรอเวจีล้มเหลว! (โอกาส ${rate}%) เสียเหรียญทอง`);
+        gameState.upgradeFailStreak.eye = (gameState.upgradeFailStreak.eye || 0) + 1;
+        showToast(`❌ เบิกเนตรล้มเหลว! ได้รับโบนัสโอกาสสำเร็จครั้งถัดไป +10% (สะสม: +${gameState.upgradeFailStreak.eye * 10}%)`);
       }
       voiceBatchState.eyeAttempts++;
 
@@ -2985,7 +3169,7 @@
         if (voiceBatchState.eyeSuccessLevel !== null) {
           speakVoice(`เบิกเนตรอเวจีสำเร็จ เลเวล ${voiceBatchState.eyeSuccessLevel}`, true);
         } else {
-          speakVoice('การอัปเกรดล้มเหลว', true);
+          speakVoice('การอัปเกรดล้มเหลว ได้รับโบนัสก้าวหน้าเพิ่มโอกาสครั้งถัดไป', true);
         }
         voiceBatchState.eyeAttempts = 0;
         voiceBatchState.eyeSuccessLevel = null;
@@ -3168,6 +3352,10 @@
 
       if (runSeconds % 3 === 0) {
         saveCurrentActiveRun();
+      }
+
+      if (tempestCritBuffSeconds > 0) {
+        tempestCritBuffSeconds--;
       }
 
       if (isFrenzyActive || currentHrZone === 3) {
@@ -3372,6 +3560,7 @@
     isFlowStateActive = false;
     rhythmBaselinePace = null;
     rhythmConsistentDistance = 0.0;
+    flowGraceStrikes = 0;
     flowBadgeEl.style.display = 'none';
 
     saveCurrentActiveRun();

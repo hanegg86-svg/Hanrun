@@ -21,6 +21,8 @@
   --rarity-legendary: #fbbf24;
   --rarity-mythic: #f43f5e;
   --rarity-mythic-glow: rgba(244, 63, 94, 0.6);
+  --rarity-cosmic: #38bdf8;
+  --rarity-cosmic-glow: rgba(56, 189, 248, 0.85);
 
   /* Heart Rate Zone Colors */
   --zone-1: #9ca3af;
@@ -39,6 +41,7 @@
   --set-blood: #f87171;
   --set-void: #38bdf8;
   --set-annihilator: #a855f7;
+  --set-tempest: #f59e0b;
 }
 
 * {
@@ -369,6 +372,15 @@ body {
 
 .boss-card.chrono-active::before {
   background: linear-gradient(90deg, #38bdf8, #a855f7, #ffd700);
+}
+
+.boss-card.juggernaut-active {
+  border-color: #f59e0b;
+  box-shadow: 0 0 35px rgba(245, 158, 11, 0.5);
+}
+
+.boss-card.juggernaut-active::before {
+  background: linear-gradient(90deg, transparent, #f59e0b, #ef4444, transparent);
 }
 
 .boss-card.superboss-active {
@@ -1171,11 +1183,11 @@ body {
   max-width: 55%;
 }
 
-/* 5 Slots Grid (Weapon, Armor, Boots, Relic, Ring) */
+/* 6 Slots Grid (Weapon, Armor, Boots, Relic, Ring, Bracelet) */
 .equip-slots-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 5px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
   margin: 10px 0 8px 0;
   width: 100%;
 }
@@ -1190,7 +1202,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  min-height: 84px;
+  min-height: 82px;
   min-width: 0;
   overflow: hidden;
   position: relative;
@@ -1207,19 +1219,19 @@ body {
 }
 
 .slot-label {
-  font-size: 0.58rem;
+  font-size: 0.54rem;
   color: var(--text-muted);
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .slot-item-icon {
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   margin: 2px 0;
 }
 
 .slot-item-name {
-  font-size: 0.58rem;
+  font-size: 0.55rem;
   color: #fff;
   text-align: center;
   white-space: nowrap;
@@ -1230,7 +1242,7 @@ body {
 }
 
 .slot-item-set-tag {
-  font-size: 0.5rem;
+  font-size: 0.48rem;
   font-weight: 800;
   padding: 1px 3px;
   border-radius: 3px;
@@ -1392,10 +1404,27 @@ body {
   background: radial-gradient(circle, rgba(244, 63, 94, 0.15) 0%, #171620 100%);
   animation: mythicPulse 2s infinite ease-in-out;
 }
+.inv-item-card.rarity-cosmic {
+  border: 1.5px solid var(--rarity-cosmic);
+  box-shadow: 0 0 16px var(--rarity-cosmic-glow);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22) 0%, rgba(168, 85, 247, 0.22) 50%, rgba(236, 72, 153, 0.22) 100%);
+  animation: cosmicPulse 1.6s infinite alternate;
+}
 
 @keyframes mythicPulse {
   0%, 100% { box-shadow: 0 0 8px rgba(244, 63, 94, 0.4); }
   50% { box-shadow: 0 0 16px rgba(244, 63, 94, 0.85); }
+}
+
+@keyframes cosmicPulse {
+  0% {
+    border-color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.6), inset 0 0 6px rgba(168, 85, 247, 0.4);
+  }
+  100% {
+    border-color: #ec4899;
+    box-shadow: 0 0 18px rgba(236, 72, 153, 0.9), inset 0 0 10px rgba(56, 189, 248, 0.6);
+  }
 }
 
 .inv-item-icon {
@@ -1559,6 +1588,11 @@ body {
   color: #38bdf8;
   margin-top: 2px;
   font-weight: 700;
+}
+
+.pity-bonus-tag {
+  color: #4ade80;
+  font-weight: 800;
 }
 
 .item-footer {
@@ -2221,6 +2255,13 @@ body {
   font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.modal-item-rarity.rarity-cosmic {
+  background: linear-gradient(90deg, #38bdf8, #c084fc, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
 }
 
 .modal-item-set {
