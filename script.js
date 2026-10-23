@@ -441,14 +441,14 @@
     return 'Shadow Initiate';
   }
 
-  // --- Hardcore Daily Quests ---
+  // --- Hardcore Daily Quests (Target & Reward x10 Adjusted) ---
   function generateDailyQuests() {
     return [
-      { id: 'dq_dist', name: 'สำรวจอเวจีลึก: สะสมระยะทาง 4.0 กม.', target: 4.0, current: 0.0, unit: 'กม.', rewardExp: 3200, rewardGold: 350, claimed: false },
-      { id: 'dq_time', name: 'สมาธิจิตนักล่า: วิ่งสะสมเวลา 25 นาที', target: 1500, current: 0, unit: 'วินาที', rewardExp: 3800, rewardGold: 400, claimed: false },
-      { id: 'dq_cal', name: 'ผลาญพลังเวท: เผาผลาญ 250 kcal', target: 250, current: 0, unit: 'kcal', rewardExp: 3000, rewardGold: 320, claimed: false },
-      { id: 'dq_boss', name: 'ล่าสังหารสองชีพ: โค่นบอส 2 ตัว', target: 2, current: 0, unit: 'ตัว', rewardExp: 5000, rewardGold: 650, claimed: false },
-      { id: 'dq_crit', name: 'สังหารจุดตาย: โจมตีคริติคอล 20 ครั้ง', target: 20, current: 0, unit: 'ครั้ง', rewardExp: 4200, rewardGold: 450, claimed: false }
+      { id: 'dq_dist', name: 'สำรวจอเวจีลึก: สะสมระยะทาง 5.0 กม.', target: 5.0, current: 0.0, unit: 'กม.', rewardExp: 32000, rewardGold: 3500, claimed: false },
+      { id: 'dq_time', name: 'สมาธิจิตนักล่า: วิ่งสะสมเวลา 30 นาที', target: 1800, current: 0, unit: 'วินาที', rewardExp: 38000, rewardGold: 4000, claimed: false },
+      { id: 'dq_cal', name: 'ผลาญพลังเวท: เผาผลาญ 320 kcal', target: 320, current: 0, unit: 'kcal', rewardExp: 30000, rewardGold: 3200, claimed: false },
+      { id: 'dq_boss', name: 'ล่าสังหารสามชีพ: โค่นบอส 3 ตัว', target: 3, current: 0, unit: 'ตัว', rewardExp: 50000, rewardGold: 6500, claimed: false },
+      { id: 'dq_crit', name: 'สังหารจุดตาย: โจมตีคริติคอล 30 ครั้ง', target: 30, current: 0, unit: 'ครั้ง', rewardExp: 42000, rewardGold: 4500, claimed: false }
     ];
   }
 
@@ -612,6 +612,21 @@
       gameState.inventory.forEach(item => {
         if (item.goldValue < (updatedGoldValues[item.rarity] || 3000)) {
           item.goldValue = updatedGoldValues[item.rarity] || 3000;
+        }
+      });
+    }
+
+    // Auto-migrate เควสต์เดิมที่ค้างอยู่ให้เป็นชุดเป้าหมายและผลตอบแทน x10 ใหม่
+    if (gameState.dailyQuests && gameState.dailyQuests.length > 0) {
+      const freshQuests = generateDailyQuests();
+      gameState.dailyQuests.forEach(q => {
+        const matchingFresh = freshQuests.find(fq => fq.id === q.id);
+        if (matchingFresh) {
+          q.name = matchingFresh.name;
+          q.target = matchingFresh.target;
+          q.rewardExp = matchingFresh.rewardExp;
+          q.rewardGold = matchingFresh.rewardGold;
+          q.unit = matchingFresh.unit;
         }
       });
     }
@@ -2795,7 +2810,7 @@
       card.innerHTML = `
         <div class="quest-title-row">
           <span class="quest-name">${quest.name}</span>
-          <span class="quest-reward">+${quest.rewardExp} EXP / +${quest.rewardGold}G</span>
+          <span class="quest-reward">+${quest.rewardExp.toLocaleString()} EXP / +${quest.rewardGold.toLocaleString()}G</span>
         </div>
         <div class="quest-progress-bar">
           <div class="quest-progress-fill" style="width: ${pct}%;"></div>
@@ -2818,7 +2833,7 @@
           q.claimed = true;
           gameState.gold += q.rewardGold;
           addExp(q.rewardExp);
-          showToast(`🎁 เคลมภารกิจสำเร็จ! +${q.rewardGold} ทอง`);
+          showToast(`🎁 เคลมภารกิจสำเร็จ! +${q.rewardGold.toLocaleString()} ทอง`);
           speakVoice(`เคลมภารกิจสำเร็จ ได้รับ ${q.rewardGold} เหรียญทอง`);
           saveGame();
           renderUI();
