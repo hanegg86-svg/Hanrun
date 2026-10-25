@@ -283,7 +283,7 @@
     }
   };
 
-  // --- Boss List Database (Including Major Tier II & Super Boss) ---
+  // --- Boss List Database (Including Tier II Major, Super Boss & Secret Boss) ---
   const BOSS_DATABASE = [
     {
       id: 'boss_1',
@@ -405,6 +405,17 @@
       rewardExp: 350000,
       rewardGold: 70000,
       gimmick: 'superboss'
+    },
+    {
+      id: 'boss_secret',
+      tier: 'TIER EX (SECRET)',
+      name: 'Primordial Void Sovereign: Ouroboros-Null',
+      avatar: '🌌',
+      maxHpKm: 120.00,
+      desc: 'ผู้กลืนกินมิติบรรพกาล ปรากฏเฉพาะผู้พิชิตจบลูป 3 ขึ้นไป! ทลายเกราะด้วย Flow State หรือไม้ตาย และเร่งชีพจร Zone 3 เพื่อสยบการดูดกลืนพลัง!',
+      rewardExp: 500000,
+      rewardGold: 100000,
+      gimmick: 'secretboss'
     }
   ];
 
@@ -422,11 +433,12 @@
     const currentLevel = gameState.upgrades[itemKey] || 0;
     const baseRate = getUpgradeBaseSuccessRate(currentLevel);
     const failStreak = (gameState.upgradeFailStreak && gameState.upgradeFailStreak[itemKey]) || 0;
-    const bonusRate = failStreak * 10; // เพิ่มขึ้นทีละ +10% ต่อครั้งที่ล้มเหลว
+    const bonusRate = failStreak * 10;
     return Math.min(100, baseRate + bonusRate);
   }
 
   function getTitleForLevel(level) {
+    if (level >= 80) return 'Ouroboros God Sovereign';
     if (level >= 75) return 'Cosmic Void Exterminator';
     if (level >= 60) return 'Eternal Sovereign of Time & Void';
     if (level >= 50) return 'Lord of the Primordial Void';
@@ -505,7 +517,8 @@
       boss_7: { kills: 0, name: 'Eclipse Harbinger: Ignis-Vorax' },
       boss_8: { kills: 0, name: 'Primordial Void Leviathan: Nihil-Khaos' },
       boss_9: { kills: 0, name: 'Chrono-Abyss Overlord: Chronos-Nox' },
-      boss_super: { kills: 0, name: 'Cosmic Dread: Azathoth-Nox' }
+      boss_super: { kills: 0, name: 'Cosmic Dread: Azathoth-Nox' },
+      boss_secret: { kills: 0, name: 'Primordial Void Sovereign: Ouroboros-Null' }
     },
     chestsAvailable: 0,
     streak: { count: 1, lastDate: new Date().toDateString() },
@@ -545,6 +558,7 @@
   let chronoHealingTick = 0;
   let bloodKnightStallTick = 0;
   let superbossSiphonTick = 0;
+  let secretbossSiphonTick = 0;
   let gimmickAnnounced = {};
 
   // Mini-Event Variables
@@ -616,7 +630,6 @@
       });
     }
 
-    // Auto-migrate เควสต์เดิมที่ค้างอยู่ให้เป็นชุดเป้าหมายและผลตอบแทน x10 ใหม่
     if (gameState.dailyQuests && gameState.dailyQuests.length > 0) {
       const freshQuests = generateDailyQuests();
       gameState.dailyQuests.forEach(q => {
@@ -655,6 +668,7 @@
       chronoHealingTick = 0;
       bloodKnightStallTick = 0;
       superbossSiphonTick = 0;
+      secretbossSiphonTick = 0;
     } else if (activeRun) {
       if (typeof activeRun.bossIndex === 'number') gameState.bossIndex = activeRun.bossIndex;
       if (typeof activeRun.bossHpRemain === 'number') gameState.bossHpRemain = activeRun.bossHpRemain;
@@ -818,7 +832,6 @@
     const baseName = nameList[Math.floor(Math.random() * nameList.length)];
     const icons = { weapon: '🗡️', armor: '🛡️', boots: '🥾', relic: '🧿', ring: '💍', bracelet: '📿' };
 
-    // ปรับราคาขายไอเทมแพงขึ้น 100 เท่า
     const goldValues = {
       cosmic: 350000,
       mythic: 150000,
@@ -889,7 +902,6 @@
         bonusCritDmg += (item.subStat2Val * 0.01);
       }
 
-      // Cosmic Tier Innate: ทะลุเกราะชิ้นละ 10%
       if (item.rarity === 'cosmic') {
         bonusArmorPierce += 10;
       }
@@ -1529,7 +1541,7 @@
     const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier * loopRewardMult * ultBonusMult);
     const rewardGold = Math.floor(currentBoss.rewardGold * totalGoldMultiplier * loopRewardMult * ultBonusMult);
 
-    showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp} EXP & +${rewardGold} ทอง & 📦 1 หีบ`);
+    showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp.toLocaleString()} EXP & +${rewardGold.toLocaleString()} ทอง & 📦 1 หีบ`);
     speakVoice(`สยบ ${currentBoss.name} สำเร็จแล้ว ปิดผนึกชัยชนะ!`, true);
     addExp(rewardExp);
     gameState.gold += rewardGold;
@@ -1578,9 +1590,20 @@
     chronoHealingTick = 0;
     bloodKnightStallTick = 0;
     superbossSiphonTick = 0;
+    secretbossSiphonTick = 0;
 
-    // Super Boss condition: appears in Loop >= 1 as the final boss
-    const maxBossIndexForCurrentLoop = (gameState.bossLoopCycle || 0) >= 1 ? BOSS_DATABASE.length - 1 : BOSS_DATABASE.length - 2;
+    // Boss Pool Scaling:
+    // Loop 0: Boss 0..9 (Tier I - Tier IX)
+    // Loop 1 - 2: Boss 0..10 (Tier I - Tier X Super Boss)
+    // Loop >= 3: Boss 0..11 (Tier I - Tier EX Secret Boss)
+    let maxBossIndexForCurrentLoop;
+    if ((gameState.bossLoopCycle || 0) >= 3) {
+      maxBossIndexForCurrentLoop = BOSS_DATABASE.length - 1;
+    } else if ((gameState.bossLoopCycle || 0) >= 1) {
+      maxBossIndexForCurrentLoop = BOSS_DATABASE.length - 2;
+    } else {
+      maxBossIndexForCurrentLoop = BOSS_DATABASE.length - 3;
+    }
 
     let nextBossIndex;
     if (gameState.bossIndex >= maxBossIndexForCurrentLoop) {
@@ -1590,9 +1613,12 @@
       speakVoice(`พิชิตบอสรอบนี้สำเร็จแล้ว! เข้าสู่สังเวียนอเวจีรอบที่ ${gameState.bossLoopCycle}`, true);
     } else {
       nextBossIndex = gameState.bossIndex + 1;
-      if (nextBossIndex === BOSS_DATABASE.length - 1) {
+      if (nextBossIndex === BOSS_DATABASE.length - 2) {
         showToast('⚠️ ประตูมิติระดับสูงสุดเปิดออก! COSMIC SUPER BOSS ปรากฏกาย!');
         speakVoice('ประตูมิติระดับสูงสุดเปิดออก เทพอสูรคอสมิก ปรากฏกาย!', true);
+      } else if (nextBossIndex === BOSS_DATABASE.length - 1) {
+        showToast('🌌 ห้วงอเวจีโบราณแยกออก! มหาอสูรลับ PRIMORDIAL SOVEREIGN ตื่นขึ้นแล้ว!');
+        speakVoice('คำเตือนระดับสูงสุด ประตูมิติมืดมิดเปิดออก เทพอสูรลับ บรรพกาล ปรากฏกาย!', true);
       }
     }
 
@@ -1642,10 +1668,10 @@
         flowGraceStrikes = 0;
       } else {
         const paceDiff = Math.abs(rollingPace - rhythmBaselinePace);
-        if (paceDiff <= 0.45) { // กรอบ Tolerance กว้างขึ้นครอบคลุม GPS Jitter
+        if (paceDiff <= 0.45) {
           rhythmConsistentDistance += distanceDeltaKm;
           flowGraceStrikes = 0;
-          rhythmBaselinePace = (rhythmBaselinePace * 0.75) + (rollingPace * 0.25); // EMA Update
+          rhythmBaselinePace = (rhythmBaselinePace * 0.75) + (rollingPace * 0.25);
 
           if (rhythmConsistentDistance >= flowThresholdKm && !isFlowStateActive) {
             isFlowStateActive = true;
@@ -1658,7 +1684,7 @@
           }
         } else {
           flowGraceStrikes++;
-          if (flowGraceStrikes > 3) { // Grace Period 3 ครั้งก่อนรีเซ็ต
+          if (flowGraceStrikes > 3) {
             rhythmBaselinePace = rollingPace;
             rhythmConsistentDistance = 0.0;
             flowGraceStrikes = 0;
@@ -1928,7 +1954,41 @@
       }
     }
 
-    // Cosmic Tier ทะลุเกราะตามโบนัสที่มี
+    // --- SECRET BOSS GIMMICK (LOOP 3+) ---
+    if (currentBoss.gimmick === 'secretboss') {
+      if (bossHpPct > 0.60) {
+        if (bossVulnerableTimer > 0 || isFlowStateActive) {
+          bossDamageMultiplier *= 1.8;
+        } else {
+          bossDamageMultiplier *= 0.25;
+          if (!gimmickAnnounced.secretbossP1) {
+            gimmickAnnounced.secretbossP1 = true;
+            speakVoice('มหาอสูรลับแผ่เกราะบิดเบือนมิติ เข้าสู่โฟลว์สเตท หรือปลดปล่อยท่าไม้ตายเพื่อทะลวงเกราะ', true);
+            showToast('🌌 Void Distortion: เกราะลดดาเมจ 75%! เข้าสู่ Flow State หรือใช้ Shadow Slash ทลายเกราะ');
+          }
+        }
+      } else if (bossHpPct <= 0.60 && bossHpPct > 0.30) {
+        if (!gimmickAnnounced.secretbossP2) {
+          gimmickAnnounced.secretbossP2 = true;
+          speakVoice('เข้าสู่เฟสสอง แรงกดดันมิติอเวจี ดันชีพจรแตะโซนสามและคุมเพซให้เร็วกว่า 7:00 มิฉะนั้นเกจไม้ตายจะถูกดูดกลืน');
+          showToast('🕳️ Event Horizon: ดันชีพจร Zone 3 และวิ่งเร็วกว่า 7:00 มิฉะนั้นบอสจะดูดเกจและฟื้นเลือด!');
+        }
+        if (rollingPace === null || rollingPace > 7.0 || currentHrZone < 3) {
+          bossDamageMultiplier *= 0.40;
+        } else {
+          bossDamageMultiplier *= 1.50;
+        }
+      } else {
+        if (!gimmickAnnounced.secretbossP3) {
+          gimmickAnnounced.secretbossP3 = true;
+          speakVoice('คำเตือนฉุกเฉินระดับสูงสุด! ห้วงมิติกำลังดับสูญ ระเบิดคริติคอลพลังทำลายล้างสูงสุดเพื่อปิดฉาก!', true);
+          showToast('💥 Omniverse Collapse: มิติกำลังดับสูญ! ดาเมจคริติคอลทะยาน x3.5 สปรินต์เผด็จศึก!');
+        }
+        bossDamageMultiplier *= 2.2;
+        critDmgMultiplier *= 1.8;
+      }
+    }
+
     if (eqBonus.bonusArmorPierce > 0 && bossDamageMultiplier < 1.0) {
       bossDamageMultiplier = Math.min(1.0, bossDamageMultiplier + (eqBonus.bonusArmorPierce * 0.01));
     }
@@ -1985,26 +2045,23 @@
     let burstDamageKm = tierBaseDamages[tier] * strMultiplier * shadowSetDmgMult * ringUltDmgMult;
     const currentBoss = BOSS_DATABASE[gameState.bossIndex];
 
-    // Tempest 4-piece Bonus: สายฟ้าทัณฑ์อัสนี +0.35 กม. และล็อกคริ 15 วิ
     if (setCounts.darktempest >= 4) {
       burstDamageKm += 0.35;
       tempestCritBuffSeconds = 15;
       showToast('⚡ TEMPEST WRATH! สายฟ้าฟาด +0.35 กม. และล็อกคริติคอล 100% 15 วิ!');
     }
 
-    // Annihilator 4-piece gauge refund
     if (setCounts.voidannihilator >= 4) {
       const refund = cost * 0.30;
       gameState.ultimateCharge = Math.min(300, gameState.ultimateCharge + refund);
       showToast(`⚡ มหาอสูรล้างดารา: รีฟันด์เกจคืน +${refund.toFixed(0)}%!`);
     }
 
-    // Milestone tracking
     gameState.statsTrack.ultCastCount = (gameState.statsTrack.ultCastCount || 0) + 1;
     const achUlt = gameState.achievements.find(a => a.id === 'ach_ult_cast');
     if (achUlt) achUlt.current = Math.min(achUlt.target, gameState.statsTrack.ultCastCount);
 
-    if (currentBoss.gimmick === 'carapace' || currentBoss.gimmick === 'superboss' || currentBoss.gimmick === 'juggernaut') {
+    if (currentBoss.gimmick === 'carapace' || currentBoss.gimmick === 'superboss' || currentBoss.gimmick === 'juggernaut' || currentBoss.gimmick === 'secretboss') {
       const bonusVuln = setCounts.shadowstalker >= 4 ? 30 : 0;
       bossVulnerableTimer = tierVulnSec[tier] + bonusVuln;
       showToast(`💥 SHADOW SLASH (Lv.${tier}) กะเทาะเกราะแตก! บอสเปราะบาง (${bossVulnerableTimer} วิ)`);
@@ -2040,7 +2097,7 @@
     gameState.chestsAvailable -= 1;
 
     const roll = Math.random();
-    if (roll < 0.45 && gameState.inventory.length < 20) {
+    if (roll < 0.45 && gameState.inventory.length < 30) {
       const newItem = rollRandomItem(true, gameState.bossLoopCycle || 0);
       gameState.inventory.push(newItem);
       const setLabel = SET_DATABASE[newItem.setId] ? ` [${SET_DATABASE[newItem.setId].name}]` : '';
@@ -2154,7 +2211,7 @@
       : gameState.inventory.filter(i => i.type === currentInvFilter);
 
     if (filteredItems.length === 0) {
-      inventoryGridEl.innerHTML = '<div style="grid-column: span 5; font-size: 0.66rem; color: #71717a; text-align: center; padding: 18px 0;">ไม่มีไอเทมในหมวดหมู่นี้</div>';
+      inventoryGridEl.innerHTML = '<div style="grid-column: span 4; font-size: 0.66rem; color: #71717a; text-align: center; padding: 18px 0;">ไม่มีไอเทมในหมวดหมู่นี้</div>';
     } else {
       filteredItems.forEach(item => {
         const card = document.createElement('div');
@@ -2282,8 +2339,8 @@
       const type = slot.getAttribute('data-slottype');
       const item = gameState.equipment[type];
       if (item) {
-        if (gameState.inventory.length >= 20) {
-          showToast('กระเป๋าเต็ม ไม่สามารถถอดอุปกรณ์ได้');
+        if (gameState.inventory.length >= 30) {
+          showToast('กระเป๋าเต็ม (สูงสุด 30 ชิ้น) ไม่สามารถถอดอุปกรณ์ได้');
           return;
         }
         gameState.inventory.push(item);
@@ -2581,7 +2638,7 @@
 
     const bossHpPct = gameState.bossHpRemain / currentBossMaxHp;
     bossGimmickBannerEl.className = 'boss-gimmick-banner';
-    bossCardEl.classList.remove('eclipse-active', 'supernova-active', 'singularity-active', 'chrono-active', 'superboss-active', 'juggernaut-active');
+    bossCardEl.classList.remove('eclipse-active', 'supernova-active', 'singularity-active', 'chrono-active', 'superboss-active', 'secretboss-active', 'juggernaut-active');
 
     if (isLoop) {
       bossGimmickBannerEl.classList.add('active-awakened');
@@ -2698,6 +2755,25 @@
       } else {
         bossGimmickTagEl.textContent = '🌌 Cosmic Collapse (เฟส 3)';
         bossGimmickTextEl.textContent = 'วิ่ง Zone 3-4 หรือ Flow State ดาเมจคริติคอลพุ่งทะยาน x3.0 สปรินต์ปิดฉาก!';
+      }
+    } else if (boss.gimmick === 'secretboss') {
+      bossGimmickBannerEl.style.display = 'flex';
+      bossCardEl.classList.add('secretboss-active');
+      bossGimmickBannerEl.classList.add('active-secretboss');
+      if (bossHpPct > 0.60) {
+        if (bossVulnerableTimer > 0 || isFlowStateActive) {
+          bossGimmickTagEl.textContent = '🛡️ เกราะมิติบิดเบือนแตกสะบั้น!';
+          bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทะลวงมิติสำเร็จ! ดาเมจทะลวง x1.8' : `บอสเปราะบาง รับดาเมจ x2 นานอีก ${bossVulnerableTimer} วิ`;
+        } else {
+          bossGimmickTagEl.textContent = '🌌 Void Distortion (เฟส 1)';
+          bossGimmickTextEl.textContent = 'เกราะลดดาเมจ 75%! เข้าสู่ Flow State หรือร่ายไม้ตายเพื่อทำลายเกราะ';
+        }
+      } else if (bossHpPct > 0.30) {
+        bossGimmickTagEl.textContent = '🕳️ Event Horizon (เฟส 2)';
+        bossGimmickTextEl.textContent = 'ดันชีพจร Zone 3 และคุมเพซ < 7:00 มิฉะนั้นเกจจะถูกสูบ -20% และบอสฮีลเลือด!';
+      } else {
+        bossGimmickTagEl.textContent = '💥 Omniverse Collapse (เฟส 3)';
+        bossGimmickTextEl.textContent = 'จักรวาลดับสูญ! ดาเมจคริติคอลพุ่งทะยาน x3.5 สปรินต์ปิดฉากมหาอสูรลับ!';
       }
     } else if (isLoop && boss.id === 'boss_1') {
       bossGimmickBannerEl.style.display = 'flex';
@@ -3019,6 +3095,7 @@
       chronoHealingTick = 0;
       bloodKnightStallTick = 0;
       superbossSiphonTick = 0;
+      secretbossSiphonTick = 0;
       isGoblinActive = false;
       runDistanceKm = 0.0;
       runSeconds = 0;
@@ -3056,6 +3133,7 @@
       chronoHealingTick = 0;
       bloodKnightStallTick = 0;
       superbossSiphonTick = 0;
+      secretbossSiphonTick = 0;
       isGoblinActive = false;
       runDistanceKm = 0.0;
       runSeconds = 0;
@@ -3105,7 +3183,7 @@
 
       if (roll < rate) {
         gameState.upgrades.blade += 1;
-        gameState.upgradeFailStreak.blade = 0; // รีเซ็ตแต้มล้มเหลว
+        gameState.upgradeFailStreak.blade = 0;
         showToast(`🗡️ ตีบวกดาบเงาสำเร็จเป็น Lv.${gameState.upgrades.blade} (+${gameState.upgrades.blade * 5}% ดาเมจ)!`);
         voiceBatchState.bladeSuccessLevel = gameState.upgrades.blade;
       } else {
@@ -3138,7 +3216,7 @@
 
       if (roll < rate) {
         gameState.upgrades.charm += 1;
-        gameState.upgradeFailStreak.charm = 0; // รีเซ็ตแต้มล้มเหลว
+        gameState.upgradeFailStreak.charm = 0;
         showToast(`🧿 เสริมพลังเครื่องรางสำเร็จเป็น Lv.${gameState.upgrades.charm} (+${gameState.upgrades.charm * 10}% ทอง)!`);
         voiceBatchState.charmSuccessLevel = gameState.upgrades.charm;
       } else {
@@ -3171,7 +3249,7 @@
 
       if (roll < rate) {
         gameState.upgrades.eye += 1;
-        gameState.upgradeFailStreak.eye = 0; // รีเซ็ตแต้มล้มเหลว
+        gameState.upgradeFailStreak.eye = 0;
         showToast(`👁️ เบิกเนตรอเวจีสำเร็จเป็น Lv.${gameState.upgrades.eye} (+${gameState.upgrades.eye * 10}% ดาเมจคริติคอล)!`);
         voiceBatchState.eyeSuccessLevel = gameState.upgrades.eye;
       } else {
@@ -3343,6 +3421,7 @@
       chronoHealingTick = 0;
       bloodKnightStallTick = 0;
       superbossSiphonTick = 0;
+      secretbossSiphonTick = 0;
       isGoblinActive = false;
       goblinCooldownSeconds = 0;
       lastGoblinTriggerKm = 0.0;
@@ -3494,6 +3573,21 @@
         }
       }
 
+      if (currentBoss.gimmick === 'secretboss' && bossHpPct <= 0.60 && bossHpPct > 0.30) {
+        const rollingPace = getRecentRollingPace();
+        if (rollingPace === null || rollingPace > 7.0 || (isBleConnected && currentHrZone < 3)) {
+          secretbossSiphonTick++;
+          if (secretbossSiphonTick >= 8) {
+            secretbossSiphonTick = 0;
+            gameState.ultimateCharge = Math.max(0, gameState.ultimateCharge - 20);
+            gameState.bossHpRemain = Math.min(bossMaxHp, gameState.bossHpRemain + 0.08);
+            showToast('🕳️ Event Horizon: แรงกดดันมิติ! บอสดูดเกจ -20% และฮีลเลือด +0.08 กม.');
+          }
+        } else {
+          secretbossSiphonTick = 0;
+        }
+      }
+
       const questTime = gameState.dailyQuests.find(q => q.id === 'dq_time');
       if (questTime) {
         questTime.current = Math.min(questTime.target, questTime.current + 1);
@@ -3610,6 +3704,7 @@
         chronoHealingTick = 0;
         bloodKnightStallTick = 0;
         superbossSiphonTick = 0;
+        secretbossSiphonTick = 0;
         isGoblinActive = false;
         goblinBannerEl.style.display = 'none';
 
@@ -3694,6 +3789,7 @@
     chronoHealingTick = 0;
     bloodKnightStallTick = 0;
     superbossSiphonTick = 0;
+    secretbossSiphonTick = 0;
     isGoblinActive = false;
     goblinBannerEl.style.display = 'none';
 

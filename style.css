@@ -398,6 +398,21 @@ body {
   background: linear-gradient(90deg, #ec4899, #a855f7, #38bdf8, #ffd700);
 }
 
+.boss-card.secretboss-active {
+  border-color: #f43f5e;
+  box-shadow: 0 0 55px rgba(244, 63, 94, 0.9);
+  animation: secretbossGlow 1.8s infinite alternate;
+}
+
+@keyframes secretbossGlow {
+  0% { box-shadow: 0 0 35px rgba(244, 63, 94, 0.6); }
+  100% { box-shadow: 0 0 65px rgba(168, 85, 247, 0.95); }
+}
+
+.boss-card.secretboss-active::before {
+  background: linear-gradient(90deg, #f43f5e, #a855f7, #38bdf8, #ffd700);
+}
+
 .boss-card.awakened-active {
   border-color: var(--rarity-mythic);
   box-shadow: 0 0 35px rgba(244, 63, 94, 0.45);
@@ -558,6 +573,12 @@ body {
 .boss-gimmick-banner.active-superboss {
   border-color: #c084fc;
   background: rgba(147, 51, 234, 0.4);
+  animation: pulse 0.5s infinite;
+}
+
+.boss-gimmick-banner.active-secretboss {
+  border-color: #f43f5e;
+  background: rgba(244, 63, 94, 0.35);
   animation: pulse 0.5s infinite;
 }
 
@@ -1357,7 +1378,7 @@ body {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
-  max-height: 210px;
+  max-height: 250px;
   overflow-y: auto;
   padding-right: 2px;
   scrollbar-width: thin;
