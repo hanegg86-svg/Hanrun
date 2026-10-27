@@ -111,7 +111,7 @@
         <div class="chest-icon-anim">📦</div>
         <div class="chest-details">
           <h4 class="chest-title">พบหีบสมบัติดันเจี้ยน! (<span id="chest-count">0</span> หีบ)</h4>
-          <p class="chest-desc">ลุ้นรับอุปกรณ์สวมใส่หายาก, ชุดเซ็ตทรงพลัง, เหรียญทอง หรือ EXP</p>
+          <p class="chest-desc">ลุ้นรับอุปกรณ์สวมใส่หายาก, หินรูนโบราณ, ชุดเซ็ต, เหรียญทอง หรือ EXP</p>
         </div>
         <button class="btn-open-chest" id="btn-open-chest" type="button">เปิดหีบ</button>
       </div>
@@ -272,7 +272,7 @@
       <div class="inventory-container">
         <div class="inv-header">
           <span class="inv-title">คลังไอเทม (<span id="inv-count">0</span>/30)</span>
-          <span class="inv-hint">แตะเพื่อดู/สวมใส่</span>
+          <span class="inv-hint">แตะเพื่อดู/สวมใส่/ฝังรูน</span>
         </div>
 
         <div class="inv-tabs">
@@ -287,6 +287,16 @@
 
         <div class="inventory-grid" id="inventory-grid"></div>
       </div>
+    </section>
+
+    <!-- Rune Stash Section -->
+    <section class="rune-stash-section">
+      <div class="section-title-row">
+        <h2 class="section-title">คลังหินรูนโบราณ (Rune Stash)</h2>
+        <span class="rune-count-summary" id="rune-count-summary">ครอบครอง 0 ก้อน</span>
+      </div>
+      <p class="rune-stash-hint">หินรูนจากการพิชิตบอสและหีบสมบัติ นำมาฝังลงช่องเจาะ (Sockets) เพื่อปลุกพลังคำรูนลับ (Runewords)</p>
+      <div class="rune-grid" id="rune-grid"></div>
     </section>
 
     <!-- Monster Codex / Bestiary -->
@@ -525,10 +535,15 @@
           </div>
         </div>
         <div class="modal-body">
+          <div class="modal-sockets-row" id="modal-sockets-row" style="display: none;"></div>
           <p class="modal-stat-line" id="modal-main-stat">+10% ดาเมจ</p>
           <p class="modal-stat-line modal-sub" id="modal-sub-stat">+3% คริติคอล</p>
           <p class="modal-stat-line modal-sub" id="modal-sub-stat-2" style="display: none; color: #fda4af;">+15% คริติคอลดาเมจ</p>
           <p class="modal-stat-line modal-sub" id="modal-cosmic-perk" style="display: none; color: #38bdf8; font-weight: 800;">🌌 พลังจักรวาล: ทะลุเกราะบอส +10%</p>
+          <div class="modal-runeword-desc-box" id="modal-runeword-desc-box" style="display: none;">
+            <span class="modal-runeword-title" id="modal-runeword-title">⚡ พลังคำรูนโบราณ:</span>
+            <p class="modal-runeword-desc" id="modal-runeword-desc"></p>
+          </div>
           <div class="modal-set-desc-box" id="modal-set-desc-box">
             <span class="modal-set-title">🔮 คุณสมบัติเซ็ตโบราณ:</span>
             <p class="modal-set-line" id="modal-set-bonus-2">(2 ชิ้น) โบนัส 2 ชิ้น</p>
@@ -537,8 +552,34 @@
         </div>
         <div class="modal-actions">
           <button class="btn-modal-action btn-equip" id="btn-modal-equip" type="button">สวมใส่</button>
+          <button class="btn-modal-action btn-socket" id="btn-modal-socket" type="button" style="display: none;">ฝังรูน</button>
           <button class="btn-modal-action btn-salvage" id="btn-modal-salvage" type="button">ย่อยเป็นทอง</button>
           <button class="btn-modal-action btn-cancel" id="btn-modal-cancel" type="button">ปิด</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rune Socketing Modal -->
+    <div class="modal-overlay" id="socket-modal" style="display: none;">
+      <div class="modal-card modal-card-socket">
+        <div class="modal-header">
+          <span class="modal-item-icon">🔮</span>
+          <div class="modal-header-info">
+            <h3 class="modal-item-name">แท่นฝังหินรูนโบราณ</h3>
+            <span class="modal-item-rarity" style="color: #c084fc;">Socketing & Runewords</span>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="socket-target-summary" id="socket-target-summary"></div>
+          <div class="socket-slots-display" id="socket-slots-display"></div>
+          <div class="socket-runes-selection">
+            <span class="socket-select-label">เลือกหินรูนจาก Stash เพื่อฝัง:</span>
+            <div class="socket-runes-list" id="socket-runes-list"></div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-action btn-unsocket" id="btn-modal-unsocket" type="button" style="display: none;">ล้างรูน (ใช้ Hel)</button>
+          <button class="btn-modal-action btn-cancel" id="btn-socket-modal-close" type="button">ปิดแท่นฝัง</button>
         </div>
       </div>
     </div>

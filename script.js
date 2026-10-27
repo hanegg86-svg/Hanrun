@@ -180,7 +180,7 @@
     const touchY = e.touches[0].clientY;
     const touchDiff = touchY - touchStartY;
     if (window.scrollY <= 0 && touchDiff > 0) {
-      const scrollable = e.target.closest('.inventory-grid, .daily-list, .history-list, .achievements-claimed-list');
+      const scrollable = e.target.closest('.inventory-grid, .daily-list, .history-list, .achievements-claimed-list, .rune-grid, .socket-runes-list');
       if (!scrollable || scrollable.scrollTop <= 0) {
         e.preventDefault();
       }
@@ -283,7 +283,73 @@
     }
   };
 
-  // --- Boss List Database (Including Tier II Major, Super Boss & Secret Boss) ---
+  // --- Rune Database (El #1 to Fal #19) ---
+  const RUNE_DATABASE = {
+    el: { id: 'el', name: 'El', number: 1, icon: '🪨', statDesc: 'ดาเมจ +5%', statType: 'dmg', statVal: 5 },
+    eld: { id: 'eld', name: 'Eld', number: 2, icon: '🪨', statDesc: 'ความอึด STA +5%', statType: 'sta', statVal: 5 },
+    tir: { id: 'tir', name: 'Tir', number: 3, icon: '🪨', statDesc: 'เกจไม้ตายชาร์จไว +8%', statType: 'ultCharge', statVal: 8 },
+    nef: { id: 'nef', name: 'Nef', number: 4, icon: '🪨', statDesc: 'ความอึด STA +8%', statType: 'sta', statVal: 8 },
+    eth: { id: 'eth', name: 'Eth', number: 5, icon: '🪨', statDesc: 'เจาะเกราะบอส +8%', statType: 'pierce', statVal: 8 },
+    ith: { id: 'ith', name: 'Ith', number: 6, icon: '🪨', statDesc: 'ดาเมจ +8%', statType: 'dmg', statVal: 8 },
+    tal: { id: 'tal', name: 'Tal', number: 7, icon: '🪨', statDesc: 'ดาเมจพิษ +12%', statType: 'dmg', statVal: 12 },
+    ral: { id: 'ral', name: 'Ral', number: 8, icon: '🪨', statDesc: 'ดาเมจเพลิง +15%', statType: 'dmg', statVal: 15 },
+    ort: { id: 'ort', name: 'Ort', number: 9, icon: '🪨', statDesc: 'เกจไม้ตายไวขึ้น +15%', statType: 'ultCharge', statVal: 15 },
+    thul: { id: 'thul', name: 'Thul', number: 10, icon: '🪨', statDesc: 'คริติคอล +5%', statType: 'crit', statVal: 5 },
+    amn: { id: 'amn', name: 'Amn', number: 11, icon: '🪨', statDesc: 'โบนัส EXP +15%', statType: 'exp', statVal: 15 },
+    sol: { id: 'sol', name: 'Sol', number: 12, icon: '🪨', statDesc: 'ดาเมจสุทธิ +14%', statType: 'dmg', statVal: 14 },
+    shael: { id: 'shael', name: 'Shael', number: 13, icon: '🪨', statDesc: 'เข้าสู่ Flow State ไวขึ้น 25%', statType: 'flow', statVal: 25 },
+    dol: { id: 'dol', name: 'Dol', number: 14, icon: '🪨', statDesc: 'โบนัสเหรียญทอง +20%', statType: 'gold', statVal: 20 },
+    hel: { id: 'hel', name: 'Hel', number: 15, icon: '🪨', statDesc: 'หินล้างช่องรูน', statType: 'cleanse', statVal: 0 },
+    io: { id: 'io', name: 'Io', number: 16, icon: '🪨', statDesc: 'ความอึด STA +15%', statType: 'sta', statVal: 15 },
+    lum: { id: 'lum', name: 'Lum', number: 17, icon: '🪨', statDesc: 'STA +15% & โบนัสทอง +15%', statType: 'lum', statVal: 15 },
+    ko: { id: 'ko', name: 'Ko', number: 18, icon: '🪨', statDesc: 'คริติคอล +8% & คริแรง +20%', statType: 'critPlus', statVal: 8 },
+    fal: { id: 'fal', name: 'Fal', number: 19, icon: '🪨', statDesc: 'ดาเมจพลังกาย +25%', statType: 'dmg', statVal: 25 }
+  };
+
+  // --- Runewords Database ---
+  const RUNEWORD_DATABASE = [
+    {
+      id: 'stealth',
+      name: 'Stealth (ก้าวเงาล่องหน)',
+      runes: ['tal', 'eth'],
+      types: ['armor'],
+      desc: 'เข้าสู่ Flow State ไวขึ้น 50%, ชาร์จไม้ตายไวขึ้น +25%, เจาะเกราะบอส +15%',
+      bonusDmg: 15,
+      bonusUltCharge: 25,
+      bonusPierce: 15
+    },
+    {
+      id: 'lore',
+      name: 'Lore (เนตรพหูสูต)',
+      runes: ['ort', 'sol'],
+      types: ['relic', 'ring'],
+      desc: 'ดูดซับ EXP เพิ่มขึ้น +35%, ดาเมจ +15%, เกจไม้ตายแรงขึ้น +20%',
+      bonusExp: 35,
+      bonusDmg: 15,
+      bonusUltDmg: 20
+    },
+    {
+      id: 'ancients_pledge',
+      name: "Ancient's Pledge (พันธสัญญาบรรพกาล)",
+      runes: ['ral', 'ort', 'tal'],
+      types: ['armor', 'relic'],
+      desc: 'ปราการทมิฬ! ป้องกันคำสาปหมอกสูบเลือด, ป้องกันการสูบเกจ, ความอึด STA +35%',
+      bonusSta: 35,
+      bonusDmg: 15
+    },
+    {
+      id: 'lionheart',
+      name: 'Lionheart (หัวใจราชสีห์)',
+      runes: ['hel', 'lum', 'fal'],
+      types: ['armor'],
+      desc: 'พลังแห่งราชสีห์คำราม! ดาเมจสุทธิ +40%, ความอึด STA +35%, คริติคอล +15%',
+      bonusDmg: 40,
+      bonusSta: 35,
+      bonusCrit: 15
+    }
+  ];
+
+  // --- Boss List Database ---
   const BOSS_DATABASE = [
     {
       id: 'boss_1',
@@ -424,7 +490,6 @@
     return parseFloat((base * (1 + (loopCycle * 0.15))).toFixed(2));
   }
 
-  // --- Upgrade Success Rate & Pity Step System ---
   function getUpgradeBaseSuccessRate(currentLevel) {
     return Math.max(20, 100 - (currentLevel * 2));
   }
@@ -453,7 +518,6 @@
     return 'Shadow Initiate';
   }
 
-  // --- Hardcore Daily Quests (Target & Reward x10 Adjusted) ---
   function generateDailyQuests() {
     return [
       { id: 'dq_dist', name: 'สำรวจอเวจีลึก: สะสมระยะทาง 5.0 กม.', target: 5.0, current: 0.0, unit: 'กม.', rewardExp: 32000, rewardGold: 3500, claimed: false },
@@ -464,7 +528,6 @@
     ];
   }
 
-  // --- 21 Milestones / Achievements ---
   function generateAchievements() {
     return [
       { id: 'ach_first', name: 'First Blood (การล่าครั้งแรก)', desc: 'จบเซสชันการล่าสำเร็จ 1 รอบ', target: 1, current: 0, unit: 'รอบ', rewardExp: 1000, rewardGold: 200, claimed: false },
@@ -491,7 +554,6 @@
     ];
   }
 
-  // --- Game State Object ---
   const defaultState = {
     playerName: 'Abyss Stalker',
     level: 1,
@@ -506,6 +568,10 @@
     upgradeFailStreak: { blade: 0, charm: 0, eye: 0 },
     equipment: { weapon: null, armor: null, boots: null, relic: null, ring: null, bracelet: null },
     inventory: [],
+    runeStash: {
+      el: 0, eld: 0, tir: 0, nef: 0, eth: 0, ith: 0, tal: 0, ral: 0, ort: 0, thul: 0,
+      amn: 0, sol: 0, shael: 0, dol: 0, hel: 0, io: 0, lum: 0, ko: 0, fal: 0
+    },
     bestiary: {
       boss_1: { kills: 0, name: 'Gargoyle of the Crypt' },
       boss_2: { kills: 0, name: 'Abyssal Blood Knight' },
@@ -552,7 +618,6 @@
   let gameState = defaultState;
   let currentInvFilter = 'all';
 
-  // Boss Gimmick Runtime Variables
   let bossVulnerableTimer = 0;
   let mistHealingTick = 0;
   let chronoHealingTick = 0;
@@ -561,7 +626,6 @@
   let secretbossSiphonTick = 0;
   let gimmickAnnounced = {};
 
-  // Mini-Event Variables
   let isGoblinActive = false;
   let goblinSecondsLeft = 0;
   let goblinTargetPaceDec = null;
@@ -592,6 +656,7 @@
       gameState.upgradeFailStreak = Object.assign({ blade: 0, charm: 0, eye: 0 }, defaultState.upgradeFailStreak, saved.upgradeFailStreak || {});
       gameState.equipment = Object.assign({ ring: null, bracelet: null }, defaultState.equipment, saved.equipment || {});
       gameState.inventory = saved.inventory || [];
+      gameState.runeStash = Object.assign({}, defaultState.runeStash, saved.runeStash || {});
       gameState.bestiary = Object.assign({}, defaultState.bestiary, saved.bestiary || {});
       gameState.streak = Object.assign({}, defaultState.streak, saved.streak || {});
       gameState.career = Object.assign({}, defaultState.career, saved.career || {});
@@ -612,7 +677,6 @@
       gameState = JSON.parse(JSON.stringify(defaultState));
     }
 
-    // Migration: ปรับราคาขายของไอเทมเก่าให้เพิ่มขึ้น 100 เท่า
     const updatedGoldValues = {
       cosmic: 350000,
       mythic: 150000,
@@ -627,19 +691,21 @@
         if (item.goldValue < (updatedGoldValues[item.rarity] || 3000)) {
           item.goldValue = updatedGoldValues[item.rarity] || 3000;
         }
+        if (typeof item.socketsMax !== 'number') {
+          item.socketsMax = 0;
+          item.socketedRunes = [];
+          item.activeRuneword = null;
+        }
       });
     }
 
-    if (gameState.dailyQuests && gameState.dailyQuests.length > 0) {
-      const freshQuests = generateDailyQuests();
-      gameState.dailyQuests.forEach(q => {
-        const matchingFresh = freshQuests.find(fq => fq.id === q.id);
-        if (matchingFresh) {
-          q.name = matchingFresh.name;
-          q.target = matchingFresh.target;
-          q.rewardExp = matchingFresh.rewardExp;
-          q.rewardGold = matchingFresh.rewardGold;
-          q.unit = matchingFresh.unit;
+    if (gameState.equipment) {
+      Object.keys(gameState.equipment).forEach(slot => {
+        const item = gameState.equipment[slot];
+        if (item && typeof item.socketsMax !== 'number') {
+          item.socketsMax = 0;
+          item.socketedRunes = [];
+          item.activeRuneword = null;
         }
       });
     }
@@ -746,6 +812,31 @@
     bracelet: ['กำไลทมิฬ', 'กำไลผลึกวิญญาณ', 'กำไลอัสนีบาต', 'กำไลสายฟ้าราตรี', 'กำไลมิติว่างเปล่า']
   };
 
+  function rollRandomRuneDrop(isBoss = false) {
+    const runeKeys = Object.keys(RUNE_DATABASE);
+    const roll = Math.random();
+    let selectedIndex = 0;
+
+    if (isBoss || (gameState.bossLoopCycle || 0) >= 2) {
+      if (roll < 0.05) selectedIndex = 18; // Fal (#19)
+      else if (roll < 0.12) selectedIndex = 17; // Ko (#18)
+      else if (roll < 0.22) selectedIndex = 16; // Lum (#17)
+      else if (roll < 0.35) selectedIndex = 14; // Hel (#15)
+      else if (roll < 0.50) selectedIndex = 12; // Shael (#13)
+      else if (roll < 0.70) selectedIndex = Math.floor(Math.random() * 5) + 6; // Tal-Sol (#7-#12)
+      else selectedIndex = Math.floor(Math.random() * 6); // El-Ith (#1-#6)
+    } else {
+      if (roll < 0.02) selectedIndex = 16; // Lum
+      else if (roll < 0.08) selectedIndex = 14; // Hel
+      else if (roll < 0.25) selectedIndex = Math.floor(Math.random() * 5) + 6; // Tal-Sol
+      else selectedIndex = Math.floor(Math.random() * 6); // El-Ith
+    }
+
+    const rKey = runeKeys[selectedIndex] || 'el';
+    gameState.runeStash[rKey] = (gameState.runeStash[rKey] || 0) + 1;
+    return RUNE_DATABASE[rKey];
+  }
+
   function rollRandomItem(isBossDrop = false, loopCount = 0) {
     const types = ['weapon', 'armor', 'boots', 'relic', 'ring', 'bracelet'];
     const type = types[Math.floor(Math.random() * types.length)];
@@ -841,6 +932,20 @@
       common: 3000
     };
 
+    let socketsMax = 0;
+    const sRoll = Math.random();
+    if (rarity === 'cosmic') {
+      socketsMax = 3;
+    } else if (rarity === 'mythic') {
+      socketsMax = sRoll < 0.5 ? 3 : 2;
+    } else if (rarity === 'legendary') {
+      socketsMax = sRoll < 0.4 ? 3 : 2;
+    } else if (rarity === 'epic') {
+      socketsMax = sRoll < 0.5 ? 2 : 1;
+    } else if (rarity === 'rare') {
+      socketsMax = sRoll < 0.6 ? 1 : 0;
+    }
+
     return {
       id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       name: `${baseName}แห่ง${setInfo.name.replace('เซ็ต', '')}`,
@@ -852,7 +957,10 @@
       subStat2Val,
       loopLevel: loopCount,
       icon: icons[type],
-      goldValue: goldValues[rarity] || 3000
+      goldValue: goldValues[rarity] || 3000,
+      socketsMax,
+      socketedRunes: [],
+      activeRuneword: null
     };
   }
 
@@ -868,6 +976,19 @@
     return counts;
   }
 
+  function checkRuneword(item) {
+    if (!item || !item.socketedRunes || item.socketedRunes.length === 0) return null;
+    if (item.socketedRunes.length !== item.socketsMax) return null;
+
+    const sequence = item.socketedRunes.join('-');
+    for (const rw of RUNEWORD_DATABASE) {
+      if (rw.types.includes(item.type) && rw.runes.join('-') === sequence) {
+        return rw;
+      }
+    }
+    return null;
+  }
+
   function calculateEquipmentBonuses() {
     let bonusDmg = 0;
     let bonusSta = 0;
@@ -876,6 +997,7 @@
     let bonusGold = 0;
     let bonusUltDmg = 0;
     let bonusArmorPierce = 0;
+    let bonusUltCharge = 0;
 
     const eq = gameState.equipment;
     ['weapon', 'armor', 'boots', 'relic', 'ring', 'bracelet'].forEach(slot => {
@@ -905,6 +1027,31 @@
       if (item.rarity === 'cosmic') {
         bonusArmorPierce += 10;
       }
+
+      if (item.socketedRunes && item.socketedRunes.length > 0) {
+        item.socketedRunes.forEach(rKey => {
+          const r = RUNE_DATABASE[rKey];
+          if (!r) return;
+          if (r.statType === 'dmg') bonusDmg += r.statVal;
+          if (r.statType === 'sta') bonusSta += r.statVal;
+          if (r.statType === 'pierce') bonusArmorPierce += r.statVal;
+          if (r.statType === 'crit') bonusCrit += r.statVal;
+          if (r.statType === 'critPlus') { bonusCrit += r.statVal; bonusCritDmg += 0.20; }
+          if (r.statType === 'gold') bonusGold += r.statVal;
+          if (r.statType === 'ultCharge') bonusUltCharge += r.statVal;
+          if (r.statType === 'lum') { bonusSta += r.statVal; bonusGold += r.statVal; }
+        });
+      }
+
+      if (item.activeRuneword) {
+        const rw = item.activeRuneword;
+        if (rw.bonusDmg) bonusDmg += rw.bonusDmg;
+        if (rw.bonusSta) bonusSta += rw.bonusSta;
+        if (rw.bonusCrit) bonusCrit += rw.bonusCrit;
+        if (rw.bonusPierce) bonusArmorPierce += rw.bonusPierce;
+        if (rw.bonusUltDmg) bonusUltDmg += rw.bonusUltDmg;
+        if (rw.bonusUltCharge) bonusUltCharge += rw.bonusUltCharge;
+      }
     });
 
     const setCounts = getActiveEquippedSets();
@@ -922,7 +1069,7 @@
       bonusDmg += 20;
     }
 
-    return { bonusDmg, bonusSta, bonusCrit, bonusCritDmg, bonusGold, bonusUltDmg, bonusArmorPierce, setCounts };
+    return { bonusDmg, bonusSta, bonusCrit, bonusCritDmg, bonusGold, bonusUltDmg, bonusArmorPierce, bonusUltCharge, setCounts };
   }
 
   function calculateCritStats() {
@@ -1090,20 +1237,36 @@
   const setBonusesContainerEl = document.getElementById('set-bonuses-container');
   const inventoryGridEl = document.getElementById('inventory-grid');
   const invCountEl = document.getElementById('inv-count');
+
+  const runeCountSummaryEl = document.getElementById('rune-count-summary');
+  const runeGridEl = document.getElementById('rune-grid');
+
   const itemModalEl = document.getElementById('item-modal');
   const modalItemIconEl = document.getElementById('modal-item-icon');
   const modalItemNameEl = document.getElementById('modal-item-name');
   const modalItemRarityEl = document.getElementById('modal-item-rarity');
   const modalItemSetEl = document.getElementById('modal-item-set');
+  const modalSocketsRowEl = document.getElementById('modal-sockets-row');
   const modalMainStatEl = document.getElementById('modal-main-stat');
   const modalSubStatEl = document.getElementById('modal-sub-stat');
   const modalSubStat2El = document.getElementById('modal-sub-stat-2');
   const modalCosmicPerkEl = document.getElementById('modal-cosmic-perk');
+  const modalRunewordDescBoxEl = document.getElementById('modal-runeword-desc-box');
+  const modalRunewordTitleEl = document.getElementById('modal-runeword-title');
+  const modalRunewordDescEl = document.getElementById('modal-runeword-desc');
   const modalSetBonus2El = document.getElementById('modal-set-bonus-2');
   const modalSetBonus4El = document.getElementById('modal-set-bonus-4');
   const btnModalEquip = document.getElementById('btn-modal-equip');
+  const btnModalSocket = document.getElementById('btn-modal-socket');
   const btnModalSalvage = document.getElementById('btn-modal-salvage');
   const btnModalCancel = document.getElementById('btn-modal-cancel');
+
+  const socketModalEl = document.getElementById('socket-modal');
+  const socketTargetSummaryEl = document.getElementById('socket-target-summary');
+  const socketSlotsDisplayEl = document.getElementById('socket-slots-display');
+  const socketRunesListEl = document.getElementById('socket-runes-list');
+  const btnModalUnsocket = document.getElementById('btn-modal-unsocket');
+  const btnSocketModalClose = document.getElementById('btn-socket-modal-close');
 
   const codexListEl = document.getElementById('codex-list');
   const codexCounterEl = document.getElementById('codex-counter');
@@ -1166,13 +1329,12 @@
 
   function addUltimateCharge(amount) {
     const setCounts = getActiveEquippedSets();
+    const eqBonus = calculateEquipmentBonuses();
     let finalAmount = amount;
-    if (setCounts.shadowstalker >= 2) {
-      finalAmount *= 1.25;
-    }
-    if (setCounts.voidannihilator >= 2) {
-      finalAmount *= 1.45;
-    }
+
+    if (setCounts.shadowstalker >= 2) finalAmount *= 1.25;
+    if (setCounts.voidannihilator >= 2) finalAmount *= 1.45;
+    if (eqBonus.bonusUltCharge > 0) finalAmount *= (1 + (eqBonus.bonusUltCharge * 0.01));
 
     const prevCharge = gameState.ultimateCharge;
     gameState.ultimateCharge = Math.min(300, Math.max(0, gameState.ultimateCharge + finalAmount));
@@ -1348,12 +1510,14 @@
     gameState.gold += bonusGold;
     addUltimateCharge(30);
 
+    const droppedRune = rollRandomRuneDrop(false);
+    showToast(`🎉 สยบโกบลินเงาสำเร็จ! +📦 1 หีบ, +${bonusGold} 🪙, +🪨 ${droppedRune.name} Rune!`);
+    speakVoice(`สยบโกบลินเงาสำเร็จ ได้รับหินรูน ${droppedRune.name}`, true);
+
     gameState.statsTrack.goblinCaughtCount = (gameState.statsTrack.goblinCaughtCount || 0) + 1;
     const achGoblin = gameState.achievements.find(a => a.id === 'ach_goblin_catch');
     if (achGoblin) achGoblin.current = Math.min(achGoblin.target, gameState.statsTrack.goblinCaughtCount);
 
-    showToast(`🎉 สยบโกบลินเงาสำเร็จ! +📦 1 หีบ, +${bonusGold} 🪙, เกจไม้ตาย +30%`);
-    speakVoice('สยบโกบลินเงาสำเร็จ ยึดสมบัติได้แล้ว!', true);
     saveGame();
     renderUI();
   }
@@ -1541,8 +1705,10 @@
     const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier * loopRewardMult * ultBonusMult);
     const rewardGold = Math.floor(currentBoss.rewardGold * totalGoldMultiplier * loopRewardMult * ultBonusMult);
 
-    showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp.toLocaleString()} EXP & +${rewardGold.toLocaleString()} ทอง & 📦 1 หีบ`);
-    speakVoice(`สยบ ${currentBoss.name} สำเร็จแล้ว ปิดผนึกชัยชนะ!`, true);
+    const droppedRune = rollRandomRuneDrop(true);
+
+    showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp.toLocaleString()} EXP & +${rewardGold.toLocaleString()} ทอง & +🪨 ${droppedRune.name} Rune!`);
+    speakVoice(`สยบ ${currentBoss.name} สำเร็จแล้ว ปิดผนึกชัยชนะ ได้รับหินรูน ${droppedRune.name}`, true);
     addExp(rewardExp);
     gameState.gold += rewardGold;
 
@@ -1592,10 +1758,6 @@
     superbossSiphonTick = 0;
     secretbossSiphonTick = 0;
 
-    // Boss Pool Scaling:
-    // Loop 0: Boss 0..9 (Tier I - Tier IX)
-    // Loop 1 - 2: Boss 0..10 (Tier I - Tier X Super Boss)
-    // Loop >= 3: Boss 0..11 (Tier I - Tier EX Secret Boss)
     let maxBossIndexForCurrentLoop;
     if ((gameState.bossLoopCycle || 0) >= 3) {
       maxBossIndexForCurrentLoop = BOSS_DATABASE.length - 1;
@@ -1653,7 +1815,6 @@
 
     addUltimateCharge((distanceDeltaKm * 8) * ultChargeBonusMult);
 
-    // --- Flow State Detection Algorithm (EMA + Grace Period) ---
     const flowThresholdKm = setCounts.voidwalker >= 2 ? 0.15 : 0.30;
     let rollingPace = getRecentRollingPace();
 
@@ -1745,7 +1906,6 @@
       }
     }
 
-    // --- Major Tier II Boss: Abyssal Juggernaut Gimmick ---
     if (currentBoss.gimmick === 'juggernaut') {
       if (bossHpPct > 0.50) {
         if (isFlowStateActive || bossVulnerableTimer > 0) {
@@ -1919,7 +2079,6 @@
       }
     }
 
-    // --- SUPER BOSS GIMMICK ---
     if (currentBoss.gimmick === 'superboss') {
       if (bossHpPct > 0.65) {
         if (bossVulnerableTimer > 0) {
@@ -1954,7 +2113,6 @@
       }
     }
 
-    // --- SECRET BOSS GIMMICK (LOOP 3+) ---
     if (currentBoss.gimmick === 'secretboss') {
       if (bossHpPct > 0.60) {
         if (bossVulnerableTimer > 0 || isFlowStateActive) {
@@ -2097,7 +2255,7 @@
     gameState.chestsAvailable -= 1;
 
     const roll = Math.random();
-    if (roll < 0.45 && gameState.inventory.length < 30) {
+    if (roll < 0.40 && gameState.inventory.length < 30) {
       const newItem = rollRandomItem(true, gameState.bossLoopCycle || 0);
       gameState.inventory.push(newItem);
       const setLabel = SET_DATABASE[newItem.setId] ? ` [${SET_DATABASE[newItem.setId].name}]` : '';
@@ -2111,12 +2269,16 @@
         showToast(`🎁 พบอุปกรณ์: [${newItem.rarity.toUpperCase()}] ${newItem.name}${setLabel}!`);
         speakVoice(`ได้รับอุปกรณ์ระดับ ${newItem.rarity}`);
       }
-    } else if (roll < 0.72) {
+    } else if (roll < 0.65) {
+      const droppedRune = rollRandomRuneDrop(false);
+      showToast(`🪨 พบหินรูนโบราณ: ${droppedRune.name} Rune! (${droppedRune.statDesc})`);
+      speakVoice(`ได้รับหินรูน ${droppedRune.name}`);
+    } else if (roll < 0.85) {
       const loopGoldBonus = 1 + ((gameState.bossLoopCycle || 0) * 0.2);
       const goldDrop = Math.floor((120 + Math.random() * 220) * loopGoldBonus);
       gameState.gold += goldDrop;
       showToast(`🎁 พบถุงทองโบราณ +${goldDrop} 🪙`);
-    } else if (roll < 0.92) {
+    } else if (roll < 0.95) {
       const expDrop = Math.floor(800 + Math.random() * 1000);
       showToast(`🎁 ดูดซับผลึกวิญญาณ +${expDrop} EXP`);
       addExp(expDrop);
@@ -2131,6 +2293,30 @@
   }
 
   btnOpenChest.addEventListener('click', openMysteryChest);
+
+  function renderRuneStash() {
+    if (!runeGridEl || !runeCountSummaryEl) return;
+    runeGridEl.innerHTML = '';
+    let totalRunes = 0;
+
+    Object.keys(RUNE_DATABASE).forEach(rKey => {
+      const r = RUNE_DATABASE[rKey];
+      const count = gameState.runeStash[rKey] || 0;
+      totalRunes += count;
+
+      const card = document.createElement('div');
+      card.className = `rune-card ${count > 0 ? 'has-rune' : ''}`;
+      card.innerHTML = `
+        <span class="rune-card-icon">${r.icon}</span>
+        <span class="rune-card-name">${r.name}</span>
+        <span class="rune-card-tier">#${r.number}</span>
+        <span class="rune-card-qty">x${count}</span>
+      `;
+      runeGridEl.appendChild(card);
+    });
+
+    runeCountSummaryEl.textContent = `ครอบครอง ${totalRunes} ก้อน`;
+  }
 
   function renderEquipmentAndInventory() {
     const eq = gameState.equipment;
@@ -2151,7 +2337,7 @@
       if (equippedItem) {
         slotBox.classList.add('equipped');
         iconEl.textContent = equippedItem.icon;
-        nameEl.textContent = equippedItem.name;
+        nameEl.textContent = equippedItem.activeRuneword ? `⚡ ${equippedItem.activeRuneword.name.split(' ')[0]}` : equippedItem.name;
 
         if (equippedItem.setId && SET_DATABASE[equippedItem.setId]) {
           const s = SET_DATABASE[equippedItem.setId];
@@ -2222,10 +2408,19 @@
           setDotHtml = `<div class="inv-item-set-dot" style="background: ${SET_DATABASE[item.setId].color};" title="${SET_DATABASE[item.setId].name}"></div>`;
         }
 
+        let socketIndicator = '';
+        if (item.socketsMax > 0) {
+          const filled = (item.socketedRunes || []).length;
+          socketIndicator = `<span class="inv-item-socket-tag">${item.activeRuneword ? '⚡' : '⬡'} ${filled}/${item.socketsMax}</span>`;
+        }
+
+        const displayName = item.activeRuneword ? `⚡ ${item.activeRuneword.name.split(' ')[0]}` : item.name;
+
         card.innerHTML = `
           ${setDotHtml}
           <span class="inv-item-icon">${item.icon}</span>
-          <span class="inv-item-name">${item.name}</span>
+          <span class="inv-item-name">${displayName}</span>
+          ${socketIndicator}
         `;
         card.addEventListener('click', () => openItemModal(item));
         inventoryGridEl.appendChild(card);
@@ -2245,7 +2440,7 @@
   function openItemModal(item) {
     selectedInventoryItem = item;
     modalItemIconEl.textContent = item.icon;
-    modalItemNameEl.textContent = item.name;
+    modalItemNameEl.textContent = item.activeRuneword ? `⚡ [คำรูน] ${item.activeRuneword.name}` : item.name;
     const loopText = item.loopLevel ? ` [Loop ${item.loopLevel}]` : '';
     modalItemRarityEl.className = `modal-item-rarity rarity-${item.rarity}`;
     modalItemRarityEl.textContent = `ระดับ: ${item.rarity.toUpperCase()}${loopText}`;
@@ -2269,6 +2464,35 @@
     } else {
       modalItemSetEl.style.display = 'none';
       document.getElementById('modal-set-desc-box').style.display = 'none';
+    }
+
+    if (item.socketsMax > 0) {
+      modalSocketsRowEl.style.display = 'flex';
+      modalSocketsRowEl.innerHTML = '';
+      for (let i = 0; i < item.socketsMax; i++) {
+        const node = document.createElement('span');
+        const rKey = (item.socketedRunes || [])[i];
+        if (rKey && RUNE_DATABASE[rKey]) {
+          node.className = 'socket-node';
+          node.textContent = `⬢ ${RUNE_DATABASE[rKey].name} (#${RUNE_DATABASE[rKey].number})`;
+        } else {
+          node.className = 'socket-node empty';
+          node.textContent = '⬡ ช่องว่าง';
+        }
+        modalSocketsRowEl.appendChild(node);
+      }
+      btnModalSocket.style.display = 'inline-block';
+    } else {
+      modalSocketsRowEl.style.display = 'none';
+      btnModalSocket.style.display = 'none';
+    }
+
+    if (item.activeRuneword) {
+      modalRunewordDescBoxEl.style.display = 'flex';
+      modalRunewordTitleEl.textContent = `⚡ คำรูน: ${item.activeRuneword.name}`;
+      modalRunewordDescEl.textContent = item.activeRuneword.desc;
+    } else {
+      modalRunewordDescBoxEl.style.display = 'none';
     }
 
     const statTypeNames = {
@@ -2351,6 +2575,138 @@
       }
     });
   });
+
+  // --- Rune Socketing Modal Engine ---
+  function openSocketModal() {
+    if (!selectedInventoryItem || selectedInventoryItem.socketsMax <= 0) return;
+    itemModalEl.style.display = 'none';
+
+    renderSocketModalUI();
+    socketModalEl.style.display = 'flex';
+  }
+
+  function closeSocketModal() {
+    socketModalEl.style.display = 'none';
+    if (selectedInventoryItem) {
+      openItemModal(selectedInventoryItem);
+    }
+  }
+
+  function renderSocketModalUI() {
+    const item = selectedInventoryItem;
+    if (!item) return;
+
+    socketTargetSummaryEl.textContent = `🎯 ${item.name} (${item.socketedRunes.length}/${item.socketsMax} ช่อง)`;
+    socketSlotsDisplayEl.innerHTML = '';
+
+    for (let i = 0; i < item.socketsMax; i++) {
+      const rKey = (item.socketedRunes || [])[i];
+      const row = document.createElement('div');
+      row.className = 'socket-slot-row';
+      if (rKey && RUNE_DATABASE[rKey]) {
+        const r = RUNE_DATABASE[rKey];
+        row.innerHTML = `
+          <span class="socket-slot-title">ช่องที่ ${i + 1}: ${r.icon} ${r.name} (#${r.number})</span>
+          <span class="socket-slot-value">${r.statDesc}</span>
+        `;
+      } else {
+        row.innerHTML = `
+          <span class="socket-slot-title">ช่องที่ ${i + 1}: ⬡ ช่องว่าง</span>
+          <span class="socket-slot-value" style="color: #a1a1aa;">พร้อมฝัง</span>
+        `;
+      }
+      socketSlotsDisplayEl.appendChild(row);
+    }
+
+    const hasEmptySlot = item.socketedRunes.length < item.socketsMax;
+    socketRunesListEl.innerHTML = '';
+
+    if (!hasEmptySlot) {
+      socketRunesListEl.innerHTML = '<div style="grid-column: span 3; font-size: 0.65rem; color: #a1a1aa; text-align: center; padding: 12px 0;">ช่องเจาะของไอเทมนี้เต็มแล้ว</div>';
+    } else {
+      let availableCount = 0;
+      Object.keys(RUNE_DATABASE).forEach(rKey => {
+        const count = gameState.runeStash[rKey] || 0;
+        if (count > 0 && rKey !== 'hel') {
+          availableCount++;
+          const r = RUNE_DATABASE[rKey];
+          const choice = document.createElement('div');
+          choice.className = 'socket-rune-choice';
+          choice.innerHTML = `
+            <span style="font-size: 1.1rem;">${r.icon}</span>
+            <span class="socket-choice-name">${r.name}</span>
+            <span class="socket-choice-qty">${r.statDesc} (x${count})</span>
+          `;
+          choice.addEventListener('click', () => insertRuneIntoItem(rKey));
+          socketRunesListEl.appendChild(choice);
+        }
+      });
+
+      if (availableCount === 0) {
+        socketRunesListEl.innerHTML = '<div style="grid-column: span 3; font-size: 0.65rem; color: #a1a1aa; text-align: center; padding: 12px 0;">ไม่มีหินรูนใน Stash (ออกล่าเพื่อค้นหา)</div>';
+      }
+    }
+
+    const hasHel = (gameState.runeStash['hel'] || 0) > 0;
+    const hasAnySocketed = item.socketedRunes.length > 0;
+    if (hasAnySocketed) {
+      btnModalUnsocket.style.display = 'inline-block';
+      btnModalUnsocket.textContent = hasHel ? 'ล้างรูน (ใช้ Hel 1 ก้อน)' : 'ต้องการ Hel Rune เพื่อล้าง';
+      btnModalUnsocket.disabled = !hasHel;
+    } else {
+      btnModalUnsocket.style.display = 'none';
+    }
+  }
+
+  function insertRuneIntoItem(runeKey) {
+    const item = selectedInventoryItem;
+    if (!item || item.socketedRunes.length >= item.socketsMax) return;
+    if ((gameState.runeStash[runeKey] || 0) <= 0) return;
+
+    gameState.runeStash[runeKey] -= 1;
+    item.socketedRunes.push(runeKey);
+
+    const r = RUNE_DATABASE[runeKey];
+    showToast(`🪨 ฝัง ${r.name} Rune ลงใน ${item.name} สำเร็จ!`);
+
+    const runeword = checkRuneword(item);
+    if (runeword) {
+      item.activeRuneword = runeword;
+      showToast(`⚡ ปลุกพลังคำรูนโบราณสำเร็จ: ${runeword.name}!`);
+      speakVoice(`ปลุกพลังคำรูนโบราณสำเร็จ ${runeword.name} พลังอสูรตื่นขึ้นแล้ว`, true);
+    }
+
+    saveGame();
+    renderUI();
+    renderSocketModalUI();
+  }
+
+  function unsocketItemWithHel() {
+    const item = selectedInventoryItem;
+    if (!item || !item.socketedRunes || item.socketedRunes.length === 0) return;
+    if ((gameState.runeStash['hel'] || 0) <= 0) {
+      showToast('⚠️ ต้องการ Hel Rune (#15) ใน Stash 1 ก้อนเพื่อล้างรูน');
+      return;
+    }
+
+    const confirmClear = confirm(`คุณต้องการใช้ Hel Rune เพื่อทำลายและล้างหินรูนทั้งหมดออกจาก ${item.name} ใช่หรือไม่?`);
+    if (!confirmClear) return;
+
+    gameState.runeStash['hel'] -= 1;
+    item.socketedRunes = [];
+    item.activeRuneword = null;
+
+    showToast(`✨ ใช้ Hel Rune ล้างช่องเจาะของ ${item.name} เรียบร้อย!`);
+    speakVoice('ล้างหินรูนออกจากอุปกรณ์เรียบร้อย');
+
+    saveGame();
+    renderUI();
+    renderSocketModalUI();
+  }
+
+  btnModalSocket.addEventListener('click', openSocketModal);
+  btnSocketModalClose.addEventListener('click', closeSocketModal);
+  btnModalUnsocket.addEventListener('click', unsocketItemWithHel);
 
   function renderMonsterCodex() {
     codexListEl.innerHTML = '';
@@ -2579,7 +2935,6 @@
     });
   }
 
-  // --- Modular UI Renderers ---
   function renderHUD() {
     if (playerNameEl) {
       playerNameEl.textContent = gameState.playerName || 'Abyss Stalker';
@@ -3028,6 +3383,7 @@
   function renderUI() {
     renderHUD();
     renderEquipmentAndInventory();
+    renderRuneStash();
     renderMonsterCodex();
     renderShop();
     renderQuestsList();
@@ -3035,7 +3391,6 @@
     renderCareerUI();
   }
 
-  // --- Character Management Handlers ---
   function openCharacterModal() {
     if (inputCharNameEl) {
       inputCharNameEl.value = gameState.playerName || 'Abyss Stalker';
@@ -3353,7 +3708,6 @@
     showToast('🔒 เปิดโหมดพักจอ (แตะค้างเพื่อปลดล็อก)');
   });
 
-  // --- Real-Time Active Run Persistence Layer ---
   function saveCurrentActiveRun() {
     if (runDistanceKm <= 0 && runSeconds <= 0) {
       DB.clearActiveRun().catch(() => {});
