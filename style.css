@@ -2772,3 +2772,416 @@ body {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
 }
+
+
+/* ==========================================================================
+   ENHANCED RUNNER UX/UI: TABS, HERO DUO METRICS, AUTO-CAST & SAFETY CONTROLS
+   ========================================================================== */
+
+/* App Container Padding Adjustment for Fixed Bottom Nav */
+.app-container {
+  padding-bottom: calc(var(--safe-bottom) + 84px) !important;
+}
+
+/* Tab Page System */
+.tab-page {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  animation: fadeInTab 0.2s ease-in-out;
+}
+
+.tab-page.active {
+  display: flex !important;
+}
+
+@keyframes fadeInTab {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Fixed Bottom Navigation Bar */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  background: rgba(13, 12, 17, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(212, 175, 55, 0.35);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 6px 4px calc(var(--safe-bottom) + 6px) 4px;
+  z-index: 9999;
+  box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.85);
+}
+
+.nav-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  min-height: 48px;
+  border-radius: 10px;
+}
+
+.nav-tab-btn:active {
+  transform: scale(0.92);
+}
+
+.nav-icon {
+  font-size: 1.35rem;
+  transition: transform 0.2s ease;
+}
+
+.nav-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.nav-tab-btn.active {
+  color: var(--gold-glow);
+}
+
+.nav-tab-btn.active .nav-icon {
+  transform: translateY(-2px) scale(1.1);
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.6));
+}
+
+.nav-tab-btn.active .nav-label {
+  color: var(--gold-glow);
+  font-weight: 800;
+}
+
+.nav-tab-btn.active::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  width: 20px;
+  height: 2px;
+  background: var(--gold-glow);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+
+.nav-badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 16px);
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 900;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+  animation: pulse 1.2s infinite;
+}
+
+/* ==========================================================================
+   HERO DUO METRICS: DISTANCE & PACE HIGH VISIBILITY GLANCEABILITY
+   ========================================================================== */
+.hud-hero-duo {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 10px 0 8px 0;
+}
+
+.hero-metric-card {
+  background: linear-gradient(180deg, #181723 0%, #100f17 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.25);
+  border-radius: 14px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5), 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.hero-metric-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.hero-metric-label-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hero-metric-val {
+  font-size: 2.75rem;
+  font-weight: 900;
+  line-height: 1.05;
+  font-family: monospace, -apple-system;
+  margin: 4px 0 2px 0;
+  white-space: nowrap;
+}
+
+.metric-distance {
+  border-color: rgba(212, 175, 55, 0.45);
+}
+
+.metric-distance .hero-metric-val {
+  color: var(--gold-glow);
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.45);
+}
+
+.metric-pace {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.metric-pace .hero-metric-val {
+  color: #38bdf8;
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.45);
+}
+
+.hero-metric-unit {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   ULTIMATE SKILL: QUICK-CAST & AUTO-CAST SYSTEM
+   ========================================================================== */
+.ultimate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.ult-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.btn-autocast-toggle {
+  background: #1e1b29;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--text-muted);
+  border-radius: 20px;
+  padding: 3px 9px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.autocast-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #71717a;
+}
+
+.btn-autocast-toggle.active {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: #22c55e;
+  color: #4ade80;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.35);
+}
+
+.btn-autocast-toggle.active .autocast-status-dot {
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+}
+
+.btn-autocast-toggle.active-tier3 {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: #f59e0b;
+  color: #fbbf24;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+.btn-autocast-toggle.active-tier3 .autocast-status-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+}
+
+.btn-autocast-toggle.active-smart {
+  background: rgba(192, 132, 252, 0.18);
+  border-color: #c084fc;
+  color: #f3e8ff;
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.45);
+}
+
+.btn-autocast-toggle.active-smart .autocast-status-dot {
+  background: #c084fc;
+  box-shadow: 0 0 8px #c084fc;
+}
+
+/* Ultimate Bar Track Notches */
+.ultimate-bar-track {
+  position: relative;
+}
+
+.ult-notch {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  z-index: 2;
+}
+
+.notch-100 { left: 33.33%; }
+.notch-200 { left: 66.66%; }
+
+/* Big Tactile Quick-Cast Button */
+.btn-quick-cast-ult {
+  width: 100%;
+  min-height: 52px;
+  background: linear-gradient(180deg, #321c4d 0%, #1a102a 100%);
+  border: 1.5px solid rgba(192, 132, 252, 0.4);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #a1a1aa;
+  cursor: not-allowed;
+  transition: all 0.2s ease;
+  padding: 6px 12px;
+}
+
+.quick-ult-icon {
+  font-size: 1.6rem;
+}
+
+.quick-ult-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.quick-ult-title {
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.quick-ult-sub {
+  font-size: 0.62rem;
+  color: #a1a1aa;
+}
+
+.btn-quick-cast-ult.ready {
+  background: linear-gradient(180deg, #9333ea 0%, #581c87 100%);
+  border-color: #d8b4fe;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(147, 51, 234, 0.6);
+  animation: pulse 1.4s infinite;
+}
+
+.btn-quick-cast-ult.ready .quick-ult-sub {
+  color: #fef08a;
+  font-weight: 700;
+}
+
+.btn-quick-cast-ult.ready-tier3 {
+  background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+  border-color: #fef08a;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.85);
+  animation: ultButtonPulse 0.9s infinite;
+}
+
+.btn-quick-cast-ult.ready-tier3 .quick-ult-sub {
+  color: #fff;
+  font-weight: 800;
+}
+
+/* Safe Finish Confirmation Modal */
+.btn-modal-action.btn-finish-confirm {
+  background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+  color: #ffffff;
+  border: 1px solid #fca5a5;
+  font-weight: 800;
+}
+
+/* High Contrast Outdoor Pocket Mode */
+.pocket-hero-duo {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.pocket-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pocket-lbl {
+  font-size: 0.75rem;
+  color: #71717a;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pocket-metric-val {
+  color: var(--gold-glow) !important;
+  font-size: 2.8rem !important;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.pocket-pace-val {
+  color: #38bdf8;
+  font-size: 2.8rem;
+  font-weight: 900;
+  font-family: monospace, -apple-system;
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+}
+
+.pocket-metric-sub {
+  color: #ffffff !important;
+  font-size: 1.3rem !important;
+  font-weight: 800 !important;
+}
+
+/* Quest 10x Boost Badge */
+.quest-boost-tag {
+  font-size: 0.62rem;
+  font-weight: 900;
+  color: #f59e0b;
+  letter-spacing: 0.3px;
+  margin-top: 1px;
+}

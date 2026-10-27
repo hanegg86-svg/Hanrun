@@ -13,7 +13,7 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Top Bar: Player Stats & Streak -->
+    <!-- Top Bar: Persistent Hero Header Across All Tabs -->
     <header class="top-nav">
       <div class="player-badge">
         <div class="avatar-frame">
@@ -46,438 +46,516 @@
       </div>
     </header>
 
-    <!-- Stat Points Alert Bar -->
-    <div class="stat-points-bar" id="stat-points-bar" style="display: none;">
-      <span>✨ มีแต้มอัปเกรดคงเหลือ: <strong id="stat-points-val">0</strong> แต้ม</span>
-    </div>
-
-    <!-- Stats Bar (STR, STA, AGI) with Allocation Buttons -->
-    <section class="stats-ribbon">
-      <div class="stat-item">
-        <span class="stat-label">STR (ดาเมจ x<span id="str-mult">1.0</span>)</span>
-        <div class="stat-val-row">
-          <span class="stat-val" id="stat-str">10</span>
-          <button class="btn-stat-add" id="btn-add-str" type="button" title="อัปเกรด STR">+</button>
+    <!-- TAB 1: RUN / HUNT SCREEN (Dedicated Clean Runner Experience) -->
+    <main class="tab-page active" id="tab-hunt">
+      <!-- Boss Encounter Card -->
+      <section class="boss-card" id="boss-card">
+        <div class="boss-header">
+          <span class="boss-tag">⚠️ ดันเจี้ยนบอส</span>
+          <span class="boss-tier" id="boss-tier">TIER I</span>
         </div>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <span class="stat-label">STA (โบนัส +<span id="sta-mult">0</span>%)</span>
-        <div class="stat-val-row">
-          <span class="stat-val" id="stat-sta">10</span>
-          <button class="btn-stat-add" id="btn-add-sta" type="button" title="อัปเกรด STA">+</button>
-        </div>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
-        <span class="stat-label">AGI (<span id="agi-crit">คริติคอล 7.0%</span>)</span>
-        <div class="stat-val-row">
-          <span class="stat-val" id="stat-agi">10</span>
-          <button class="btn-stat-add" id="btn-add-agi" type="button" title="อัปเกรด AGI">+</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Boss Encounter Card -->
-    <section class="boss-card" id="boss-card">
-      <div class="boss-header">
-        <span class="boss-tag">⚠️ ดันเจี้ยนบอส</span>
-        <span class="boss-tier" id="boss-tier">TIER I</span>
-      </div>
-      <div class="boss-body">
-        <div class="boss-visual">
-          <div class="boss-avatar" id="boss-avatar">👹</div>
-        </div>
-        <div class="boss-details">
-          <h3 class="boss-name" id="boss-name">Gargoyle of the Crypt</h3>
-          <p class="boss-desc" id="boss-desc">อสูรศิลาทมิฬที่ตื่นขึ้น จงวิ่งพิชิตระยะทางเพื่อทำลายผนึกหิน!</p>
-          <div class="boss-hp-container">
-            <div class="boss-hp-bar" id="boss-hp-bar" style="width: 100%;"></div>
+        <div class="boss-body">
+          <div class="boss-visual">
+            <div class="boss-avatar" id="boss-avatar">👹</div>
           </div>
-          <div class="boss-hp-text">
-            พลังชีวิตบอส: <span id="boss-hp-remain">1.25</span> / <span id="boss-hp-max">1.25</span> กม.
+          <div class="boss-details">
+            <h3 class="boss-name" id="boss-name">Gargoyle of the Crypt</h3>
+            <p class="boss-desc" id="boss-desc">อสูรศิลาทมิฬที่ตื่นขึ้น จงวิ่งพิชิตระยะทางเพื่อทำลายผนึกหิน!</p>
+            <div class="boss-hp-container">
+              <div class="boss-hp-bar" id="boss-hp-bar" style="width: 100%;"></div>
+            </div>
+            <div class="boss-hp-text">
+              พลังชีวิตบอส: <span id="boss-hp-remain">2.00</span> / <span id="boss-hp-max">2.00</span> กม.
+            </div>
           </div>
         </div>
-      </div>
-      <div class="boss-gimmick-banner" id="boss-gimmick-banner" style="display: none;">
-        <span class="gimmick-tag" id="boss-gimmick-tag">🔥 กลไกบอส</span>
-        <span class="gimmick-desc" id="boss-gimmick-text">รายละเอียดลูกเล่น</span>
-      </div>
-    </section>
+        <div class="boss-gimmick-banner" id="boss-gimmick-banner" style="display: none;">
+          <span class="gimmick-tag" id="boss-gimmick-tag">🔥 กลไกบอส</span>
+          <span class="gimmick-desc" id="boss-gimmick-text">รายละเอียดลูกเล่น</span>
+        </div>
+      </section>
 
-    <!-- Mystery Chest Loot Drop Notification Card -->
-    <section class="chest-card" id="chest-card" style="display: none;">
-      <div class="chest-content">
-        <div class="chest-icon-anim">📦</div>
-        <div class="chest-details">
-          <h4 class="chest-title">พบหีบสมบัติดันเจี้ยน! (<span id="chest-count">0</span> หีบ)</h4>
-          <p class="chest-desc">ลุ้นรับอุปกรณ์สวมใส่หายาก, หินรูนโบราณ, ชุดเซ็ต, เหรียญทอง หรือ EXP</p>
+      <!-- Mystery Chest Loot Drop Notification Card -->
+      <section class="chest-card" id="chest-card" style="display: none;">
+        <div class="chest-content">
+          <div class="chest-icon-anim">📦</div>
+          <div class="chest-details">
+            <h4 class="chest-title">พบหีบสมบัติดันเจี้ยน! (<span id="chest-count">0</span> หีบ)</h4>
+            <p class="chest-desc">ลุ้นรับอุปกรณ์สวมใส่หายาก, หินรูนโบราณ, เหรียญทอง หรือ EXP</p>
+          </div>
+          <button class="btn-open-chest" id="btn-open-chest" type="button">เปิดหีบ</button>
         </div>
-        <button class="btn-open-chest" id="btn-open-chest" type="button">เปิดหีบ</button>
-      </div>
-    </section>
+      </section>
 
-    <!-- Run Tracker HUD -->
-    <section class="run-hud" id="run-hud">
-      <div class="goblin-banner" id="goblin-banner" style="display: none;">
-        <div class="goblin-header-row">
-          <span class="goblin-tag">👺 โกบลินเงาหลบหนี!</span>
-          <span class="goblin-timer" id="goblin-timer">45s</span>
+      <!-- Run Tracker HUD -->
+      <section class="run-hud" id="run-hud">
+        <!-- Event Banners -->
+        <div class="goblin-banner" id="goblin-banner" style="display: none;">
+          <div class="goblin-header-row">
+            <span class="goblin-tag">👺 โกบลินเงาหลบหนี!</span>
+            <span class="goblin-timer" id="goblin-timer">45s</span>
+          </div>
+          <div class="goblin-req-text">
+            เร่งสปรินต์ให้แตะเพซ: <strong id="goblin-target-pace">--'--"</strong> (เร็วขึ้น 0.5 เพซ)
+          </div>
+          <div class="goblin-progress-track">
+            <div class="goblin-progress-fill" id="goblin-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="goblin-hint-text" id="goblin-status-hint">รักษาเพซเป้าหมายเพื่อจับกุม!</div>
         </div>
-        <div class="goblin-req-text">
-          เร่งสปรินต์ให้แตะเพซ: <strong id="goblin-target-pace">--'--"</strong> (เร็วขึ้น 0.5 เพซ)
-        </div>
-        <div class="goblin-progress-track">
-          <div class="goblin-progress-fill" id="goblin-progress-fill" style="width: 0%;"></div>
-        </div>
-        <div class="goblin-hint-text" id="goblin-status-hint">รักษาเพซเป้าหมายเพื่อจับกุม!</div>
-      </div>
 
-      <div class="frenzy-banner" id="frenzy-banner" style="display: none;">
-        ⚡ BERSERK FRENZY: ชีพจร Zone 3 ล็อกเป้า! คริติคอล 100% ดาเมจ x1.5 ⚡
-      </div>
+        <div class="frenzy-banner" id="frenzy-banner" style="display: none;">
+          ⚡ BERSERK FRENZY: ชีพจร Zone 3 ล็อกเป้า! คริติคอล 100% ดาเมจ x1.5 ⚡
+        </div>
 
-      <div class="overdrive-banner" id="overdrive-banner" style="display: none;">
-        🔥 OVERDRIVE SURGE: โบนัสทองคำ x2 & ดูดซับ EXP เร่งด่วน (<span id="overdrive-time-left">45</span>s) 🔥
-      </div>
+        <div class="overdrive-banner" id="overdrive-banner" style="display: none;">
+          🔥 OVERDRIVE SURGE: โบนัสทองคำ x2 & ดูดซับ EXP เร่งด่วน (<span id="overdrive-time-left">45</span>s) 🔥
+        </div>
 
-      <div class="hud-status-row">
-        <span class="gps-badge" id="gps-status">GPS: พร้อมใช้งาน</span>
-        <div class="hud-status-actions">
-          <button class="voice-toggle-btn" id="voice-toggle-btn" type="button" title="เปิด/ปิดเสียงผู้ช่วยบรรยาย">🔊 เสียง: เปิด</button>
-          <button class="pocket-btn" id="pocket-btn" type="button" title="โหมดกระเป๋า/ล็อกจอสีดำประหยัดแบต">🔒 พักจอ</button>
-          <button class="sim-toggle-btn" id="sim-toggle-btn" type="button">จำลอง: ปิด</button>
+        <!-- System Controls Bar -->
+        <div class="hud-status-row">
+          <span class="gps-badge" id="gps-status">GPS: พร้อมใช้งาน</span>
+          <div class="hud-status-actions">
+            <button class="voice-toggle-btn" id="voice-toggle-btn" type="button" title="เปิด/ปิดเสียงบรรยาย">🔊 เสียง: เปิด</button>
+            <button class="pocket-btn" id="pocket-btn" type="button" title="พักหน้าจอ/ป้องกันสัมผัส">🔒 พักจอ</button>
+            <button class="sim-toggle-btn" id="sim-toggle-btn" type="button">จำลอง: ปิด</button>
+          </div>
         </div>
-      </div>
 
-      <div class="hr-panel">
-        <div class="hr-display" id="hr-display">
-          <span class="hr-icon">❤️</span>
-          <span class="hr-bpm" id="hr-bpm">--</span>
-          <span class="hr-unit">BPM</span>
-          <span class="hr-zone-badge" id="hr-zone-badge">โซน: ยังไม่เชื่อมต่อ</span>
+        <!-- Heart Rate & BLE Panel -->
+        <div class="hr-panel">
+          <div class="hr-display" id="hr-display">
+            <span class="hr-icon">❤️</span>
+            <span class="hr-bpm" id="hr-bpm">--</span>
+            <span class="hr-unit">BPM</span>
+            <span class="hr-zone-badge" id="hr-zone-badge">โซน: ยังไม่เชื่อมต่อ</span>
+          </div>
+          <button class="btn-ble-connect" id="btn-ble-connect" type="button">🔗 เชื่อมต่อสายคาดอก BLE</button>
         </div>
-        <button class="btn-ble-connect" id="btn-ble-connect" type="button">🔗 เชื่อมต่อสายคาดอก BLE</button>
-      </div>
 
-      <div class="hud-main-metric">
-        <div class="metric-value-huge" id="distance-val">0.00</div>
-        <div class="metric-unit">กิโลเมตร (KM)</div>
-      </div>
+        <!-- HERO DUO METRICS: DISTANCE & PACE (Large, high-contrast, glanceable) -->
+        <div class="hud-hero-duo">
+          <div class="hero-metric-card metric-distance">
+            <span class="hero-metric-label">ระยะทาง</span>
+            <div class="hero-metric-val" id="distance-val">0.00</div>
+            <span class="hero-metric-unit">กิโลเมตร (KM)</span>
+          </div>
+          <div class="hero-metric-card metric-pace">
+            <div class="hero-metric-label-row">
+              <span class="hero-metric-label">เพซเฉลี่ย</span>
+              <span class="flow-badge" id="flow-badge" style="display: none;">🌊 FLOW</span>
+            </div>
+            <div class="hero-metric-val" id="pace-val">--'--"</div>
+            <span class="hero-metric-unit">นาที/กม. (PACE)</span>
+          </div>
+        </div>
 
-      <div class="hud-sub-metrics">
-        <div class="sub-metric-box">
-          <span class="sub-label">เวลาที่ใช้</span>
-          <span class="sub-val" id="time-val">00:00:00</span>
+        <!-- Secondary Metrics Row (Time, Calories, Avg Speed) -->
+        <div class="hud-sub-metrics">
+          <div class="sub-metric-box">
+            <span class="sub-label">เวลาที่ใช้</span>
+            <span class="sub-val" id="time-val">00:00:00</span>
+          </div>
+          <div class="sub-metric-box">
+            <span class="sub-label">แคลอรี</span>
+            <span class="sub-val" id="cal-val">0 kcal</span>
+          </div>
         </div>
-        <div class="sub-metric-box">
-          <span class="sub-label">เพซเฉลี่ย</span>
-          <span class="sub-val" id="pace-val">--'--"</span>
-          <span class="flow-badge" id="flow-badge" style="display: none;">🌊 FLOW STATE</span>
-        </div>
-        <div class="sub-metric-box">
-          <span class="sub-label">แคลอรี</span>
-          <span class="sub-val" id="cal-val">0 kcal</span>
-        </div>
-      </div>
 
-      <div class="ultimate-container">
-        <div class="ultimate-header">
-          <span class="ult-label">⚡ เกจไม้ตาย: SHADOW SLASH (3 สต็อก)</span>
-          <span class="ult-pct" id="ult-pct-val">0% (สต็อก: 0/3)</span>
-        </div>
-        <div class="ultimate-bar-track">
-          <div class="ultimate-bar-fill" id="ult-bar-fill" style="width: 0%;"></div>
-        </div>
-        <div class="ultimate-actions-row">
-          <button class="btn-cast-ult" id="btn-cast-ult-1" type="button" disabled title="ใช้เกจ 100%: ดาเมจ 0.40 กม. / Overdrive 30 วิ">
-            🗡️ Lv.1 (100%)
+        <!-- Ultimate Skill & Auto-Cast Section -->
+        <div class="ultimate-container">
+          <div class="ultimate-header">
+            <div class="ult-title-group">
+              <span class="ult-label">⚡ SHADOW SLASH</span>
+              <span class="ult-pct" id="ult-pct-val">0% (สต็อก: 0/3)</span>
+            </div>
+            <button class="btn-autocast-toggle" id="btn-autocast-toggle" type="button" title="สลับโหมดร่ายอัตโนมัติ">
+              <span class="autocast-status-dot"></span>
+              <span class="autocast-text" id="autocast-status-text">ออโต้: ปิด</span>
+            </button>
+          </div>
+          <div class="ultimate-bar-track">
+            <div class="ultimate-bar-fill" id="ult-bar-fill" style="width: 0%;"></div>
+            <div class="ult-notch notch-100"></div>
+            <div class="ult-notch notch-200"></div>
+          </div>
+
+          <!-- Big Tactile Quick-Cast Button for Runners -->
+          <button class="btn-quick-cast-ult" id="btn-quick-cast-ult" type="button" disabled>
+            <span class="quick-ult-icon">🗡️</span>
+            <div class="quick-ult-info">
+              <span class="quick-ult-title">ร่าย SHADOW SLASH</span>
+              <span class="quick-ult-sub" id="quick-ult-sub">สะสมเกจแตะ 100% เพื่อปลดปล่อย</span>
+            </div>
           </button>
-          <button class="btn-cast-ult" id="btn-cast-ult-2" type="button" disabled title="ใช้เกจ 200%: ดาเมจ 1.00 กม. / Overdrive 60 วิ">
-            ⚡ Lv.2 (200%)
+
+          <!-- Precision Tier Selection -->
+          <div class="ultimate-actions-row">
+            <button class="btn-cast-ult" id="btn-cast-ult-1" type="button" disabled title="ใช้เกจ 100%: ดาเมจ 0.40 กม. / Overdrive 30 วิ">
+              🗡️ Lv.1 (100%)
+            </button>
+            <button class="btn-cast-ult" id="btn-cast-ult-2" type="button" disabled title="ใช้เกจ 200%: ดาเมจ 1.00 กม. / Overdrive 60 วิ">
+              ⚡ Lv.2 (200%)
+            </button>
+            <button class="btn-cast-ult" id="btn-cast-ult-3" type="button" disabled title="ใช้เกจ 300%: ดาเมจ 2.20 กม. / Overdrive 90 วิ">
+              💥 Lv.3 (300%)
+            </button>
+          </div>
+        </div>
+
+        <!-- Big Runner Action Controls -->
+        <div class="hud-controls">
+          <button class="btn-primary-action" id="btn-toggle-run" type="button">
+            <span class="btn-icon">⚡</span>
+            <span class="btn-text" id="btn-run-text">เริ่มออกล่า</span>
           </button>
-          <button class="btn-cast-ult" id="btn-cast-ult-3" type="button" disabled title="ใช้เกจ 300%: ดาเมจ 2.20 กม. / Overdrive 90 วิ">
-            💥 Lv.3 (300%)
+          <button class="btn-secondary-action" id="btn-finish-run" type="button" disabled>
+            <span class="btn-text">🏁 สรุปผลการวิ่ง</span>
           </button>
         </div>
+
+        <!-- Simulation Tools (for in-room / testing) -->
+        <div class="sim-controls" id="sim-controls" style="display: none;">
+          <span class="sim-hint">กดเพื่อเพิ่มระยะทดสอบ:</span>
+          <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.2)">+200 ม.</button>
+          <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.5)">+500 ม.</button>
+          <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(1.0)">+1.0 กม.</button>
+          <button class="btn-sim-add btn-sim-goblin" type="button" onclick="window.shadowStrider.triggerGoblin()">👺 สปอว์นโกบลิน</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- TAB 2: HERO & EQUIPMENT (Character, Stats, Inventory, Runes) -->
+    <section class="tab-page" id="tab-hero" style="display: none;">
+      <!-- Stat Points Alert Bar -->
+      <div class="stat-points-bar" id="stat-points-bar" style="display: none;">
+        <span>✨ มีแต้มอัปเกรดคงเหลือ: <strong id="stat-points-val">0</strong> แต้ม</span>
       </div>
 
-      <div class="hud-controls">
-        <button class="btn-primary-action" id="btn-toggle-run" type="button">
-          <span class="btn-icon">⚡</span>
-          <span class="btn-text" id="btn-run-text">เริ่มออกล่า</span>
-        </button>
-        <button class="btn-secondary-action" id="btn-finish-run" type="button" disabled>
-          <span class="btn-text">สรุปผลการวิ่ง</span>
-        </button>
-      </div>
+      <!-- Stats Bar (STR, STA, AGI) with Allocation Buttons -->
+      <section class="stats-ribbon">
+        <div class="stat-item">
+          <span class="stat-label">STR (ดาเมจ x<span id="str-mult">1.0</span>)</span>
+          <div class="stat-val-row">
+            <span class="stat-val" id="stat-str">10</span>
+            <button class="btn-stat-add" id="btn-add-str" type="button" title="อัปเกรด STR">+</button>
+          </div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">STA (โบนัส +<span id="sta-mult">0</span>%)</span>
+          <div class="stat-val-row">
+            <span class="stat-val" id="stat-sta">10</span>
+            <button class="btn-stat-add" id="btn-add-sta" type="button" title="อัปเกรด STA">+</button>
+          </div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">AGI (<span id="agi-crit">คริติคอล 7.0%</span>)</span>
+          <div class="stat-val-row">
+            <span class="stat-val" id="stat-agi">10</span>
+            <button class="btn-stat-add" id="btn-add-agi" type="button" title="อัปเกรด AGI">+</button>
+          </div>
+        </div>
+      </section>
 
-      <div class="sim-controls" id="sim-controls" style="display: none;">
-        <span class="sim-hint">กดเพื่อเพิ่มระยะทดสอบ:</span>
-        <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.2)">+200 ม.</button>
-        <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.5)">+500 ม.</button>
-        <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(1.0)">+1.0 กม.</button>
-        <button class="btn-sim-add btn-sim-goblin" type="button" onclick="window.shadowStrider.triggerGoblin()">👺 สปอว์นโกบลิน</button>
-      </div>
+      <!-- Equipment & Inventory Section -->
+      <section class="equipment-section">
+        <div class="section-title-row">
+          <h2 class="section-title">อุปกรณ์สวมใส่ (Equipment)</h2>
+          <span class="equip-summary" id="equip-summary">โบนัส: ดาเมจ +0%</span>
+        </div>
+
+        <div class="equip-slots-grid">
+          <div class="slot-box" id="slot-weapon" data-slottype="weapon">
+            <span class="slot-label">อาวุธ</span>
+            <div class="slot-item-icon" id="icon-slot-weapon">🗡️</div>
+            <span class="slot-item-name" id="name-slot-weapon">ว่างเปล่า</span>
+            <span class="slot-item-set-tag" id="set-slot-weapon"></span>
+          </div>
+          <div class="slot-box" id="slot-armor" data-slottype="armor">
+            <span class="slot-label">เกราะอก</span>
+            <div class="slot-item-icon" id="icon-slot-armor">🛡️</div>
+            <span class="slot-item-name" id="name-slot-armor">ว่างเปล่า</span>
+            <span class="slot-item-set-tag" id="set-slot-armor"></span>
+          </div>
+          <div class="slot-box" id="slot-boots" data-slottype="boots">
+            <span class="slot-label">รองเท้าเงา</span>
+            <div class="slot-item-icon" id="icon-slot-boots">🥾</div>
+            <span class="slot-item-name" id="name-slot-boots">ว่างเปล่า</span>
+            <span class="slot-item-set-tag" id="set-slot-boots"></span>
+          </div>
+          <div class="slot-box" id="slot-relic" data-slottype="relic">
+            <span class="slot-label">เครื่องราง</span>
+            <div class="slot-item-icon" id="icon-slot-relic">🧿</div>
+            <span class="slot-item-name" id="name-slot-relic">ว่างเปล่า</span>
+            <span class="slot-item-set-tag" id="set-slot-relic"></span>
+          </div>
+          <div class="slot-box" id="slot-ring" data-slottype="ring">
+            <span class="slot-label">แหวนเงา</span>
+            <div class="slot-item-icon" id="icon-slot-ring">💍</div>
+            <span class="slot-item-name" id="name-slot-ring">ว่างเปล่า</span>
+            <span class="slot-item-set-tag" id="set-slot-ring"></span>
+          </div>
+          <div class="slot-box" id="slot-bracelet" data-slottype="bracelet">
+            <span class="slot-label">กำไลข้อมือ</span>
+            <div class="slot-item-icon" id="icon-slot-bracelet">📿</div>
+            <span class="slot-item-name" id="name-slot-bracelet">ว่างเปล่า</span>
+            <span class="slot-item-set-tag" id="set-slot-bracelet"></span>
+          </div>
+        </div>
+
+        <div class="set-bonuses-container" id="set-bonuses-container"></div>
+
+        <div class="inventory-container">
+          <div class="inv-header">
+            <span class="inv-title">คลังไอเทม (<span id="inv-count">0</span>/30)</span>
+            <span class="inv-hint">แตะเพื่อดู/สวมใส่/ฝังรูน</span>
+          </div>
+
+          <div class="inv-tabs">
+            <button class="inv-tab-btn active" data-filter="all" type="button">ทั้งหมด</button>
+            <button class="inv-tab-btn" data-filter="weapon" type="button">อาวุธ</button>
+            <button class="inv-tab-btn" data-filter="armor" type="button">เกราะ</button>
+            <button class="inv-tab-btn" data-filter="boots" type="button">รองเท้า</button>
+            <button class="inv-tab-btn" data-filter="relic" type="button">เครื่องราง</button>
+            <button class="inv-tab-btn" data-filter="ring" type="button">แหวน</button>
+            <button class="inv-tab-btn" data-filter="bracelet" type="button">กำไลข้อมือ</button>
+          </div>
+
+          <div class="inventory-grid" id="inventory-grid"></div>
+        </div>
+      </section>
+
+      <!-- Rune Stash Section -->
+      <section class="rune-stash-section">
+        <div class="section-title-row">
+          <h2 class="section-title">คลังหินรูนโบราณ (Rune Stash)</h2>
+          <span class="rune-count-summary" id="rune-count-summary">ครอบครอง 0 ก้อน</span>
+        </div>
+        <p class="rune-stash-hint">หินรูนจากการพิชิตบอสและหีบสมบัติ นำมาฝังลงช่องเจาะ (Sockets) เพื่อปลุกพลังคำรูนลับ (Runewords)</p>
+        <div class="rune-grid" id="rune-grid"></div>
+      </section>
     </section>
 
-    <!-- Equipment & Inventory Section -->
-    <section class="equipment-section">
-      <div class="section-title-row">
-        <h2 class="section-title">อุปกรณ์สวมใส่ (Equipment)</h2>
-        <span class="equip-summary" id="equip-summary">โบนัส: ดาเมจ +0%</span>
-      </div>
-
-      <div class="equip-slots-grid">
-        <div class="slot-box" id="slot-weapon" data-slottype="weapon">
-          <span class="slot-label">อาวุธ</span>
-          <div class="slot-item-icon" id="icon-slot-weapon">🗡️</div>
-          <span class="slot-item-name" id="name-slot-weapon">ว่างเปล่า</span>
-          <span class="slot-item-set-tag" id="set-slot-weapon"></span>
+    <!-- TAB 3: ARMORY & CODEX (Shop & Bestiary) -->
+    <section class="tab-page" id="tab-armory" style="display: none;">
+      <!-- Shadow Armory (Shop System) -->
+      <section class="shop-section">
+        <div class="section-title-row">
+          <h2 class="section-title">คลังสรรพาวุธเงา (Shadow Armory)</h2>
+          <span class="shop-hint">อัปเกรดพลังด้วยเหรียญทอง (ล้มเหลวเพิ่มโอกาส +10%)</span>
         </div>
-        <div class="slot-box" id="slot-armor" data-slottype="armor">
-          <span class="slot-label">เกราะอก</span>
-          <div class="slot-item-icon" id="icon-slot-armor">🛡️</div>
-          <span class="slot-item-name" id="name-slot-armor">ว่างเปล่า</span>
-          <span class="slot-item-set-tag" id="set-slot-armor"></span>
-        </div>
-        <div class="slot-box" id="slot-boots" data-slottype="boots">
-          <span class="slot-label">รองเท้าเงา</span>
-          <div class="slot-item-icon" id="icon-slot-boots">🥾</div>
-          <span class="slot-item-name" id="name-slot-boots">ว่างเปล่า</span>
-          <span class="slot-item-set-tag" id="set-slot-boots"></span>
-        </div>
-        <div class="slot-box" id="slot-relic" data-slottype="relic">
-          <span class="slot-label">เครื่องราง</span>
-          <div class="slot-item-icon" id="icon-slot-relic">🧿</div>
-          <span class="slot-item-name" id="name-slot-relic">ว่างเปล่า</span>
-          <span class="slot-item-set-tag" id="set-slot-relic"></span>
-        </div>
-        <div class="slot-box" id="slot-ring" data-slottype="ring">
-          <span class="slot-label">แหวนเงา</span>
-          <div class="slot-item-icon" id="icon-slot-ring">💍</div>
-          <span class="slot-item-name" id="name-slot-ring">ว่างเปล่า</span>
-          <span class="slot-item-set-tag" id="set-slot-ring"></span>
-        </div>
-        <div class="slot-box" id="slot-bracelet" data-slottype="bracelet">
-          <span class="slot-label">กำไลข้อมือ</span>
-          <div class="slot-item-icon" id="icon-slot-bracelet">📿</div>
-          <span class="slot-item-name" id="name-slot-bracelet">ว่างเปล่า</span>
-          <span class="slot-item-set-tag" id="set-slot-bracelet"></span>
-        </div>
-      </div>
-
-      <div class="set-bonuses-container" id="set-bonuses-container"></div>
-
-      <div class="inventory-container">
-        <div class="inv-header">
-          <span class="inv-title">คลังไอเทม (<span id="inv-count">0</span>/30)</span>
-          <span class="inv-hint">แตะเพื่อดู/สวมใส่/ฝังรูน</span>
-        </div>
-
-        <div class="inv-tabs">
-          <button class="inv-tab-btn active" data-filter="all" type="button">ทั้งหมด</button>
-          <button class="inv-tab-btn" data-filter="weapon" type="button">อาวุธ</button>
-          <button class="inv-tab-btn" data-filter="armor" type="button">เกราะ</button>
-          <button class="inv-tab-btn" data-filter="boots" type="button">รองเท้า</button>
-          <button class="inv-tab-btn" data-filter="relic" type="button">เครื่องราง</button>
-          <button class="inv-tab-btn" data-filter="ring" type="button">แหวน</button>
-          <button class="inv-tab-btn" data-filter="bracelet" type="button">กำไลข้อมือ</button>
-        </div>
-
-        <div class="inventory-grid" id="inventory-grid"></div>
-      </div>
-    </section>
-
-    <!-- Rune Stash Section -->
-    <section class="rune-stash-section">
-      <div class="section-title-row">
-        <h2 class="section-title">คลังหินรูนโบราณ (Rune Stash)</h2>
-        <span class="rune-count-summary" id="rune-count-summary">ครอบครอง 0 ก้อน</span>
-      </div>
-      <p class="rune-stash-hint">หินรูนจากการพิชิตบอสและหีบสมบัติ นำมาฝังลงช่องเจาะ (Sockets) เพื่อปลุกพลังคำรูนลับ (Runewords)</p>
-      <div class="rune-grid" id="rune-grid"></div>
-    </section>
-
-    <!-- Monster Codex / Bestiary -->
-    <section class="codex-section">
-      <div class="section-title-row">
-        <h2 class="section-title">สมุดภาพมอนสเตอร์ (Bestiary Codex)</h2>
-        <span class="codex-counter" id="codex-counter">บันทึก 12 อสูร</span>
-      </div>
-      <div class="codex-list" id="codex-list"></div>
-    </section>
-
-    <!-- Shadow Armory (Shop System) -->
-    <section class="shop-section">
-      <div class="section-title-row">
-        <h2 class="section-title">คลังสรรพาวุธเงา (Shadow Armory)</h2>
-        <span class="shop-hint">อัปเกรดพลังด้วยเหรียญทอง (ล้มเหลวเพิ่มโอกาส +5%)</span>
-      </div>
-      <div class="shop-grid">
-        <div class="shop-item">
-          <div class="item-header">
-            <span class="item-icon">🧪</span>
-            <div class="item-info">
-              <span class="item-name">น้ำยาจิตวิญญาณ</span>
-              <span class="item-buff">+1 แต้มสเตตัสอิสระ</span>
+        <div class="shop-grid">
+          <div class="shop-item">
+            <div class="item-header">
+              <span class="item-icon">🧪</span>
+              <div class="item-info">
+                <span class="item-name">น้ำยาจิตวิญญาณ</span>
+                <span class="item-buff">+1 แต้มสเตตัสอิสระ</span>
+              </div>
+            </div>
+            <div class="item-footer">
+              <span class="item-price">🪙 <span id="price-elixir">200</span></span>
+              <button class="btn-buy-item" id="btn-buy-elixir" type="button">ซื้อ</button>
             </div>
           </div>
-          <div class="item-footer">
-            <span class="item-price">🪙 <span id="price-elixir">200</span></span>
-            <button class="btn-buy-item" id="btn-buy-elixir" type="button">ซื้อ</button>
-          </div>
-        </div>
 
-        <div class="shop-item">
-          <div class="item-header">
-            <span class="item-icon">🗡️</span>
-            <div class="item-info">
-              <span class="item-name">ดาบเงาพิฆาต (Lv.<span id="lvl-blade">0</span>)</span>
-              <span class="item-buff">ดาเมจพื้นฐาน +<span id="blade-bonus">0</span>%</span>
-              <span class="item-rate">โอกาสสำเร็จ: <strong id="rate-blade">100</strong>%</span>
+          <div class="shop-item">
+            <div class="item-header">
+              <span class="item-icon">🗡️</span>
+              <div class="item-info">
+                <span class="item-name">ดาบเงาพิฆาต (Lv.<span id="lvl-blade">0</span>)</span>
+                <span class="item-buff">ดาเมจพื้นฐาน +<span id="blade-bonus">0</span>%</span>
+                <span class="item-rate">โอกาสสำเร็จ: <strong id="rate-blade">100</strong>%</span>
+              </div>
+            </div>
+            <div class="item-footer">
+              <span class="item-price">🪙 <span id="price-blade">400</span></span>
+              <button class="btn-buy-item" id="btn-buy-blade" type="button">อัปเกรด</button>
             </div>
           </div>
-          <div class="item-footer">
-            <span class="item-price">🪙 <span id="price-blade">400</span></span>
-            <button class="btn-buy-item" id="btn-buy-blade" type="button">อัปเกรด</button>
-          </div>
-        </div>
 
-        <div class="shop-item">
-          <div class="item-header">
-            <span class="item-icon">🧿</span>
-            <div class="item-info">
-              <span class="item-name">เครื่องรางล่าโลหิต (Lv.<span id="lvl-charm">0</span>)</span>
-              <span class="item-buff">โบนัสเหรียญทอง +<span id="charm-bonus">0</span>%</span>
-              <span class="item-rate">โอกาสสำเร็จ: <strong id="rate-charm">100</strong>%</span>
+          <div class="shop-item">
+            <div class="item-header">
+              <span class="item-icon">🧿</span>
+              <div class="item-info">
+                <span class="item-name">เครื่องรางล่าโลหิต (Lv.<span id="lvl-charm">0</span>)</span>
+                <span class="item-buff">โบนัสเหรียญทอง +<span id="charm-bonus">0</span>%</span>
+                <span class="item-rate">โอกาสสำเร็จ: <strong id="rate-charm">100</strong>%</span>
+              </div>
+            </div>
+            <div class="item-footer">
+              <span class="item-price">🪙 <span id="price-charm">350</span></span>
+              <button class="btn-buy-item" id="btn-buy-charm" type="button">อัปเกรด</button>
             </div>
           </div>
-          <div class="item-footer">
-            <span class="item-price">🪙 <span id="price-charm">350</span></span>
-            <button class="btn-buy-item" id="btn-buy-charm" type="button">อัปเกรด</button>
-          </div>
-        </div>
 
-        <div class="shop-item">
-          <div class="item-header">
-            <span class="item-icon">👁️</span>
-            <div class="item-info">
-              <span class="item-name">เนตรอเวจี (Lv.<span id="lvl-eye">0</span>)</span>
-              <span class="item-buff">ดาเมจคริติคอล +<span id="eye-bonus">0</span>%</span>
-              <span class="item-rate">โอกาสสำเร็จ: <strong id="rate-eye">100</strong>%</span>
+          <div class="shop-item">
+            <div class="item-header">
+              <span class="item-icon">👁️</span>
+              <div class="item-info">
+                <span class="item-name">เนตรอเวจี (Lv.<span id="lvl-eye">0</span>)</span>
+                <span class="item-buff">ดาเมจคริติคอล +<span id="eye-bonus">0</span>%</span>
+                <span class="item-rate">โอกาสสำเร็จ: <strong id="rate-eye">100</strong>%</span>
+              </div>
+            </div>
+            <div class="item-footer">
+              <span class="item-price">🪙 <span id="price-eye">500</span></span>
+              <button class="btn-buy-item" id="btn-buy-eye" type="button">อัปเกรด</button>
             </div>
           </div>
-          <div class="item-footer">
-            <span class="item-price">🪙 <span id="price-eye">500</span></span>
-            <button class="btn-buy-item" id="btn-buy-eye" type="button">อัปเกรด</button>
+        </div>
+      </section>
+
+      <!-- Monster Codex / Bestiary -->
+      <section class="codex-section">
+        <div class="section-title-row">
+          <h2 class="section-title">สมุดภาพมอนสเตอร์ (Bestiary Codex)</h2>
+          <span class="codex-counter" id="codex-counter">บันทึก 12 อสูร</span>
+        </div>
+        <div class="codex-list" id="codex-list"></div>
+      </section>
+    </section>
+
+    <!-- TAB 4: QUESTS & MILESTONES (10x Rewards & New Major Milestones) -->
+    <section class="tab-page" id="tab-quests" style="display: none;">
+      <!-- Daily Quests Section -->
+      <section class="quests-section">
+        <div class="section-title-row">
+          <div>
+            <h2 class="section-title">ภารกิจประจำวัน (Daily Quests)</h2>
+            <div class="quest-boost-tag">🔥 ผลตอบแทน 10 เท่า!</div>
+          </div>
+          <span class="quest-refresh-time" id="quest-date">วันนี้</span>
+        </div>
+        <div class="quests-list" id="quests-list"></div>
+      </section>
+
+      <!-- Achievements / Milestones Section -->
+      <section class="achievements-section">
+        <div class="section-title-row">
+          <h2 class="section-title">เกียรติยศแห่งเงา (Milestones)</h2>
+          <div class="ach-header-cluster">
+            <span class="achievements-counter" id="achievements-counter">0/32 สำเร็จ</span>
+            <button class="btn-ach-filter" id="btn-toggle-claimed-ach" type="button" title="สลับการแสดงผล">👁️ ซ่อนที่สำเร็จแล้ว</button>
           </div>
         </div>
-      </div>
+        
+        <div class="achievements-list" id="achievements-list"></div>
+
+        <!-- Collapsible Claimed Achievements Container -->
+        <div class="achievements-claimed-container" id="achievements-claimed-container" style="display: none;">
+          <button class="btn-toggle-claimed-group" id="btn-toggle-claimed-group" type="button">
+            <span>📜 เกียรติยศที่บันทึกแล้ว (<span id="claimed-ach-count">0</span> รายการ)</span>
+            <span id="claimed-accordion-arrow">▸ กางออก</span>
+          </button>
+          <div class="achievements-claimed-list" id="achievements-claimed-list" style="display: none;"></div>
+        </div>
+      </section>
     </section>
 
-    <!-- Daily Quests Section -->
-    <section class="quests-section">
-      <div class="section-title-row">
-        <h2 class="section-title">ภารกิจประจำวัน (Daily Quests)</h2>
-        <span class="quest-refresh-time" id="quest-date">วันนี้</span>
-      </div>
-      <div class="quests-list" id="quests-list"></div>
+    <!-- TAB 5: STATS & RECORDS (Career, History, GPX, Backup) -->
+    <section class="tab-page" id="tab-records" style="display: none;">
+      <!-- Career Stats Section -->
+      <section class="career-section">
+        <div class="section-title-row">
+          <h2 class="section-title">สถิติสะสมตลอดกาล (Career Stats)</h2>
+        </div>
+        <div class="career-grid">
+          <div class="career-box">
+            <span class="career-label">ระยะทางสะสม</span>
+            <span class="career-val" id="career-distance">0.00 กม.</span>
+          </div>
+          <div class="career-box">
+            <span class="career-label">เวลาสะสม</span>
+            <span class="career-val" id="career-time">00:00:00</span>
+          </div>
+          <div class="career-box">
+            <span class="career-label">บอสที่พิชิต</span>
+            <span class="career-val" id="career-bosses">0 ตัว</span>
+          </div>
+          <div class="career-box">
+            <span class="career-label">วิ่งไกลสุด/รอบ</span>
+            <span class="career-val" id="career-longest">0.00 กม.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- History & Daily Stats Section -->
+      <section class="history-section" id="history-section">
+        <div class="section-title-row">
+          <div class="title-with-badge">
+            <h2 class="section-title">บันทึกสถิติการล่า</h2>
+            <span class="history-count" id="history-count">0 รอบ</span>
+          </div>
+          <button class="btn-toggle-history" id="btn-toggle-history" type="button">▾ พับเก็บ</button>
+        </div>
+
+        <div class="history-collapsed-summary" id="history-collapsed-summary" style="display: none;">
+          <span class="history-mini-icon">📜</span>
+          <span class="history-mini-text" id="history-mini-text">มีประวัติการล่าสะสม แตะ "กางออก" เพื่อเปิดดู</span>
+        </div>
+
+        <div class="history-collapsible-content" id="history-collapsible-content">
+          <div class="tab-control">
+            <button class="tab-btn active" id="tab-btn-daily" type="button">📊 สถิติรายวัน (Daily)</button>
+            <button class="tab-btn" id="tab-btn-sessions" type="button">📜 ประวัติรายรอบ (Sessions)</button>
+          </div>
+
+          <div class="tab-view" id="view-daily">
+            <div class="daily-list" id="daily-list"></div>
+          </div>
+
+          <div class="tab-view" id="view-sessions" style="display: none;">
+            <div class="history-list" id="history-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Runner Utility & Data Management -->
+      <section class="utility-section">
+        <div class="section-title-row">
+          <h2 class="section-title">การจัดการตัวละคร & สำรองข้อมูล</h2>
+        </div>
+        <p class="utility-desc">จัดการโปรไฟล์ตัวละคร หรือสำรองข้อมูลทั้งหมดใน IndexedDB เป็นไฟล์ JSON</p>
+        <div class="utility-actions">
+          <button class="btn-utility btn-utility-char" id="btn-utility-character" type="button">👤 จัดการตัวละคร (สร้าง / ลบ / ตั้งชื่อ)</button>
+          <button class="btn-utility" id="btn-export-backup" type="button">📥 ส่งออกไฟล์สำรอง (Backup JSON)</button>
+          <label class="btn-utility btn-utility-import">
+            📤 กู้คืนข้อมูล (Restore JSON)
+            <input type="file" id="input-import-backup" accept=".json" style="display: none;">
+          </label>
+        </div>
+      </section>
     </section>
 
-    <!-- Achievements / Milestones Section -->
-    <section class="achievements-section">
-      <div class="section-title-row">
-        <h2 class="section-title">เกียรติยศแห่งเงา (Milestones)</h2>
-        <div class="ach-header-cluster">
-          <span class="achievements-counter" id="achievements-counter">0/21 สำเร็จ</span>
-          <button class="btn-ach-filter" id="btn-toggle-claimed-ach" type="button" title="สลับการแสดงผล">👁️ ซ่อนที่สำเร็จแล้ว</button>
-        </div>
-      </div>
-      
-      <div class="achievements-list" id="achievements-list"></div>
-
-      <!-- Collapsible Claimed Achievements Container -->
-      <div class="achievements-claimed-container" id="achievements-claimed-container" style="display: none;">
-        <button class="btn-toggle-claimed-group" id="btn-toggle-claimed-group" type="button">
-          <span>📜 เกียรติยศที่บันทึกแล้ว (<span id="claimed-ach-count">0</span> รายการ)</span>
-          <span id="claimed-accordion-arrow">▸ กางออก</span>
-        </button>
-        <div class="achievements-claimed-list" id="achievements-claimed-list" style="display: none;"></div>
-      </div>
-    </section>
-
-    <!-- Career Stats Section -->
-    <section class="career-section">
-      <div class="section-title-row">
-        <h2 class="section-title">สถิติสะสมตลอดกาล (Career Stats)</h2>
-      </div>
-      <div class="career-grid">
-        <div class="career-box">
-          <span class="career-label">ระยะทางสะสม</span>
-          <span class="career-val" id="career-distance">0.00 กม.</span>
-        </div>
-        <div class="career-box">
-          <span class="career-label">เวลาสะสม</span>
-          <span class="career-val" id="career-time">00:00:00</span>
-        </div>
-        <div class="career-box">
-          <span class="career-label">บอสที่พิชิต</span>
-          <span class="career-val" id="career-bosses">0 ตัว</span>
-        </div>
-        <div class="career-box">
-          <span class="career-label">วิ่งไกลสุด/รอบ</span>
-          <span class="career-val" id="career-longest">0.00 กม.</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- History & Daily Stats Section -->
-    <section class="history-section" id="history-section">
-      <div class="section-title-row">
-        <div class="title-with-badge">
-          <h2 class="section-title">บันทึกสถิติการล่า</h2>
-          <span class="history-count" id="history-count">0 รอบ</span>
-        </div>
-        <button class="btn-toggle-history" id="btn-toggle-history" type="button">▾ พับเก็บ</button>
-      </div>
-
-      <div class="history-collapsed-summary" id="history-collapsed-summary" style="display: none;">
-        <span class="history-mini-icon">📜</span>
-        <span class="history-mini-text" id="history-mini-text">มีประวัติการล่าสะสม แตะ "กางออก" เพื่อเปิดดู</span>
-      </div>
-
-      <div class="history-collapsible-content" id="history-collapsible-content">
-        <div class="tab-control">
-          <button class="tab-btn active" id="tab-btn-daily" type="button">📊 สถิติรายวัน (Daily)</button>
-          <button class="tab-btn" id="tab-btn-sessions" type="button">📜 ประวัติรายรอบ (Sessions)</button>
-        </div>
-
-        <div class="tab-view" id="view-daily">
-          <div class="daily-list" id="daily-list"></div>
-        </div>
-
-        <div class="tab-view" id="view-sessions" style="display: none;">
-          <div class="history-list" id="history-list"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Runner Utility & Data Management -->
-    <section class="utility-section">
-      <div class="section-title-row">
-        <h2 class="section-title">การจัดการตัวละคร & สำรองข้อมูล</h2>
-      </div>
-      <p class="utility-desc">จัดการโปรไฟล์ตัวละคร หรือสำรองข้อมูลทั้งหมดใน IndexedDB เป็นไฟล์ JSON</p>
-      <div class="utility-actions">
-        <button class="btn-utility btn-utility-char" id="btn-utility-character" type="button">👤 จัดการตัวละคร (สร้าง / ลบ / ตั้งชื่อ)</button>
-        <button class="btn-utility" id="btn-export-backup" type="button">📥 ส่งออกไฟล์สำรอง (Backup JSON)</button>
-        <label class="btn-utility btn-utility-import">
-          📤 กู้คืนข้อมูล (Restore JSON)
-          <input type="file" id="input-import-backup" accept=".json" style="display: none;">
-        </label>
-      </div>
-    </section>
+    <!-- FIXED BOTTOM NAVIGATION BAR -->
+    <nav class="bottom-nav">
+      <button class="nav-tab-btn active" data-tab="tab-hunt" type="button">
+        <span class="nav-icon">🏃</span>
+        <span class="nav-label">ออกล่า</span>
+        <span class="nav-badge" id="badge-hunt" style="display: none;">!</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-hero" type="button">
+        <span class="nav-icon">⚔️</span>
+        <span class="nav-label">ตัวละคร</span>
+        <span class="nav-badge" id="badge-hero" style="display: none;">!</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-armory" type="button">
+        <span class="nav-icon">🏪</span>
+        <span class="nav-label">ร้านค้า</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-quests" type="button">
+        <span class="nav-icon">📜</span>
+        <span class="nav-label">ภารกิจ</span>
+        <span class="nav-badge" id="badge-quests" style="display: none;">!</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-records" type="button">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">สถิติ</span>
+      </button>
+    </nav>
 
     <!-- Character Management Modal -->
     <div class="modal-overlay" id="char-modal" style="display: none;">
@@ -508,11 +586,42 @@
       </div>
     </div>
 
-    <!-- Pocket Mode / Screen Saver Overlay -->
+    <!-- Finish Run Safe Confirmation Modal (Prevents sweaty finger misclicks) -->
+    <div class="modal-overlay" id="confirm-finish-modal" style="display: none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-item-icon">🏁</span>
+          <div class="modal-header-info">
+            <h3 class="modal-item-name">ยืนยันจบการออกล่า</h3>
+            <span class="modal-item-rarity" style="color: var(--gold-glow);">Session Complete</span>
+          </div>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 0.85rem; color: #fff; line-height: 1.4; text-align: center; padding: 6px 0;">
+            คุณต้องการสรุปและบันทึกผลการวิ่งรอบนี้ลงในประวัติใช่หรือไม่?
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-action btn-finish-confirm" id="btn-modal-finish-confirm" type="button">🏁 จบการวิ่ง</button>
+          <button class="btn-modal-action btn-cancel" id="btn-modal-finish-cancel" type="button">วิ่งต่อ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pocket Mode / Screen Saver Overlay (High Contrast for Outdoor Daylight) -->
     <div class="pocket-overlay" id="pocket-overlay" style="display: none;">
       <div class="pocket-content">
         <div class="pocket-lock-icon">🔒</div>
-        <div class="pocket-metric-val" id="pocket-dist-val">0.00 KM</div>
+        <div class="pocket-hero-duo">
+          <div class="pocket-box">
+            <span class="pocket-lbl">ระยะทาง</span>
+            <div class="pocket-metric-val" id="pocket-dist-val">0.00 KM</div>
+          </div>
+          <div class="pocket-box">
+            <span class="pocket-lbl">เพซ</span>
+            <div class="pocket-pace-val" id="pocket-pace-val">--'--"</div>
+          </div>
+        </div>
         <div class="pocket-metric-sub" id="pocket-time-val">00:00:00</div>
         <div class="pocket-unlock-guide">แตะค้างไว้ 1.5 วินาทีเพื่อปลดล็อก</div>
         <div class="pocket-progress-track">

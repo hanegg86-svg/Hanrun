@@ -520,11 +520,13 @@
 
   function generateDailyQuests() {
     return [
-      { id: 'dq_dist', name: 'สำรวจอเวจีลึก: สะสมระยะทาง 5.0 กม.', target: 5.0, current: 0.0, unit: 'กม.', rewardExp: 32000, rewardGold: 3500, claimed: false },
-      { id: 'dq_time', name: 'สมาธิจิตนักล่า: วิ่งสะสมเวลา 30 นาที', target: 1800, current: 0, unit: 'วินาที', rewardExp: 38000, rewardGold: 4000, claimed: false },
-      { id: 'dq_cal', name: 'ผลาญพลังเวท: เผาผลาญ 320 kcal', target: 320, current: 0, unit: 'kcal', rewardExp: 30000, rewardGold: 3200, claimed: false },
-      { id: 'dq_boss', name: 'ล่าสังหารสามชีพ: โค่นบอส 3 ตัว', target: 3, current: 0, unit: 'ตัว', rewardExp: 50000, rewardGold: 6500, claimed: false },
-      { id: 'dq_crit', name: 'สังหารจุดตาย: โจมตีคริติคอล 30 ครั้ง', target: 30, current: 0, unit: 'ครั้ง', rewardExp: 42000, rewardGold: 4500, claimed: false }
+      { id: 'dq_dist', name: 'สำรวจอเวจีลึก: สะสมระยะทาง 8.0 กม.', target: 8.0, current: 0.0, unit: 'กม.', rewardExp: 320000, rewardGold: 35000, claimed: false },
+      { id: 'dq_time', name: 'สมาธิจิตนักล่า: วิ่งสะสมเวลา 45 นาที', target: 2700, current: 0, unit: 'วินาที', rewardExp: 380000, rewardGold: 40000, claimed: false },
+      { id: 'dq_cal', name: 'ผลาญพลังเวท: เผาผลาญ 550 kcal', target: 550, current: 0, unit: 'kcal', rewardExp: 300000, rewardGold: 32000, claimed: false },
+      { id: 'dq_boss', name: 'ล่าสังหารห้าชีพ: โค่นบอส 5 ตัว', target: 5, current: 0, unit: 'ตัว', rewardExp: 500000, rewardGold: 65000, claimed: false },
+      { id: 'dq_crit', name: 'สังหารจุดตาย: โจมตีคริติคอล 60 ครั้ง', target: 60, current: 0, unit: 'ครั้ง', rewardExp: 420000, rewardGold: 45000, claimed: false },
+      { id: 'dq_frenzy', name: 'คลั่งศึกอเวจี: รักษาสภาวะ Berserk/Zone 3 นาน 10 นาที', target: 600, current: 0, unit: 'วินาที', rewardExp: 450000, rewardGold: 48000, claimed: false },
+      { id: 'dq_ult', name: 'เพลงดาบเงาปลิดชีพ: ร่าย Shadow Slash 10 ครั้ง', target: 10, current: 0, unit: 'ครั้ง', rewardExp: 360000, rewardGold: 38000, claimed: false }
     ];
   }
 
@@ -550,7 +552,18 @@
       { id: 'ach_goblin_catch', name: 'Goblin Executioner (ผู้ล้างบางก็อบลิน)', desc: 'สยบโกบลินเงาหลบหนีสำเร็จ 8 ครั้ง', target: 8, current: 0, unit: 'ครั้ง', rewardExp: 32000, rewardGold: 6500, claimed: false },
       { id: 'ach_flow_count', name: 'Transcendental Flow (สมาธิไร้ขอบเขต)', desc: 'เข้าสู่สถานะ Flow State สะสม 20 ครั้ง', target: 20, current: 0, unit: 'ครั้ง', rewardExp: 30000, rewardGold: 6000, claimed: false },
       { id: 'ach_single_long', name: 'Single-Run Behemoth (การล่าทรหด)', desc: 'จบการวิ่งในรอบเดียวได้ระยะทางมากกว่า 15.0 กม.', target: 15.0, current: 0.0, unit: 'กม.', rewardExp: 55000, rewardGold: 12000, claimed: false },
-      { id: 'ach_superboss', name: 'Super Boss Annihilator (ผู้สยบเทพอสูรบรรพกาล)', desc: 'โค่น Cosmic Dread: Azathoth-Nox (Super Boss) สำเร็จ', target: 1, current: 0, unit: 'ตัว', rewardExp: 250000, rewardGold: 60000, claimed: false }
+      { id: 'ach_superboss', name: 'Super Boss Annihilator (ผู้สยบเทพอสูรบรรพกาล)', desc: 'โค่น Cosmic Dread: Azathoth-Nox (Super Boss) สำเร็จ', target: 1, current: 0, unit: 'ตัว', rewardExp: 250000, rewardGold: 60000, claimed: false },
+      { id: 'ach_secretboss', name: 'Primordial Void Conqueror (ผู้พิชิตมหาอสูรลับบรรพกาล)', desc: 'โค่น Primordial Void Sovereign: Ouroboros-Null (Tier EX Secret Boss)', target: 1, current: 0, unit: 'ตัว', rewardExp: 600000, rewardGold: 150000, claimed: false },
+      { id: 'ach_dist500', name: 'Abyssal Half-Marathon Legend (ตำนาน 500K อเวจี)', desc: 'สะสมระยะทางรวมตลอดกาลแตะ 500.0 กม.', target: 500.0, current: 0.0, unit: 'กม.', rewardExp: 200000, rewardGold: 50000, claimed: false },
+      { id: 'ach_dist1000', name: 'Titan of the Thousand Leagues (จอมคนพันกิโลเมตร)', desc: 'สะสมระยะทางรวมตลอดกาลแตะ 1,000.0 กม.', target: 1000.0, current: 0.0, unit: 'กม.', rewardExp: 500000, rewardGold: 120000, claimed: false },
+      { id: 'ach_boss100', name: 'Centurion Slayer (มหาผู้พิชิตร้อยอสูร)', desc: 'โค่นบอสรวมสะสม 100 ตัว', target: 100, current: 0, unit: 'ตัว', rewardExp: 250000, rewardGold: 60000, claimed: false },
+      { id: 'ach_single_halfmarathon', name: 'Half Marathon Ascendant (สัจธรรมฮาล์ฟมาราธอน)', desc: 'จบการวิ่งในรอบเดียวได้ระยะทาง 21.1 กม. ขึ้นไป', target: 21.1, current: 0.0, unit: 'กม.', rewardExp: 150000, rewardGold: 35000, claimed: false },
+      { id: 'ach_single_marathon', name: 'Full Marathon Conqueror (ผู้พิชิตฟูลมาราธอน)', desc: 'จบการวิ่งในรอบเดียวได้ระยะทาง 42.195 กม. ขึ้นไป', target: 42.195, current: 0.0, unit: 'กม.', rewardExp: 350000, rewardGold: 85000, claimed: false },
+      { id: 'ach_loop_master', name: 'Loop Dimension Master (จอมวนลูปอเวจี)', desc: 'เข้าสู่สังเวียน Awakened Loop 3 ขึ้นไป', target: 3, current: 0, unit: 'ลูป', rewardExp: 180000, rewardGold: 45000, claimed: false },
+      { id: 'ach_streak14', name: 'Iron Will Discipline (วินัยเหล็กกล้า 14 วัน)', desc: 'ทำสถิติออกล่าต่อเนื่อง Streak ครบ 14 วัน', target: 14, current: 0, unit: 'วัน', rewardExp: 120000, rewardGold: 30000, claimed: false },
+      { id: 'ach_ult150', name: 'Shadow Sword Deity (เทพดาบเงาพันเล่ม)', desc: 'ปลดปล่อยท่าไม้ตาย Shadow Slash รวม 150 ครั้ง', target: 150, current: 0, unit: 'ครั้ง', rewardExp: 160000, rewardGold: 40000, claimed: false },
+      { id: 'ach_goblin25', name: 'Goblin\'s Worst Nightmare (ฝันร้ายแห่งเผ่าโกบลิน)', desc: 'สยบโกบลินเงาหลบหนีสำเร็จ 25 ครั้ง', target: 25, current: 0, unit: 'ครั้ง', rewardExp: 140000, rewardGold: 35000, claimed: false },
+      { id: 'ach_flow60', name: 'Zenith Flow Master (มหาผู้ตรัสรู้โฟลว์สเตท)', desc: 'เข้าสู่สภาวะ Flow State สะสม 60 ครั้ง', target: 60, current: 0, unit: 'ครั้ง', rewardExp: 130000, rewardGold: 32000, claimed: false }
     ];
   }
 
@@ -598,6 +611,7 @@
     isHistoryCollapsed: false,
     hideCompletedAchievements: false,
     isClaimedAchAccordionOpen: false,
+    autoCastMode: 'off',
     statsTrack: {
       berserkSeconds: 0,
       ultCastCount: 0,
@@ -718,10 +732,34 @@
 
     const defaultAchs = generateAchievements();
     defaultAchs.forEach(defAch => {
-      if (!gameState.achievements.find(a => a.id === defAch.id)) {
+      const existing = gameState.achievements.find(a => a.id === defAch.id);
+      if (!existing) {
         gameState.achievements.push(defAch);
+      } else {
+        existing.name = defAch.name;
+        existing.desc = defAch.desc;
+        existing.target = defAch.target;
+        existing.rewardExp = defAch.rewardExp;
+        existing.rewardGold = defAch.rewardGold;
+        existing.unit = defAch.unit;
       }
     });
+
+    const defaultDqs = generateDailyQuests();
+    defaultDqs.forEach(defQ => {
+      const existing = gameState.dailyQuests.find(q => q.id === defQ.id);
+      if (!existing) {
+        gameState.dailyQuests.push(defQ);
+      } else {
+        existing.name = defQ.name;
+        existing.target = defQ.target;
+        existing.rewardExp = defQ.rewardExp;
+        existing.rewardGold = defQ.rewardGold;
+        existing.unit = defQ.unit;
+      }
+    });
+
+    gameState.autoCastMode = gameState.autoCastMode || 'off';
 
     const activeRun = await DB.getActiveRun();
     if (!isRunning && !activeRun) {
@@ -765,6 +803,9 @@
         gameState.streak.count = 1;
       }
       gameState.streak.lastDate = today;
+
+      const achStreak14 = gameState.achievements.find(a => a.id === 'ach_streak14');
+      if (achStreak14) achStreak14.current = Math.min(achStreak14.target, gameState.streak.count || 1);
 
       gameState.lastDailyDate = today;
       gameState.dailyQuests = generateDailyQuests();
@@ -1231,7 +1272,21 @@
   const pocketOverlay = document.getElementById('pocket-overlay');
   const pocketDistVal = document.getElementById('pocket-dist-val');
   const pocketTimeVal = document.getElementById('pocket-time-val');
+  const pocketPaceVal = document.getElementById('pocket-pace-val');
   const pocketUnlockBar = document.getElementById('pocket-unlock-bar');
+
+  const btnAutocastToggle = document.getElementById('btn-autocast-toggle');
+  const autocastStatusText = document.getElementById('autocast-status-text');
+  const btnQuickCastUlt = document.getElementById('btn-quick-cast-ult');
+  const quickUltSub = document.getElementById('quick-ult-sub');
+
+  const confirmFinishModal = document.getElementById('confirm-finish-modal');
+  const btnModalFinishConfirm = document.getElementById('btn-modal-finish-confirm');
+  const btnModalFinishCancel = document.getElementById('btn-modal-finish-cancel');
+
+  const badgeHunt = document.getElementById('badge-hunt');
+  const badgeHero = document.getElementById('badge-hero');
+  const badgeQuests = document.getElementById('badge-quests');
 
   const equipSummaryEl = document.getElementById('equip-summary');
   const setBonusesContainerEl = document.getElementById('set-bonuses-container');
@@ -1518,6 +1573,9 @@
     const achGoblin = gameState.achievements.find(a => a.id === 'ach_goblin_catch');
     if (achGoblin) achGoblin.current = Math.min(achGoblin.target, gameState.statsTrack.goblinCaughtCount);
 
+    const achG25 = gameState.achievements.find(a => a.id === 'ach_goblin25');
+    if (achG25) achG25.current = Math.min(achG25.target, gameState.statsTrack.goblinCaughtCount);
+
     saveGame();
     renderUI();
   }
@@ -1554,7 +1612,7 @@
 
   async function connectBluetoothHeartRate(forceNew = false) {
     if (!('bluetooth' in navigator)) {
-      alert('เบราว์เซอร์นี้ยังไม่รองรับ Web Bluetooth');
+      showToast('⚠️ เบราว์เซอร์นี้ยังไม่รองรับ Web Bluetooth');
       return;
     }
 
@@ -1635,9 +1693,8 @@
 
   btnBleConnect.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    if (confirm('คุณต้องการค้นหาและจับคู่กับอุปกรณ์บลูทูธตัวใหม่หรือไม่?')) {
-      connectBluetoothHeartRate(true);
-    }
+    showToast('กำลังค้นหาและจับคู่อุปกรณ์บลูทูธตัวใหม่...');
+    connectBluetoothHeartRate(true);
   });
 
   voiceToggleBtn.addEventListener('click', () => {
@@ -1742,7 +1799,16 @@
     } else if (currentBoss.id === 'boss_super') {
       const ach = gameState.achievements.find(a => a.id === 'ach_superboss');
       if (ach) ach.current = Math.min(ach.target, ach.current + 1);
+    } else if (currentBoss.id === 'boss_secret') {
+      const ach = gameState.achievements.find(a => a.id === 'ach_secretboss');
+      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
     }
+
+    const achB100 = gameState.achievements.find(a => a.id === 'ach_boss100');
+    if (achB100) achB100.current = Math.min(achB100.target, gameState.career.totalBossDefeated);
+
+    const achLoop = gameState.achievements.find(a => a.id === 'ach_loop_master');
+    if (achLoop) achLoop.current = Math.min(achLoop.target, gameState.bossLoopCycle || 0);
 
     const achB25 = gameState.achievements.find(a => a.id === 'ach_boss25');
     if (achB25) achB25.current = Math.min(achB25.target, gameState.career.totalBossDefeated);
@@ -1839,6 +1905,9 @@
             gameState.statsTrack.flowStateCount = (gameState.statsTrack.flowStateCount || 0) + 1;
             const achFlow = gameState.achievements.find(a => a.id === 'ach_flow_count');
             if (achFlow) achFlow.current = Math.min(achFlow.target, gameState.statsTrack.flowStateCount);
+
+            const achF60 = gameState.achievements.find(a => a.id === 'ach_flow60');
+            if (achF60) achF60.current = Math.min(achF60.target, gameState.statsTrack.flowStateCount);
 
             showToast('🌊 เข้าสู่สภาวะ FLOW STATE! โบนัส EXP +50% & เกจไม้ตายชาร์จไว x1.5');
             speakVoice('เข้าสู่สภาวะโฟลว์สเตท คุมจังหวะยอดเยี่ยม');
@@ -2218,6 +2287,12 @@
     gameState.statsTrack.ultCastCount = (gameState.statsTrack.ultCastCount || 0) + 1;
     const achUlt = gameState.achievements.find(a => a.id === 'ach_ult_cast');
     if (achUlt) achUlt.current = Math.min(achUlt.target, gameState.statsTrack.ultCastCount);
+
+    const achUlt150 = gameState.achievements.find(a => a.id === 'ach_ult150');
+    if (achUlt150) achUlt150.current = Math.min(achUlt150.target, gameState.statsTrack.ultCastCount);
+
+    const questUlt = gameState.dailyQuests.find(q => q.id === 'dq_ult');
+    if (questUlt) questUlt.current = Math.min(questUlt.target, questUlt.current + 1);
 
     if (currentBoss.gimmick === 'carapace' || currentBoss.gimmick === 'superboss' || currentBoss.gimmick === 'juggernaut' || currentBoss.gimmick === 'secretboss') {
       const bonusVuln = setCounts.shadowstalker >= 4 ? 30 : 0;
@@ -2689,8 +2764,7 @@
       return;
     }
 
-    const confirmClear = confirm(`คุณต้องการใช้ Hel Rune เพื่อทำลายและล้างหินรูนทั้งหมดออกจาก ${item.name} ใช่หรือไม่?`);
-    if (!confirmClear) return;
+    // Clear socketed runes using Hel rune
 
     gameState.runeStash['hel'] -= 1;
     item.socketedRunes = [];
@@ -3175,6 +3249,26 @@
 
       btnCastUlt3.disabled = ultCharge < 300;
       btnCastUlt3.className = `btn-cast-ult ${ultCharge >= 300 ? 'ready-tier3' : ''}`;
+
+      if (btnQuickCastUlt && quickUltSub) {
+        if (ultCharge >= 300) {
+          btnQuickCastUlt.disabled = false;
+          btnQuickCastUlt.className = 'btn-quick-cast-ult ready-tier3';
+          quickUltSub.textContent = 'ระเบิดพลังสูงสุด Lv.3 (300%)! แตะเพื่อร่าย';
+        } else if (ultCharge >= 200) {
+          btnQuickCastUlt.disabled = false;
+          btnQuickCastUlt.className = 'btn-quick-cast-ult ready';
+          quickUltSub.textContent = 'พร้อมร่ายระดับ Lv.2 (200%)! แตะเพื่อร่าย';
+        } else if (ultCharge >= 100) {
+          btnQuickCastUlt.disabled = false;
+          btnQuickCastUlt.className = 'btn-quick-cast-ult ready';
+          quickUltSub.textContent = 'พร้อมร่ายระดับ Lv.1 (100%)! แตะเพื่อร่าย';
+        } else {
+          btnQuickCastUlt.disabled = true;
+          btnQuickCastUlt.className = 'btn-quick-cast-ult';
+          quickUltSub.textContent = `สะสมเกจ... (${ultCharge}%/100%)`;
+        }
+      }
     } else {
       btnCastUlt1.disabled = true;
       btnCastUlt2.disabled = true;
@@ -3182,7 +3276,15 @@
       btnCastUlt1.className = 'btn-cast-ult';
       btnCastUlt2.className = 'btn-cast-ult';
       btnCastUlt3.className = 'btn-cast-ult';
+
+      if (btnQuickCastUlt && quickUltSub) {
+        btnQuickCastUlt.disabled = true;
+        btnQuickCastUlt.className = 'btn-quick-cast-ult';
+        quickUltSub.textContent = 'เริ่มออกล่าเพื่อสะสมเกจไม้ตาย';
+      }
     }
+
+    updateAutoCastUI();
 
     flowBadgeEl.style.display = isFlowStateActive ? 'inline-block' : 'none';
 
@@ -3380,6 +3482,38 @@
     careerLongestEl.textContent = `${(gameState.career.longestRunKm || 0).toFixed(2)} กม.`;
   }
 
+  function updateTabBadges() {
+    if (badgeHunt) {
+      badgeHunt.style.display = (gameState.chestsAvailable > 0 || isGoblinActive) ? 'flex' : 'none';
+    }
+    if (badgeHero) {
+      badgeHero.style.display = (gameState.statPoints > 0) ? 'flex' : 'none';
+    }
+    if (badgeQuests) {
+      const hasUnclaimedQuest = (gameState.dailyQuests || []).some(q => q.current >= q.target && !q.claimed);
+      const hasUnclaimedAch = (gameState.achievements || []).some(a => a.current >= a.target && !a.claimed);
+      badgeQuests.style.display = (hasUnclaimedQuest || hasUnclaimedAch) ? 'flex' : 'none';
+    }
+  }
+
+  function updateAutoCastUI() {
+    if (!btnAutocastToggle || !autocastStatusText) return;
+    const mode = gameState.autoCastMode || 'off';
+    btnAutocastToggle.className = 'btn-autocast-toggle';
+    if (mode === 'tier1') {
+      btnAutocastToggle.classList.add('active');
+      autocastStatusText.textContent = 'ออโต้: Lv.1 รัวๆ';
+    } else if (mode === 'tier3') {
+      btnAutocastToggle.classList.add('active-tier3');
+      autocastStatusText.textContent = 'ออโต้: Lv.3 อัลติ';
+    } else if (mode === 'smart') {
+      btnAutocastToggle.classList.add('active-smart');
+      autocastStatusText.textContent = 'ออโต้: สมาร์ต';
+    } else {
+      autocastStatusText.textContent = 'ออโต้: ปิด';
+    }
+  }
+
   function renderUI() {
     renderHUD();
     renderEquipmentAndInventory();
@@ -3389,6 +3523,7 @@
     renderQuestsList();
     renderAchievementsList();
     renderCareerUI();
+    updateTabBadges();
   }
 
   function openCharacterModal() {
@@ -3429,8 +3564,7 @@
   if (btnModalCreateChar) {
     btnModalCreateChar.addEventListener('click', () => {
       const enteredName = (inputCharNameEl ? inputCharNameEl.value.trim() : '') || 'Abyss Stalker';
-      const confirmCreate = confirm(`คุณต้องการสร้างตัวละครใหม่ "${enteredName}" ใช่หรือไม่?\n(เลเวล, สเตตัส, ไอเทม และการผจญภัยจะเริ่มใหม่ทั้งหมด)`);
-      if (!confirmCreate) return;
+      // Create fresh character profile
 
       if (isRunning) {
         pauseRunEngine();
@@ -3467,8 +3601,7 @@
   if (btnModalDeleteChar) {
     btnModalDeleteChar.addEventListener('click', async () => {
       const currentName = gameState.playerName || 'ตัวละครนี้';
-      const confirmDelete = confirm(`⚠️ คำเตือน: คุณแน่ใจหรือไม่ว่าต้องการลบ "${currentName}"?\nข้อมูลสถิติ เลเวล ไอเทม และอุปกรณ์ทั้งหมดจะถูกลบถาวร!`);
-      if (!confirmDelete) return;
+      // Delete character profile and reset to fresh initiate
 
       if (isRunning) {
         pauseRunEngine();
@@ -3653,7 +3786,9 @@
   }
 
   function updatePace() {
-    paceValEl.textContent = calculatePace(runSeconds, runDistanceKm);
+    const pStr = calculatePace(runSeconds, runDistanceKm);
+    paceValEl.textContent = pStr;
+    if (pocketPaceVal) pocketPaceVal.textContent = pStr;
   }
 
   tabBtnDaily.addEventListener('click', () => {
@@ -3818,6 +3953,22 @@
         gameState.statsTrack.berserkSeconds = (gameState.statsTrack.berserkSeconds || 0) + 1;
         const achBerserk = gameState.achievements.find(a => a.id === 'ach_berserk_time');
         if (achBerserk) achBerserk.current = Math.min(achBerserk.target, gameState.statsTrack.berserkSeconds);
+
+        const questFrenzy = gameState.dailyQuests.find(q => q.id === 'dq_frenzy');
+        if (questFrenzy) questFrenzy.current = Math.min(questFrenzy.target, questFrenzy.current + 1);
+      }
+
+      // Auto-Cast Runner Engine Execution
+      if (isRunning && gameState.autoCastMode && gameState.autoCastMode !== 'off') {
+        if (gameState.autoCastMode === 'tier1' && gameState.ultimateCharge >= 100) {
+          activateUltimateSkill(1);
+        } else if (gameState.autoCastMode === 'tier3' && gameState.ultimateCharge >= 300) {
+          activateUltimateSkill(3);
+        } else if (gameState.autoCastMode === 'smart') {
+          if (gameState.ultimateCharge >= 300) activateUltimateSkill(3);
+          else if (gameState.ultimateCharge >= 200) activateUltimateSkill(2);
+          else if (gameState.ultimateCharge >= 100) activateUltimateSkill(1);
+        }
       }
 
       if (isOverdriveActive) {
@@ -4033,8 +4184,7 @@
 
   async function finishRunSession() {
     if (runDistanceKm < 0.05) {
-      const confirmDiscard = confirm('ระยะทางวิ่งน้อยกว่า 0.05 กม. (50 เมตร) คุณต้องการยกเลิกรอบนี้โดยไม่บันทึกประวัติหรือไม่?');
-      if (confirmDiscard) {
+      if (true) {
         pauseRunEngine();
         await DB.clearActiveRun();
         cancelUnlockHold();
@@ -4105,6 +4255,18 @@
 
     const achSingleLong = gameState.achievements.find(a => a.id === 'ach_single_long');
     if (achSingleLong) achSingleLong.current = Math.min(achSingleLong.target, Math.max(achSingleLong.current, runDistanceKm));
+
+    const ach500 = gameState.achievements.find(a => a.id === 'ach_dist500');
+    if (ach500) ach500.current = Math.min(ach500.target, gameState.career.totalDistanceKm);
+
+    const ach1000 = gameState.achievements.find(a => a.id === 'ach_dist1000');
+    if (ach1000) ach1000.current = Math.min(ach1000.target, gameState.career.totalDistanceKm);
+
+    const achHalf = gameState.achievements.find(a => a.id === 'ach_single_halfmarathon');
+    if (achHalf) achHalf.current = Math.min(achHalf.target, Math.max(achHalf.current, runDistanceKm));
+
+    const achFull = gameState.achievements.find(a => a.id === 'ach_single_marathon');
+    if (achFull) achFull.current = Math.min(achFull.target, Math.max(achFull.current, runDistanceKm));
 
     const historyItem = {
       timestamp: Date.now(),
@@ -4203,8 +4365,90 @@
     }
   });
 
+  // --- Auto-Cast Toggle Listener ---
+  if (btnAutocastToggle) {
+    btnAutocastToggle.addEventListener('click', () => {
+      const modes = ['off', 'tier1', 'tier3', 'smart'];
+      const currentIdx = modes.indexOf(gameState.autoCastMode || 'off');
+      const nextMode = modes[(currentIdx + 1) % modes.length];
+      gameState.autoCastMode = nextMode;
+      updateAutoCastUI();
+      saveGame();
+
+      const modeVoices = {
+        off: 'ปิดระบบร่ายอัตโนมัติ',
+        tier1: 'เปิดระบบร่ายไม้ตายอัตโนมัติ ระดับหนึ่ง',
+        tier3: 'เปิดระบบร่ายไม้ตายอัตโนมัติ ระดับสาม',
+        smart: 'เปิดระบบร่ายไม้ตายอัตโนมัติ แบบสมาร์ต'
+      };
+      speakVoice(modeVoices[nextMode] || 'เปลี่ยนโหมดร่ายอัตโนมัติ', true);
+      showToast(`⚡ โหมดร่ายอัตโนมัติ: ${autocastStatusText.textContent}`);
+    });
+  }
+
+  // --- Large Tactile Quick Cast Button Listener ---
+  if (btnQuickCastUlt) {
+    btnQuickCastUlt.addEventListener('click', () => {
+      if (gameState.ultimateCharge >= 300) {
+        activateUltimateSkill(3);
+      } else if (gameState.ultimateCharge >= 200) {
+        activateUltimateSkill(2);
+      } else if (gameState.ultimateCharge >= 100) {
+        activateUltimateSkill(1);
+      } else {
+        showToast('เกจไม้ตายยังไม่ถึง 100%');
+      }
+    });
+  }
+
+  // --- Safe Finish Run with Confirmation Modal ---
   btnFinishRun.addEventListener('click', () => {
-    finishRunSession();
+    if (runDistanceKm < 0.05) {
+      finishRunSession();
+      return;
+    }
+    if (confirmFinishModal) {
+      confirmFinishModal.style.display = 'flex';
+    } else {
+      finishRunSession();
+    }
+  });
+
+  if (btnModalFinishConfirm) {
+    btnModalFinishConfirm.addEventListener('click', () => {
+      if (confirmFinishModal) confirmFinishModal.style.display = 'none';
+      finishRunSession();
+    });
+  }
+
+  if (btnModalFinishCancel) {
+    btnModalFinishCancel.addEventListener('click', () => {
+      if (confirmFinishModal) confirmFinishModal.style.display = 'none';
+    });
+  }
+
+  // --- Fixed Bottom Navigation Tab Switching ---
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-page').forEach(page => {
+      page.classList.remove('active');
+      page.style.display = 'none';
+    });
+    const targetPage = document.getElementById(tabId);
+    if (targetPage) {
+      targetPage.classList.add('active');
+      targetPage.style.display = 'flex';
+    }
+    document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = btn.getAttribute('data-tab');
+      if (tabId) switchTab(tabId);
+    });
   });
 
   simToggleBtn.addEventListener('click', () => {
