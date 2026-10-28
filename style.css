@@ -3185,3 +3185,43 @@ body {
   letter-spacing: 0.3px;
   margin-top: 1px;
 }
+
+/* Inventory Bag Expansion Button */
+.inv-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-expand-inv {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.22) 0%, rgba(140, 109, 31, 0.22) 100%);
+  border: 1px solid var(--border-gold-bright);
+  color: var(--gold-glow);
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-expand-inv:hover {
+  background: linear-gradient(180deg, #d4af37 0%, #8c6d1f 100%);
+  color: #0d0c11;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+}
+
+.btn-expand-inv:active {
+  transform: scale(0.94);
+}
+
+.btn-expand-inv:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  box-shadow: none;
+}

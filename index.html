@@ -309,7 +309,10 @@
 
         <div class="inventory-container">
           <div class="inv-header">
-            <span class="inv-title">คลังไอเทม (<span id="inv-count">0</span>/30)</span>
+            <div class="inv-title-group">
+              <span class="inv-title">คลังไอเทม (<span id="inv-count">0</span>/<span id="inv-max">30</span>)</span>
+              <button class="btn-expand-inv" id="btn-expand-inv" type="button" title="ขยายความจุกระเป๋า">🎒 +5 ช่อง</button>
+            </div>
             <span class="inv-hint">แตะเพื่อดู/สวมใส่/ฝังรูน</span>
           </div>
 
@@ -388,6 +391,21 @@
             <div class="item-footer">
               <span class="item-price">🪙 <span id="price-charm">350</span></span>
               <button class="btn-buy-item" id="btn-buy-charm" type="button">อัปเกรด</button>
+            </div>
+          </div>
+
+          <div class="shop-item">
+            <div class="item-header">
+              <span class="item-icon">🎒</span>
+              <div class="item-info">
+                <span class="item-name">ถุงมิติขยายช่องเก็บของ (Lv.<span id="lvl-bag">0</span>)</span>
+                <span class="item-buff">ขยายกระเป๋า +5 ช่อง (ความจุ: <span id="bag-slots-current">30</span> ช่อง)</span>
+                <span class="item-rate" style="color: #4ade80;">สำเร็จ 100% (ไม่มีวันล้มเหลว)</span>
+              </div>
+            </div>
+            <div class="item-footer">
+              <span class="item-price">🪙 <span id="price-bag">500</span></span>
+              <button class="btn-buy-item" id="btn-buy-bag" type="button">ขยาย</button>
             </div>
           </div>
 

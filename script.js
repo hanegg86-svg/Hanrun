@@ -577,7 +577,7 @@
     statPoints: 0,
     ultimateCharge: 0,
     stats: { str: 10, sta: 10, agi: 10 },
-    upgrades: { blade: 0, charm: 0, eye: 0, elixir: 0 },
+    upgrades: { blade: 0, charm: 0, eye: 0, elixir: 0, bag: 0 },
     upgradeFailStreak: { blade: 0, charm: 0, eye: 0 },
     equipment: { weapon: null, armor: null, boots: null, relic: null, ring: null, bracelet: null },
     inventory: [],
@@ -666,7 +666,7 @@
       gameState = Object.assign({}, defaultState, saved);
       gameState.playerName = saved.playerName || defaultState.playerName;
       gameState.stats = Object.assign({}, defaultState.stats, saved.stats || {});
-      gameState.upgrades = Object.assign({ elixir: 0 }, defaultState.upgrades, saved.upgrades || {});
+      gameState.upgrades = Object.assign({ elixir: 0, bag: 0 }, defaultState.upgrades, saved.upgrades || {});
       gameState.upgradeFailStreak = Object.assign({ blade: 0, charm: 0, eye: 0 }, defaultState.upgradeFailStreak, saved.upgradeFailStreak || {});
       gameState.equipment = Object.assign({ ring: null, bracelet: null }, defaultState.equipment, saved.equipment || {});
       gameState.inventory = saved.inventory || [];
@@ -1233,6 +1233,12 @@
 
   const priceElixirEl = document.getElementById('price-elixir');
   const btnBuyElixir = document.getElementById('btn-buy-elixir');
+  const lvlBagEl = document.getElementById('lvl-bag');
+  const bagSlotsCurrentEl = document.getElementById('bag-slots-current');
+  const priceBagEl = document.getElementById('price-bag');
+  const btnBuyBag = document.getElementById('btn-buy-bag');
+  const invMaxEl = document.getElementById('inv-max');
+  const btnExpandInv = document.getElementById('btn-expand-inv');
   const lvlBladeEl = document.getElementById('lvl-blade');
   const bladeBonusEl = document.getElementById('blade-bonus');
   const priceBladeEl = document.getElementById('price-blade');
@@ -1359,6 +1365,14 @@
   function getEyePrice() {
     return Math.floor(500 * Math.pow(1.32, gameState.upgrades.eye || 0));
   }
+  function getMaxInventorySlots() {
+    return 30 + (((gameState.upgrades && gameState.upgrades.bag) || 0) * 5);
+  }
+
+  function getBagPrice() {
+    return Math.floor(500 * Math.pow(1.30, (gameState.upgrades && gameState.upgrades.bag) || 0));
+  }
+
   function getElixirPrice() {
     return Math.floor(200 * Math.pow(1.28, gameState.upgrades.elixir || 0));
   }
@@ -2330,7 +2344,8 @@
     gameState.chestsAvailable -= 1;
 
     const roll = Math.random();
-    if (roll < 0.40 && gameState.inventory.length < 30) {
+    const maxSlots = getMaxInventorySlots();
+    if (roll < 0.40 && gameState.inventory.length < maxSlots) {
       const newItem = rollRandomItem(true, gameState.bossLoopCycle || 0);
       gameState.inventory.push(newItem);
       const setLabel = SET_DATABASE[newItem.setId] ? ` [${SET_DATABASE[newItem.setId].name}]` : '';
@@ -2465,6 +2480,14 @@
     }
 
     invCountEl.textContent = gameState.inventory.length;
+    const currentMaxSlots = getMaxInventorySlots();
+    if (invMaxEl) invMaxEl.textContent = currentMaxSlots;
+    if (btnExpandInv) {
+      const bagCost = getBagPrice();
+      const isMaxBag = currentMaxSlots >= 150;
+      btnExpandInv.textContent = isMaxBag ? '🎒 MAX (150)' : ('🎒 +5 ช่อง (' + bagCost.toLocaleString() + '🪙)');
+      btnExpandInv.disabled = isMaxBag || (gameState.gold < bagCost);
+    }
     inventoryGridEl.innerHTML = '';
 
     const filteredItems = currentInvFilter === 'all'
@@ -2638,8 +2661,9 @@
       const type = slot.getAttribute('data-slottype');
       const item = gameState.equipment[type];
       if (item) {
-        if (gameState.inventory.length >= 30) {
-          showToast('กระเป๋าเต็ม (สูงสุด 30 ชิ้น) ไม่สามารถถอดอุปกรณ์ได้');
+        const maxSlots = getMaxInventorySlots();
+        if (gameState.inventory.length >= maxSlots) {
+          showToast('กระเป๋าเต็ม (สูงสุด ' + maxSlots + ' ชิ้น) ไม่สามารถถอดอุปกรณ์ได้');
           return;
         }
         gameState.inventory.push(item);
@@ -3330,6 +3354,17 @@
     renderShopRateText(rateEyeEl, 'eye');
 
     priceElixirEl.textContent = getElixirPrice();
+
+    if (lvlBagEl) lvlBagEl.textContent = (gameState.upgrades && gameState.upgrades.bag) || 0;
+    if (bagSlotsCurrentEl) bagSlotsCurrentEl.textContent = getMaxInventorySlots() + ' ช่อง';
+    if (priceBagEl) {
+      const isMaxBag = getMaxInventorySlots() >= 150;
+      priceBagEl.textContent = isMaxBag ? 'MAX' : getBagPrice().toLocaleString();
+    }
+    if (btnBuyBag) {
+      const isMaxBag = getMaxInventorySlots() >= 150;
+      btnBuyBag.textContent = isMaxBag ? 'เต็มแล้ว' : 'ขยาย';
+    }
   }
 
   function renderQuestsList() {
@@ -3727,6 +3762,30 @@
       renderUI();
     }
   });
+
+  function buyBagExpansion() {
+    const MAX_SLOTS = 150;
+    const currentMax = getMaxInventorySlots();
+    if (currentMax >= MAX_SLOTS) {
+      showToast('🎒 กระเป๋าขยายถึงขนาดสูงสุดแล้ว (150 ช่อง)!');
+      return;
+    }
+    const cost = getBagPrice();
+    if (gameState.gold < cost) {
+      showToast('🪙 เหรียญทองไม่เพียงพอ ต้องการ ' + cost.toLocaleString() + ' 🪙');
+      return;
+    }
+    gameState.gold -= cost;
+    gameState.upgrades.bag = (gameState.upgrades.bag || 0) + 1;
+    const newMax = getMaxInventorySlots();
+    showToast('🎒 ขยายขนาดกระเป๋าสำเร็จเป็น ' + newMax + ' ช่อง! (+5 ช่อง)');
+    speakVoice('ขยายขนาดกระเป๋าเก็บไอเทมเป็น ' + newMax + ' ช่อง สำเร็จ', true);
+    saveGame();
+    renderUI();
+  }
+
+  if (btnBuyBag) btnBuyBag.addEventListener('click', buyBagExpansion);
+  if (btnExpandInv) btnExpandInv.addEventListener('click', buyBagExpansion);
 
   btnBuyEye.addEventListener('click', () => {
     const cost = getEyePrice();
