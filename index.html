@@ -9,6 +9,7 @@
   <title>ShadowStrider: Dark Run RPG</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -75,6 +76,31 @@
         </div>
       </section>
 
+      <!-- Roaming Field Monster Encounter Card (10m Proximity Combat / 30m Radar Alert) -->
+      <section class="encounter-card" id="encounter-card" style="display: none;">
+        <div class="encounter-header">
+          <span class="encounter-tag" id="encounter-tag">⚔️ ปะทะมอนสเตอร์ในรัศมี 10 เมตร!</span>
+          <span class="encounter-lvl-badge" id="encounter-lvl">LV. 1</span>
+        </div>
+        <div class="encounter-body">
+          <div class="encounter-avatar" id="encounter-avatar">👻</div>
+          <div class="encounter-details">
+            <div class="encounter-name-row">
+              <h4 class="encounter-name" id="encounter-name">Shadow Wisp</h4>
+              <span class="encounter-dist-tag" id="encounter-dist">ระยะ 5 ม.</span>
+            </div>
+            <p class="encounter-gimmick" id="encounter-gimmick">กลไกพิเศษ</p>
+            <div class="encounter-hp-track">
+              <div class="encounter-hp-fill" id="encounter-hp-fill" style="width: 100%;"></div>
+            </div>
+            <div class="encounter-hp-row">
+              <span id="encounter-timer-text" class="encounter-timer-txt"></span>
+              <span class="encounter-hp-txt">HP: <strong id="encounter-hp-remain">0.05</strong> / <span id="encounter-hp-max">0.05</span> กม.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Mystery Chest Loot Drop Notification Card -->
       <section class="chest-card" id="chest-card" style="display: none;">
         <div class="chest-content">
@@ -133,7 +159,7 @@
           <button class="btn-ble-connect" id="btn-ble-connect" type="button">🔗 เชื่อมต่อสายคาดอก BLE</button>
         </div>
 
-        <!-- HERO DUO METRICS: DISTANCE & PACE (Large, high-contrast, glanceable) -->
+        <!-- HERO DUO METRICS: DISTANCE & PACE -->
         <div class="hud-hero-duo">
           <div class="hero-metric-card metric-distance">
             <span class="hero-metric-label">ระยะทาง</span>
@@ -150,7 +176,7 @@
           </div>
         </div>
 
-        <!-- Secondary Metrics Row (Time, Calories, Avg Speed) -->
+        <!-- Secondary Metrics Row (Time, Calories, Nearest Radar) -->
         <div class="hud-sub-metrics">
           <div class="sub-metric-box">
             <span class="sub-label">เวลาที่ใช้</span>
@@ -159,6 +185,10 @@
           <div class="sub-metric-box">
             <span class="sub-label">แคลอรี</span>
             <span class="sub-val" id="cal-val">0 kcal</span>
+          </div>
+          <div class="sub-metric-box" id="hud-radar-box" style="cursor: pointer;" title="แตะเพื่อเปิดแผนที่">
+            <span class="sub-label">อสูรใกล้สุด</span>
+            <span class="sub-val" id="nearest-monster-val" style="color: #c084fc;">-- ม.</span>
           </div>
         </div>
 
@@ -216,16 +246,50 @@
 
         <!-- Simulation Tools (for in-room / testing) -->
         <div class="sim-controls" id="sim-controls" style="display: none;">
-          <span class="sim-hint">กดเพื่อเพิ่มระยะทดสอบ:</span>
+          <span class="sim-hint">จำลองการวิ่ง & มอนสเตอร์:</span>
           <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.2)">+200 ม.</button>
           <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.5)">+500 ม.</button>
           <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(1.0)">+1.0 กม.</button>
           <button class="btn-sim-add btn-sim-goblin" type="button" onclick="window.shadowStrider.triggerGoblin()">👺 สปอว์นโกบลิน</button>
+          <button class="btn-sim-add btn-sim-monster" type="button" onclick="window.shadowStrider.simulateApproachNearest()">🎯 ประชิดอสูร (10ม.)</button>
         </div>
       </section>
     </main>
 
-    <!-- TAB 2: HERO & EQUIPMENT (Character, Stats, Inventory, Runes) -->
+    <!-- TAB 2: DARK FANTASY MAP & PROXIMITY RADAR (1km Spawn / 10m Engage) -->
+    <section class="tab-page" id="tab-map" style="display: none;">
+      <section class="map-section">
+        <div class="section-title-row">
+          <div>
+            <h2 class="section-title">🗺️ แผนที่ล่าอสูรอเวจี (รัศมี 1 กม.)</h2>
+            <div class="map-subtitle">เข้าใกล้ในรัศมี <strong>10 เมตร</strong> เพื่อปะทะ (มอนสเตอร์ตรึงตำแหน่งจนกว่าจะตายหรือหลุดเกิน 1 กม.)</div>
+          </div>
+          <div class="map-actions-cluster">
+            <button class="btn-map-ctrl" id="btn-center-map" type="button" title="กึ่งกลางตำแหน่งฉัน">🎯 ฉัน</button>
+            <button class="btn-map-ctrl" id="btn-toggle-radar-mode" type="button" title="สลับแผนที่/เรดาร์">📡 เรดาร์</button>
+          </div>
+        </div>
+
+        <!-- Map & Radar Viewport -->
+        <div class="map-viewport-wrapper">
+          <div id="dungeon-map" class="dungeon-map-box"></div>
+          <canvas id="offline-radar-canvas" class="offline-radar-canvas" width="400" height="280" style="display: none;"></canvas>
+          <div class="map-legend-overlay">
+            <span>🔵 ผู้เล่น (รัศมีปะทะ 10ม.)</span>
+            <span>🟣 เขตเกิด 1.0 กม.</span>
+          </div>
+        </div>
+
+        <!-- Spawned Roaming Monsters List -->
+        <div class="roaming-list-header">
+          <span class="roaming-list-title">มอนสเตอร์พิเศษในอาณาเขต (<span id="roaming-count">0</span>/5 ตัว)</span>
+          <span class="roaming-scale-badge" id="roaming-scale-badge">สเกลพลัง: LV.1</span>
+        </div>
+        <div class="roaming-monsters-list" id="roaming-monsters-list"></div>
+      </section>
+    </section>
+
+    <!-- TAB 3: HERO & EQUIPMENT (Character, Stats, Inventory, Runes) -->
     <section class="tab-page" id="tab-hero" style="display: none;">
       <!-- Stat Points Alert Bar -->
       <div class="stat-points-bar" id="stat-points-bar" style="display: none;">
@@ -334,14 +398,17 @@
       <section class="rune-stash-section">
         <div class="section-title-row">
           <h2 class="section-title">คลังหินรูนโบราณ (Rune Stash)</h2>
-          <span class="rune-count-summary" id="rune-count-summary">ครอบครอง 0 ก้อน</span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="rune-count-summary" id="rune-count-summary">ครอบครอง 0 ก้อน</span>
+            <button class="btn-runeword-codex" id="btn-open-runeword-codex" type="button">📖 คัมภีร์คำรูน (9 เซ็ต)</button>
+          </div>
         </div>
-        <p class="rune-stash-hint">หินรูนจากการพิชิตบอสและหีบสมบัติ นำมาฝังลงช่องเจาะ (Sockets) เพื่อปลุกพลังคำรูนลับ (Runewords)</p>
+        <p class="rune-stash-hint">หินรูนจากการพิชิตบอส มอนสเตอร์พิเศษ และหีบสมบัติ นำมาฝังลงช่องเจาะ (Sockets) เพื่อปลุกพลังคำรูนลับ (Runewords)</p>
         <div class="rune-grid" id="rune-grid"></div>
       </section>
     </section>
 
-    <!-- TAB 3: ARMORY & CODEX (Shop & Bestiary) -->
+    <!-- TAB 4: ARMORY & CODEX (Shop & Bestiary) -->
     <section class="tab-page" id="tab-armory" style="display: none;">
       <!-- Shadow Armory (Shop System) -->
       <section class="shop-section">
@@ -430,15 +497,17 @@
       <section class="codex-section">
         <div class="section-title-row">
           <h2 class="section-title">สมุดภาพมอนสเตอร์ (Bestiary Codex)</h2>
-          <span class="codex-counter" id="codex-counter">บันทึก 12 อสูร</span>
+          <span class="codex-counter" id="codex-counter">บันทึก 22 อสูร</span>
         </div>
+        <div class="codex-sub-header">⚠️ ดันเจี้ยนบอส (12 ตน)</div>
         <div class="codex-list" id="codex-list"></div>
+        <div class="codex-sub-header" style="margin-top: 12px;">🗺️ อสูรพิเศษบนแผนที่ (10 ประเภท)</div>
+        <div class="codex-list" id="codex-roaming-list"></div>
       </section>
     </section>
 
-    <!-- TAB 4: QUESTS & MILESTONES (10x Rewards & New Major Milestones) -->
+    <!-- TAB 5: QUESTS & MILESTONES -->
     <section class="tab-page" id="tab-quests" style="display: none;">
-      <!-- Daily Quests Section -->
       <section class="quests-section">
         <div class="section-title-row">
           <div>
@@ -450,7 +519,6 @@
         <div class="quests-list" id="quests-list"></div>
       </section>
 
-      <!-- Achievements / Milestones Section -->
       <section class="achievements-section">
         <div class="section-title-row">
           <h2 class="section-title">เกียรติยศแห่งเงา (Milestones)</h2>
@@ -462,7 +530,6 @@
         
         <div class="achievements-list" id="achievements-list"></div>
 
-        <!-- Collapsible Claimed Achievements Container -->
         <div class="achievements-claimed-container" id="achievements-claimed-container" style="display: none;">
           <button class="btn-toggle-claimed-group" id="btn-toggle-claimed-group" type="button">
             <span>📜 เกียรติยศที่บันทึกแล้ว (<span id="claimed-ach-count">0</span> รายการ)</span>
@@ -473,9 +540,8 @@
       </section>
     </section>
 
-    <!-- TAB 5: STATS & RECORDS (Career, History, GPX, Backup) -->
+    <!-- TAB 6: STATS & RECORDS -->
     <section class="tab-page" id="tab-records" style="display: none;">
-      <!-- Career Stats Section -->
       <section class="career-section">
         <div class="section-title-row">
           <h2 class="section-title">สถิติสะสมตลอดกาล (Career Stats)</h2>
@@ -500,7 +566,6 @@
         </div>
       </section>
 
-      <!-- History & Daily Stats Section -->
       <section class="history-section" id="history-section">
         <div class="section-title-row">
           <div class="title-with-badge">
@@ -531,7 +596,6 @@
         </div>
       </section>
 
-      <!-- Runner Utility & Data Management -->
       <section class="utility-section">
         <div class="section-title-row">
           <h2 class="section-title">การจัดการตัวละคร & สำรองข้อมูล</h2>
@@ -554,6 +618,11 @@
         <span class="nav-icon">🏃</span>
         <span class="nav-label">ออกล่า</span>
         <span class="nav-badge" id="badge-hunt" style="display: none;">!</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-map" type="button">
+        <span class="nav-icon">🗺️</span>
+        <span class="nav-label">แผนที่</span>
+        <span class="nav-badge" id="badge-map" style="display: none;">!</span>
       </button>
       <button class="nav-tab-btn" data-tab="tab-hero" type="button">
         <span class="nav-icon">⚔️</span>
@@ -604,7 +673,7 @@
       </div>
     </div>
 
-    <!-- Finish Run Safe Confirmation Modal (Prevents sweaty finger misclicks) -->
+    <!-- Finish Run Safe Confirmation Modal -->
     <div class="modal-overlay" id="confirm-finish-modal" style="display: none;">
       <div class="modal-card">
         <div class="modal-header">
@@ -626,7 +695,7 @@
       </div>
     </div>
 
-    <!-- Pocket Mode / Screen Saver Overlay (High Contrast for Outdoor Daylight) -->
+    <!-- Pocket Mode / Screen Saver Overlay -->
     <div class="pocket-overlay" id="pocket-overlay" style="display: none;">
       <div class="pocket-content">
         <div class="pocket-lock-icon">🔒</div>
@@ -648,9 +717,9 @@
       </div>
     </div>
 
-    <!-- Item Action Modal -->
+    <!-- Item Action Modal (with Runeword Advisor) -->
     <div class="modal-overlay" id="item-modal" style="display: none;">
-      <div class="modal-card">
+      <div class="modal-card modal-card-scrollable">
         <div class="modal-header">
           <span class="modal-item-icon" id="modal-item-icon">🗡️</span>
           <div class="modal-header-info">
@@ -671,6 +740,11 @@
             <span class="modal-runeword-title" id="modal-runeword-title">⚡ พลังคำรูนโบราณ:</span>
             <p class="modal-runeword-desc" id="modal-runeword-desc"></p>
           </div>
+          <!-- Runeword Advisor Box -->
+          <div class="modal-rw-advisor-box" id="modal-rw-advisor-box" style="display: none;">
+            <span class="modal-rw-advisor-title">📜 คำแนะนำคำรูน (Runeword Advisor):</span>
+            <div class="modal-rw-advisor-list" id="modal-rw-advisor-list"></div>
+          </div>
           <div class="modal-set-desc-box" id="modal-set-desc-box">
             <span class="modal-set-title">🔮 คุณสมบัติเซ็ตโบราณ:</span>
             <p class="modal-set-line" id="modal-set-bonus-2">(2 ชิ้น) โบนัส 2 ชิ้น</p>
@@ -686,9 +760,9 @@
       </div>
     </div>
 
-    <!-- Rune Socketing Modal -->
+    <!-- Rune Socketing Modal (with Live Runeword Recipe Guide) -->
     <div class="modal-overlay" id="socket-modal" style="display: none;">
-      <div class="modal-card modal-card-socket">
+      <div class="modal-card modal-card-socket modal-card-scrollable">
         <div class="modal-header">
           <span class="modal-item-icon">🔮</span>
           <div class="modal-header-info">
@@ -699,6 +773,11 @@
         <div class="modal-body">
           <div class="socket-target-summary" id="socket-target-summary"></div>
           <div class="socket-slots-display" id="socket-slots-display"></div>
+          <!-- Live Runeword Advisor inside Socketing Station -->
+          <div class="socket-advisor-box" id="socket-advisor-box" style="display: none;">
+            <span class="socket-advisor-title">⚡ สูตรคำรูนที่รองรับสำหรับชิ้นนี้:</span>
+            <div id="socket-advisor-list" class="socket-advisor-list"></div>
+          </div>
           <div class="socket-runes-selection">
             <span class="socket-select-label">เลือกหินรูนจาก Stash เพื่อฝัง:</span>
             <div class="socket-runes-list" id="socket-runes-list"></div>
@@ -711,10 +790,32 @@
       </div>
     </div>
 
+    <!-- All Runewords Codex Modal -->
+    <div class="modal-overlay" id="runeword-codex-modal" style="display: none;">
+      <div class="modal-card modal-card-socket modal-card-scrollable">
+        <div class="modal-header">
+          <span class="modal-item-icon">📖</span>
+          <div class="modal-header-info">
+            <h3 class="modal-item-name">คัมภีร์คำรูนโบราณ (9 เซ็ต)</h3>
+            <span class="modal-item-rarity" style="color: #c084fc;">เรียงลำดับหินรูนให้ตรงตามช่องเจาะ</span>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div id="runeword-codex-list" class="rw-codex-list"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal-action btn-cancel" id="btn-rw-codex-close" type="button">ปิดคัมภีร์</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Notification Toast -->
     <div class="game-toast" id="game-toast"></div>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="data.js"></script>
+  <script src="map-engine.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

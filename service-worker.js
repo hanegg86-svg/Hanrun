@@ -1,8 +1,10 @@
-const CACHE_NAME = 'shadowstrider-v25';
+const CACHE_NAME = 'shadowstrider-v26';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './style.css',
+  './data.js',
+  './map-engine.js',
   './script.js',
   './manifest.json',
   './icon.png'

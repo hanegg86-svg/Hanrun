@@ -1,6 +1,18 @@
-// ShadowStrider: Dark Run RPG Core Engine
+// ShadowStrider: Dark Run RPG - Module 3: Core Engine, Runeword Advisor & UI Renderer
 (async function () {
   'use strict';
+
+  const App = window.ShadowStriderApp = window.ShadowStriderApp || {};
+  const SET_DATABASE = App.SET_DATABASE;
+  const RUNE_DATABASE = App.RUNE_DATABASE;
+  const RUNEWORD_DATABASE = App.RUNEWORD_DATABASE;
+  const BOSS_DATABASE = App.BOSS_DATABASE;
+  const ROAMING_MONSTER_DATABASE = App.ROAMING_MONSTER_DATABASE;
+  const ITEM_NAMES = App.ITEM_NAMES;
+  const getBossMaxHp = App.getBossMaxHp;
+  const getTitleForLevel = App.getTitleForLevel;
+  const generateDailyQuests = App.generateDailyQuests;
+  const generateAchievements = App.generateAchievements;
 
   // --- IndexedDB Database Layer ---
   const DB_NAME = 'ShadowStriderDB';
@@ -180,7 +192,7 @@
     const touchY = e.touches[0].clientY;
     const touchDiff = touchY - touchStartY;
     if (window.scrollY <= 0 && touchDiff > 0) {
-      const scrollable = e.target.closest('.inventory-grid, .daily-list, .history-list, .achievements-claimed-list, .rune-grid, .socket-runes-list');
+      const scrollable = e.target.closest('.inventory-grid, .daily-list, .history-list, .achievements-claimed-list, .rune-grid, .socket-runes-list, .modal-card-scrollable, .dungeon-map-box');
       if (!scrollable || scrollable.scrollTop <= 0) {
         e.preventDefault();
       }
@@ -224,272 +236,6 @@
     }, delay);
   }
 
-  // --- Equipment Set System Database ---
-  const SET_DATABASE = {
-    shadowstalker: {
-      id: 'shadowstalker',
-      name: 'เซ็ตเงามัจจุราช',
-      fullName: 'Shadowstalker Armor',
-      icon: '🌑',
-      color: '#c084fc',
-      bonuses: {
-        2: 'คริติคอล +10% & เกจไม้ตายชาร์จไวขึ้น 25%',
-        4: 'ท่าไม้ตาย Shadow Slash แรงขึ้น 50% & เกราะศิลาแตกนานขึ้น'
-      }
-    },
-    bloodknight: {
-      id: 'bloodknight',
-      name: 'เซ็ตอัศวินโลหิต',
-      fullName: 'Bloodknight Battlegear',
-      icon: '🩸',
-      color: '#f87171',
-      bonuses: {
-        2: 'ค่าความอึด STA +25% & ได้รับทองคำเพิ่มขึ้น +20%',
-        4: 'ขณะอยู่ใน Heart Rate Zone 2-3 จะได้รับโบนัส EXP เพิ่มขึ้น +40%'
-      }
-    },
-    voidwalker: {
-      id: 'voidwalker',
-      name: 'เซ็ตผู้ท่องมิติ',
-      fullName: 'Void Walker Raiment',
-      icon: '🌌',
-      color: '#38bdf8',
-      bonuses: {
-        2: 'เข้าสู่ Flow State ง่ายขึ้น 50% (คุมเพซเพียง 150 เมตร)',
-        4: 'เมื่ออยู่ใน Flow State การโจมตีจะทะลุเกราะบอส 100% (True Damage)'
-      }
-    },
-    voidannihilator: {
-      id: 'voidannihilator',
-      name: 'เซ็ตมหาอสูรล้างดารา',
-      fullName: 'Void Annihilator Regalia',
-      icon: '⚡',
-      color: '#a855f7',
-      bonuses: {
-        2: 'เกจไม้ตายชาร์จไวขึ้น +45% จากทุกแหล่ง',
-        4: 'Shadow Slash แรงขึ้น +80% และรีฟันด์เกจคืน 30% ทันทีที่ร่าย'
-      }
-    },
-    darktempest: {
-      id: 'darktempest',
-      name: 'เซ็ตพายุอัสนีอเวจี',
-      fullName: 'Dark Tempest Battlegear',
-      icon: '⚡',
-      color: '#f59e0b',
-      bonuses: {
-        2: 'ยืดเวลา Overdrive +20 วิ & ดาเมจ +20% เมื่ออยู่ใน Zone 3 ขึ้นไป',
-        4: 'Shadow Slash เรียกสายฟ้าทัณฑ์อัสนี +0.35 กม. และล็อกคริ 100% นาน 15 วิ'
-      }
-    }
-  };
-
-  // --- Rune Database (El #1 to Fal #19) ---
-  const RUNE_DATABASE = {
-    el: { id: 'el', name: 'El', number: 1, icon: '🪨', statDesc: 'ดาเมจ +5%', statType: 'dmg', statVal: 5 },
-    eld: { id: 'eld', name: 'Eld', number: 2, icon: '🪨', statDesc: 'ความอึด STA +5%', statType: 'sta', statVal: 5 },
-    tir: { id: 'tir', name: 'Tir', number: 3, icon: '🪨', statDesc: 'เกจไม้ตายชาร์จไว +8%', statType: 'ultCharge', statVal: 8 },
-    nef: { id: 'nef', name: 'Nef', number: 4, icon: '🪨', statDesc: 'ความอึด STA +8%', statType: 'sta', statVal: 8 },
-    eth: { id: 'eth', name: 'Eth', number: 5, icon: '🪨', statDesc: 'เจาะเกราะบอส +8%', statType: 'pierce', statVal: 8 },
-    ith: { id: 'ith', name: 'Ith', number: 6, icon: '🪨', statDesc: 'ดาเมจ +8%', statType: 'dmg', statVal: 8 },
-    tal: { id: 'tal', name: 'Tal', number: 7, icon: '🪨', statDesc: 'ดาเมจพิษ +12%', statType: 'dmg', statVal: 12 },
-    ral: { id: 'ral', name: 'Ral', number: 8, icon: '🪨', statDesc: 'ดาเมจเพลิง +15%', statType: 'dmg', statVal: 15 },
-    ort: { id: 'ort', name: 'Ort', number: 9, icon: '🪨', statDesc: 'เกจไม้ตายไวขึ้น +15%', statType: 'ultCharge', statVal: 15 },
-    thul: { id: 'thul', name: 'Thul', number: 10, icon: '🪨', statDesc: 'คริติคอล +5%', statType: 'crit', statVal: 5 },
-    amn: { id: 'amn', name: 'Amn', number: 11, icon: '🪨', statDesc: 'โบนัส EXP +15%', statType: 'exp', statVal: 15 },
-    sol: { id: 'sol', name: 'Sol', number: 12, icon: '🪨', statDesc: 'ดาเมจสุทธิ +14%', statType: 'dmg', statVal: 14 },
-    shael: { id: 'shael', name: 'Shael', number: 13, icon: '🪨', statDesc: 'เข้าสู่ Flow State ไวขึ้น 25%', statType: 'flow', statVal: 25 },
-    dol: { id: 'dol', name: 'Dol', number: 14, icon: '🪨', statDesc: 'โบนัสเหรียญทอง +20%', statType: 'gold', statVal: 20 },
-    hel: { id: 'hel', name: 'Hel', number: 15, icon: '🪨', statDesc: 'หินล้างช่องรูน', statType: 'cleanse', statVal: 0 },
-    io: { id: 'io', name: 'Io', number: 16, icon: '🪨', statDesc: 'ความอึด STA +15%', statType: 'sta', statVal: 15 },
-    lum: { id: 'lum', name: 'Lum', number: 17, icon: '🪨', statDesc: 'STA +15% & โบนัสทอง +15%', statType: 'lum', statVal: 15 },
-    ko: { id: 'ko', name: 'Ko', number: 18, icon: '🪨', statDesc: 'คริติคอล +8% & คริแรง +20%', statType: 'critPlus', statVal: 8 },
-    fal: { id: 'fal', name: 'Fal', number: 19, icon: '🪨', statDesc: 'ดาเมจพลังกาย +25%', statType: 'dmg', statVal: 25 }
-  };
-
-  // --- Runewords Database ---
-  const RUNEWORD_DATABASE = [
-    {
-      id: 'stealth',
-      name: 'Stealth (ก้าวเงาล่องหน)',
-      runes: ['tal', 'eth'],
-      types: ['armor'],
-      desc: 'เข้าสู่ Flow State ไวขึ้น 50%, ชาร์จไม้ตายไวขึ้น +25%, เจาะเกราะบอส +15%',
-      bonusDmg: 15,
-      bonusUltCharge: 25,
-      bonusPierce: 15
-    },
-    {
-      id: 'lore',
-      name: 'Lore (เนตรพหูสูต)',
-      runes: ['ort', 'sol'],
-      types: ['relic', 'ring'],
-      desc: 'ดูดซับ EXP เพิ่มขึ้น +35%, ดาเมจ +15%, เกจไม้ตายแรงขึ้น +20%',
-      bonusExp: 35,
-      bonusDmg: 15,
-      bonusUltDmg: 20
-    },
-    {
-      id: 'ancients_pledge',
-      name: "Ancient's Pledge (พันธสัญญาบรรพกาล)",
-      runes: ['ral', 'ort', 'tal'],
-      types: ['armor', 'relic'],
-      desc: 'ปราการทมิฬ! ป้องกันคำสาปหมอกสูบเลือด, ป้องกันการสูบเกจ, ความอึด STA +35%',
-      bonusSta: 35,
-      bonusDmg: 15
-    },
-    {
-      id: 'lionheart',
-      name: 'Lionheart (หัวใจราชสีห์)',
-      runes: ['hel', 'lum', 'fal'],
-      types: ['armor'],
-      desc: 'พลังแห่งราชสีห์คำราม! ดาเมจสุทธิ +40%, ความอึด STA +35%, คริติคอล +15%',
-      bonusDmg: 40,
-      bonusSta: 35,
-      bonusCrit: 15
-    }
-  ];
-
-  // --- Boss List Database ---
-  const BOSS_DATABASE = [
-    {
-      id: 'boss_1',
-      tier: 'TIER I',
-      name: 'Gargoyle of the Crypt',
-      avatar: '👹',
-      maxHpKm: 2.00,
-      desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 2.00 กม. เพื่อทำลายมัน!',
-      rewardExp: 2200,
-      rewardGold: 260,
-      gimmick: 'none'
-    },
-    {
-      id: 'boss_2',
-      tier: 'TIER II',
-      name: 'Abyssal Blood Knight',
-      avatar: '🤺',
-      maxHpKm: 4.50,
-      desc: 'อัศวินเกราะดำกระหายการต่อสู้ วิ่ง 4.50 กม. เพื่อสยบดาบโลหิต!',
-      rewardExp: 5500,
-      rewardGold: 600,
-      gimmick: 'none'
-    },
-    {
-      id: 'boss_2_major',
-      tier: 'TIER II (MAJOR)',
-      name: 'Abyssal Juggernaut: Gorgoroth',
-      avatar: '🦏',
-      maxHpKm: 6.50,
-      desc: 'บอสใหญ่แห่งเทียร์สอง จอมพลังเกราะหนาทมิฬ ทลายเกราะเหล็กด้วย Flow State หรือ Shadow Slash!',
-      rewardExp: 8500,
-      rewardGold: 1200,
-      gimmick: 'juggernaut'
-    },
-    {
-      id: 'boss_3',
-      tier: 'TIER III',
-      name: 'Ancient Bone Dragon',
-      avatar: '🐉',
-      maxHpKm: 8.00,
-      desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 8.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!',
-      rewardExp: 12000,
-      rewardGold: 1300,
-      gimmick: 'none'
-    },
-    {
-      id: 'boss_4',
-      tier: 'TIER IV',
-      name: 'Shadow Lich: Malakor',
-      avatar: '🧙‍♂️',
-      maxHpKm: 12.50,
-      desc: 'จอมเวทอเวจีโบราณ เมื่อเลือดต่ำกว่า 75% หมอกคำสาปจะสูบเลือดคืนหากเพซวิ่งช้ากว่า 7:30!',
-      rewardExp: 21000,
-      rewardGold: 2600,
-      gimmick: 'mist'
-    },
-    {
-      id: 'boss_5',
-      tier: 'TIER V',
-      name: 'Void Behemoth: Titan of Ruin',
-      avatar: '🗿',
-      maxHpKm: 18.00,
-      desc: 'ไททันศิลาแห่งความว่างเปล่า เกราะหนาลดดาเมจ 45% ทลายเกราะด้วยคริติคอลหรือท่าไม้ตาย Shadow Slash!',
-      rewardExp: 38000,
-      rewardGold: 4800,
-      gimmick: 'carapace'
-    },
-    {
-      id: 'boss_6',
-      tier: 'TIER VI',
-      name: 'Abyssal Empress: Nyxaria',
-      avatar: '👑',
-      maxHpKm: 25.00,
-      desc: 'จักรพรรดินีเงาราตรี 3 เฟส: ร่างเงาหลอก (ทลายด้วย Flow State), สนามเรโซแนนซ์ และจันทรคราสทมิฬ!',
-      rewardExp: 62000,
-      rewardGold: 8500,
-      gimmick: 'empress'
-    },
-    {
-      id: 'boss_7',
-      tier: 'TIER VII',
-      name: 'Eclipse Harbinger: Ignis-Vorax',
-      avatar: '☄',
-      maxHpKm: 36.00,
-      desc: 'เทพอสูรเพลิงสุริยคราส เลือด 36 กม. ครึ่งแรกคลื่นความร้อนแผดเผา ครึ่งหลังระเบิดซูเปอร์โนวา ชาร์จไม้ตายไว x2!',
-      rewardExp: 95000,
-      rewardGold: 15000,
-      gimmick: 'supernova'
-    },
-    {
-      id: 'boss_8',
-      tier: 'TIER VIII',
-      name: 'Primordial Void Leviathan: Nihil-Khaos',
-      avatar: '🌌',
-      maxHpKm: 50.00,
-      desc: 'เลเวียธานมิติอเวจีบรรพกาล เลือด 50 กม. ต่ำกว่า 50% หลุมดำดูดกลืนเกจ ต่ำกว่า 20% ซิงกูลาริตียุบตัว ดาเมจ x2.5 ในโซนสูง!',
-      rewardExp: 145000,
-      rewardGold: 26000,
-      gimmick: 'singularity'
-    },
-    {
-      id: 'boss_9',
-      tier: 'TIER IX',
-      name: 'Chrono-Abyss Overlord: Chronos-Nox',
-      avatar: '⏳',
-      maxHpKm: 70.00,
-      desc: 'เทพอสูรบิดผันกาลเวลา เลือด 70 กม. วิ่งเพซเร็วกว่า 6:30 ทะลวงมิติดาเมจ x3! แต่หากช้ากว่า 8:00 มิติเวลาจะหมุนกลับสูบเลือดฟื้นฟู!',
-      rewardExp: 220000,
-      rewardGold: 40000,
-      gimmick: 'chrono'
-    },
-    {
-      id: 'boss_super',
-      tier: 'TIER X',
-      name: 'Cosmic Dread: Azathoth-Nox',
-      avatar: '👁️‍🗨️',
-      maxHpKm: 90.00,
-      desc: 'เทพอสูรความว่างเปล่าบรรพกาล เลือด 90 กม.! เกราะหนาลดดาเมจ 70% สลายด้วย Shadow Slash และสูบเกจหากเพซช้ากว่า 7:00!',
-      rewardExp: 350000,
-      rewardGold: 70000,
-      gimmick: 'superboss'
-    },
-    {
-      id: 'boss_secret',
-      tier: 'TIER EX (SECRET)',
-      name: 'Primordial Void Sovereign: Ouroboros-Null',
-      avatar: '🌌',
-      maxHpKm: 120.00,
-      desc: 'ผู้กลืนกินมิติบรรพกาล ปรากฏเฉพาะผู้พิชิตจบลูป 3 ขึ้นไป! ทลายเกราะด้วย Flow State หรือไม้ตาย และเร่งชีพจร Zone 3 เพื่อสยบการดูดกลืนพลัง!',
-      rewardExp: 500000,
-      rewardGold: 100000,
-      gimmick: 'secretboss'
-    }
-  ];
-
-  function getBossMaxHp(bossIndex, loopCycle = 0) {
-    const base = BOSS_DATABASE[bossIndex].maxHpKm;
-    return parseFloat((base * (1 + (loopCycle * 0.15))).toFixed(2));
-  }
-
   function getUpgradeBaseSuccessRate(currentLevel) {
     return Math.max(20, 100 - (currentLevel * 2));
   }
@@ -502,133 +248,7 @@
     return Math.min(100, baseRate + bonusRate);
   }
 
-  function getTitleForLevel(level) {
-    if (level >= 80) return 'Ouroboros God Sovereign';
-    if (level >= 75) return 'Cosmic Void Exterminator';
-    if (level >= 60) return 'Eternal Sovereign of Time & Void';
-    if (level >= 50) return 'Lord of the Primordial Void';
-    if (level >= 45) return 'Eclipse God Slayer';
-    if (level >= 35) return 'Abyssal Sovereign Emperor';
-    if (level >= 30) return 'Void Overlord';
-    if (level >= 25) return 'Shadow Sovereign';
-    if (level >= 20) return 'Dread Champion';
-    if (level >= 15) return 'Abyssal Dreadnought';
-    if (level >= 10) return 'Abyss Stalker';
-    if (level >= 5) return 'Crypt Slayer';
-    return 'Shadow Initiate';
-  }
-
-  function generateDailyQuests() {
-    return [
-      { id: 'dq_dist', name: 'สำรวจอเวจีลึก: สะสมระยะทาง 8.0 กม.', target: 8.0, current: 0.0, unit: 'กม.', rewardExp: 320000, rewardGold: 35000, claimed: false },
-      { id: 'dq_time', name: 'สมาธิจิตนักล่า: วิ่งสะสมเวลา 45 นาที', target: 2700, current: 0, unit: 'วินาที', rewardExp: 380000, rewardGold: 40000, claimed: false },
-      { id: 'dq_cal', name: 'ผลาญพลังเวท: เผาผลาญ 550 kcal', target: 550, current: 0, unit: 'kcal', rewardExp: 300000, rewardGold: 32000, claimed: false },
-      { id: 'dq_boss', name: 'ล่าสังหารห้าชีพ: โค่นบอส 5 ตัว', target: 5, current: 0, unit: 'ตัว', rewardExp: 500000, rewardGold: 65000, claimed: false },
-      { id: 'dq_crit', name: 'สังหารจุดตาย: โจมตีคริติคอล 60 ครั้ง', target: 60, current: 0, unit: 'ครั้ง', rewardExp: 420000, rewardGold: 45000, claimed: false },
-      { id: 'dq_frenzy', name: 'คลั่งศึกอเวจี: รักษาสภาวะ Berserk/Zone 3 นาน 10 นาที', target: 600, current: 0, unit: 'วินาที', rewardExp: 450000, rewardGold: 48000, claimed: false },
-      { id: 'dq_ult', name: 'เพลงดาบเงาปลิดชีพ: ร่าย Shadow Slash 10 ครั้ง', target: 10, current: 0, unit: 'ครั้ง', rewardExp: 360000, rewardGold: 38000, claimed: false }
-    ];
-  }
-
-  function generateAchievements() {
-    return [
-      { id: 'ach_first', name: 'First Blood (การล่าครั้งแรก)', desc: 'จบเซสชันการล่าสำเร็จ 1 รอบ', target: 1, current: 0, unit: 'รอบ', rewardExp: 1000, rewardGold: 200, claimed: false },
-      { id: 'ach_dist10', name: 'Shadow Nomad (เส้นทาง 10K)', desc: 'สะสมระยะทางรวมแตะ 10.0 กม.', target: 10.0, current: 0.0, unit: 'กม.', rewardExp: 3500, rewardGold: 600, claimed: false },
-      { id: 'ach_dist50', name: 'Abyssal Walker (นักเดินทาง 50K)', desc: 'สะสมระยะทางรวมแตะ 50.0 กม.', target: 50.0, current: 0.0, unit: 'กม.', rewardExp: 12000, rewardGold: 2500, claimed: false },
-      { id: 'ach_boss_juggernaut', name: 'Juggernaut Crusher (ผู้สยบจอมอสูรเกราะเหล็ก)', desc: 'โค่น Abyssal Juggernaut: Gorgoroth (Tier II Major)', target: 1, current: 0, unit: 'ตัว', rewardExp: 5000, rewardGold: 1000, claimed: false },
-      { id: 'ach_boss_dragon', name: 'Dragon Bane (ผู้สยบมังกร)', desc: 'โค่นมังกรกระดูก Ancient Bone Dragon (Tier III)', target: 1, current: 0, unit: 'ตัว', rewardExp: 6000, rewardGold: 1200, claimed: false },
-      { id: 'ach_boss_malakor', name: 'Lich Bane (ผู้สยบจอมเวท)', desc: 'โค่นจอมเวทอเวจี Shadow Lich: Malakor (Tier IV)', target: 1, current: 0, unit: 'ตัว', rewardExp: 10000, rewardGold: 2000, claimed: false },
-      { id: 'ach_boss_titan', name: 'Titan Breaker (ผู้กะเทาะศิลาไททัน)', desc: 'โค่น Void Behemoth: Titan of Ruin (Tier V)', target: 1, current: 0, unit: 'ตัว', rewardExp: 16000, rewardGold: 3500, claimed: false },
-      { id: 'ach_boss_empress', name: 'Eclipse Sovereign (ผู้สยบจักรพรรดินี)', desc: 'โค่น Abyssal Empress: Nyxaria (Tier VI)', target: 1, current: 0, unit: 'ตัว', rewardExp: 28000, rewardGold: 6000, claimed: false },
-      { id: 'ach_boss_ignis', name: 'Harbinger Extinguisher (ผู้ดับสุริยคราส)', desc: 'โค่น Eclipse Harbinger: Ignis-Vorax (Tier VII)', target: 1, current: 0, unit: 'ตัว', rewardExp: 45000, rewardGold: 10000, claimed: false },
-      { id: 'ach_boss_leviathan', name: 'Void Leviathan Slayer (ผู้ดับชีพเลเวียธาน)', desc: 'โค่น Primordial Void Leviathan: Nihil-Khaos (Tier VIII)', target: 1, current: 0, unit: 'ตัว', rewardExp: 60000, rewardGold: 15000, claimed: false },
-      { id: 'ach_boss_chronos', name: 'Chrono Overlord Slayer (ผู้ดับมิติเวลา)', desc: 'โค่น Chrono-Abyss Overlord: Chronos-Nox (Tier IX)', target: 1, current: 0, unit: 'ตัว', rewardExp: 100000, rewardGold: 25000, claimed: false },
-      { id: 'ach_dist100', name: 'Century Stalker (นักล่าร้อยกิโล)', desc: 'สะสมระยะทางรวมแตะ 100.0 กม.', target: 100.0, current: 0.0, unit: 'กม.', rewardExp: 35000, rewardGold: 7000, claimed: false },
-      { id: 'ach_dist250', name: 'Abyssal Ultramarathon (เส้นทางอเวจี 250K)', desc: 'สะสมระยะทางรวมแตะ 250.0 กม.', target: 250.0, current: 0.0, unit: 'กม.', rewardExp: 90000, rewardGold: 20000, claimed: false },
-      { id: 'ach_boss25', name: 'Grand Demon Slayer (ผู้พิชิตบอส 25 ตน)', desc: 'โค่นบอสรวมสะสม 25 ตัว', target: 25, current: 0, unit: 'ตัว', rewardExp: 40000, rewardGold: 8000, claimed: false },
-      { id: 'ach_boss50', name: 'Scourge of the Void (มหาอสูรพิฆาต 50 ตน)', desc: 'โค่นบอสรวมสะสม 50 ตัว', target: 50, current: 0, unit: 'ตัว', rewardExp: 100000, rewardGold: 25000, claimed: false },
-      { id: 'ach_berserk_time', name: 'Berserk Master (นักรบคลั่งผู้ช่ำชอง)', desc: 'รักษาสภาวะ Berserk Frenzy รวม 30 นาที (1,800 วิ)', target: 1800, current: 0, unit: 'วินาที', rewardExp: 30000, rewardGold: 6000, claimed: false },
-      { id: 'ach_ult_cast', name: 'Blade Tempest (พายุคมดาบเงา)', desc: 'ปลดปล่อยท่าไม้ตาย Shadow Slash ครบ 40 ครั้ง', target: 40, current: 0, unit: 'ครั้ง', rewardExp: 45000, rewardGold: 9000, claimed: false },
-      { id: 'ach_goblin_catch', name: 'Goblin Executioner (ผู้ล้างบางก็อบลิน)', desc: 'สยบโกบลินเงาหลบหนีสำเร็จ 8 ครั้ง', target: 8, current: 0, unit: 'ครั้ง', rewardExp: 32000, rewardGold: 6500, claimed: false },
-      { id: 'ach_flow_count', name: 'Transcendental Flow (สมาธิไร้ขอบเขต)', desc: 'เข้าสู่สถานะ Flow State สะสม 20 ครั้ง', target: 20, current: 0, unit: 'ครั้ง', rewardExp: 30000, rewardGold: 6000, claimed: false },
-      { id: 'ach_single_long', name: 'Single-Run Behemoth (การล่าทรหด)', desc: 'จบการวิ่งในรอบเดียวได้ระยะทางมากกว่า 15.0 กม.', target: 15.0, current: 0.0, unit: 'กม.', rewardExp: 55000, rewardGold: 12000, claimed: false },
-      { id: 'ach_superboss', name: 'Super Boss Annihilator (ผู้สยบเทพอสูรบรรพกาล)', desc: 'โค่น Cosmic Dread: Azathoth-Nox (Super Boss) สำเร็จ', target: 1, current: 0, unit: 'ตัว', rewardExp: 250000, rewardGold: 60000, claimed: false },
-      { id: 'ach_secretboss', name: 'Primordial Void Conqueror (ผู้พิชิตมหาอสูรลับบรรพกาล)', desc: 'โค่น Primordial Void Sovereign: Ouroboros-Null (Tier EX Secret Boss)', target: 1, current: 0, unit: 'ตัว', rewardExp: 600000, rewardGold: 150000, claimed: false },
-      { id: 'ach_dist500', name: 'Abyssal Half-Marathon Legend (ตำนาน 500K อเวจี)', desc: 'สะสมระยะทางรวมตลอดกาลแตะ 500.0 กม.', target: 500.0, current: 0.0, unit: 'กม.', rewardExp: 200000, rewardGold: 50000, claimed: false },
-      { id: 'ach_dist1000', name: 'Titan of the Thousand Leagues (จอมคนพันกิโลเมตร)', desc: 'สะสมระยะทางรวมตลอดกาลแตะ 1,000.0 กม.', target: 1000.0, current: 0.0, unit: 'กม.', rewardExp: 500000, rewardGold: 120000, claimed: false },
-      { id: 'ach_boss100', name: 'Centurion Slayer (มหาผู้พิชิตร้อยอสูร)', desc: 'โค่นบอสรวมสะสม 100 ตัว', target: 100, current: 0, unit: 'ตัว', rewardExp: 250000, rewardGold: 60000, claimed: false },
-      { id: 'ach_single_halfmarathon', name: 'Half Marathon Ascendant (สัจธรรมฮาล์ฟมาราธอน)', desc: 'จบการวิ่งในรอบเดียวได้ระยะทาง 21.1 กม. ขึ้นไป', target: 21.1, current: 0.0, unit: 'กม.', rewardExp: 150000, rewardGold: 35000, claimed: false },
-      { id: 'ach_single_marathon', name: 'Full Marathon Conqueror (ผู้พิชิตฟูลมาราธอน)', desc: 'จบการวิ่งในรอบเดียวได้ระยะทาง 42.195 กม. ขึ้นไป', target: 42.195, current: 0.0, unit: 'กม.', rewardExp: 350000, rewardGold: 85000, claimed: false },
-      { id: 'ach_loop_master', name: 'Loop Dimension Master (จอมวนลูปอเวจี)', desc: 'เข้าสู่สังเวียน Awakened Loop 3 ขึ้นไป', target: 3, current: 0, unit: 'ลูป', rewardExp: 180000, rewardGold: 45000, claimed: false },
-      { id: 'ach_streak14', name: 'Iron Will Discipline (วินัยเหล็กกล้า 14 วัน)', desc: 'ทำสถิติออกล่าต่อเนื่อง Streak ครบ 14 วัน', target: 14, current: 0, unit: 'วัน', rewardExp: 120000, rewardGold: 30000, claimed: false },
-      { id: 'ach_ult150', name: 'Shadow Sword Deity (เทพดาบเงาพันเล่ม)', desc: 'ปลดปล่อยท่าไม้ตาย Shadow Slash รวม 150 ครั้ง', target: 150, current: 0, unit: 'ครั้ง', rewardExp: 160000, rewardGold: 40000, claimed: false },
-      { id: 'ach_goblin25', name: 'Goblin\'s Worst Nightmare (ฝันร้ายแห่งเผ่าโกบลิน)', desc: 'สยบโกบลินเงาหลบหนีสำเร็จ 25 ครั้ง', target: 25, current: 0, unit: 'ครั้ง', rewardExp: 140000, rewardGold: 35000, claimed: false },
-      { id: 'ach_flow60', name: 'Zenith Flow Master (มหาผู้ตรัสรู้โฟลว์สเตท)', desc: 'เข้าสู่สภาวะ Flow State สะสม 60 ครั้ง', target: 60, current: 0, unit: 'ครั้ง', rewardExp: 130000, rewardGold: 32000, claimed: false }
-    ];
-  }
-
-  const defaultState = {
-    playerName: 'Abyss Stalker',
-    level: 1,
-    title: 'Shadow Initiate',
-    currentExp: 0,
-    nextExp: 1000,
-    gold: 0,
-    statPoints: 0,
-    ultimateCharge: 0,
-    stats: { str: 10, sta: 10, agi: 10 },
-    upgrades: { blade: 0, charm: 0, eye: 0, elixir: 0, bag: 0 },
-    upgradeFailStreak: { blade: 0, charm: 0, eye: 0 },
-    equipment: { weapon: null, armor: null, boots: null, relic: null, ring: null, bracelet: null },
-    inventory: [],
-    runeStash: {
-      el: 0, eld: 0, tir: 0, nef: 0, eth: 0, ith: 0, tal: 0, ral: 0, ort: 0, thul: 0,
-      amn: 0, sol: 0, shael: 0, dol: 0, hel: 0, io: 0, lum: 0, ko: 0, fal: 0
-    },
-    bestiary: {
-      boss_1: { kills: 0, name: 'Gargoyle of the Crypt' },
-      boss_2: { kills: 0, name: 'Abyssal Blood Knight' },
-      boss_2_major: { kills: 0, name: 'Abyssal Juggernaut: Gorgoroth' },
-      boss_3: { kills: 0, name: 'Ancient Bone Dragon' },
-      boss_4: { kills: 0, name: 'Shadow Lich: Malakor' },
-      boss_5: { kills: 0, name: 'Void Behemoth: Titan of Ruin' },
-      boss_6: { kills: 0, name: 'Abyssal Empress: Nyxaria' },
-      boss_7: { kills: 0, name: 'Eclipse Harbinger: Ignis-Vorax' },
-      boss_8: { kills: 0, name: 'Primordial Void Leviathan: Nihil-Khaos' },
-      boss_9: { kills: 0, name: 'Chrono-Abyss Overlord: Chronos-Nox' },
-      boss_super: { kills: 0, name: 'Cosmic Dread: Azathoth-Nox' },
-      boss_secret: { kills: 0, name: 'Primordial Void Sovereign: Ouroboros-Null' }
-    },
-    chestsAvailable: 0,
-    streak: { count: 1, lastDate: new Date().toDateString() },
-    bossIndex: 0,
-    bossHpRemain: 2.00,
-    bossLoopCycle: 0,
-    totalDistanceKm: 0.0,
-    maxHr: 178,
-    lastBleDeviceName: null,
-    lastDailyDate: new Date().toDateString(),
-    isHistoryCollapsed: false,
-    hideCompletedAchievements: false,
-    isClaimedAchAccordionOpen: false,
-    autoCastMode: 'off',
-    statsTrack: {
-      berserkSeconds: 0,
-      ultCastCount: 0,
-      goblinCaughtCount: 0,
-      flowStateCount: 0
-    },
-    career: {
-      totalRuns: 0,
-      totalDistanceKm: 0.0,
-      totalSeconds: 0,
-      totalBossDefeated: 0,
-      longestRunKm: 0.0
-    },
-    dailyQuests: generateDailyQuests(),
-    achievements: generateAchievements()
-  };
-
+  const defaultState = App.createDefaultState();
   let gameState = defaultState;
   let currentInvFilter = 'all';
 
@@ -662,18 +282,20 @@
       }
     }
 
+    const freshTemplate = App.createDefaultState();
     if (saved) {
-      gameState = Object.assign({}, defaultState, saved);
-      gameState.playerName = saved.playerName || defaultState.playerName;
-      gameState.stats = Object.assign({}, defaultState.stats, saved.stats || {});
-      gameState.upgrades = Object.assign({ elixir: 0, bag: 0 }, defaultState.upgrades, saved.upgrades || {});
-      gameState.upgradeFailStreak = Object.assign({ blade: 0, charm: 0, eye: 0 }, defaultState.upgradeFailStreak, saved.upgradeFailStreak || {});
-      gameState.equipment = Object.assign({ ring: null, bracelet: null }, defaultState.equipment, saved.equipment || {});
+      gameState = Object.assign({}, freshTemplate, saved);
+      gameState.playerName = saved.playerName || freshTemplate.playerName;
+      gameState.stats = Object.assign({}, freshTemplate.stats, saved.stats || {});
+      gameState.upgrades = Object.assign({ elixir: 0, bag: 0 }, freshTemplate.upgrades, saved.upgrades || {});
+      gameState.upgradeFailStreak = Object.assign({ blade: 0, charm: 0, eye: 0 }, freshTemplate.upgradeFailStreak, saved.upgradeFailStreak || {});
+      gameState.equipment = Object.assign({ ring: null, bracelet: null }, freshTemplate.equipment, saved.equipment || {});
       gameState.inventory = saved.inventory || [];
-      gameState.runeStash = Object.assign({}, defaultState.runeStash, saved.runeStash || {});
-      gameState.bestiary = Object.assign({}, defaultState.bestiary, saved.bestiary || {});
-      gameState.streak = Object.assign({}, defaultState.streak, saved.streak || {});
-      gameState.career = Object.assign({}, defaultState.career, saved.career || {});
+      gameState.runeStash = Object.assign({}, freshTemplate.runeStash, saved.runeStash || {});
+      gameState.bestiary = Object.assign({}, freshTemplate.bestiary, saved.bestiary || {});
+      gameState.roamingMonsters = Array.isArray(saved.roamingMonsters) ? saved.roamingMonsters : [];
+      gameState.streak = Object.assign({}, freshTemplate.streak, saved.streak || {});
+      gameState.career = Object.assign({}, freshTemplate.career, saved.career || {});
       gameState.dailyQuests = saved.dailyQuests || generateDailyQuests();
       gameState.achievements = saved.achievements || generateAchievements();
       gameState.ultimateCharge = typeof saved.ultimateCharge === 'number' ? Math.min(300, saved.ultimateCharge) : 0;
@@ -685,10 +307,11 @@
         berserkSeconds: 0,
         ultCastCount: 0,
         goblinCaughtCount: 0,
-        flowStateCount: 0
+        flowStateCount: 0,
+        roamingKills: 0
       }, saved.statsTrack || {});
     } else {
-      gameState = JSON.parse(JSON.stringify(defaultState));
+      gameState = freshTemplate;
     }
 
     const updatedGoldValues = {
@@ -727,6 +350,12 @@
     BOSS_DATABASE.forEach(b => {
       if (!gameState.bestiary[b.id]) {
         gameState.bestiary[b.id] = { kills: 0, name: b.name };
+      }
+    });
+
+    ROAMING_MONSTER_DATABASE.forEach(rm => {
+      if (!gameState.bestiary[rm.id]) {
+        gameState.bestiary[rm.id] = { kills: 0, name: rm.name };
       }
     });
 
@@ -843,15 +472,6 @@
   let rhythmConsistentDistance = 0.0;
   let flowGraceStrikes = 0;
   let tempestCritBuffSeconds = 0;
-
-  const ITEM_NAMES = {
-    weapon: ['ดาบสั้น', 'ดาบใหญ่ทมิฬ', 'เคียวมรณะ', 'ดาบโบราณ', 'หอกพิฆาตมิติ'],
-    armor: ['เสื้อเกราะหนัง', 'เกราะเหล็กอสูร', 'ผ้าคลุมวิญญาณ', 'เกราะเพลทอเวจี', 'เกราะมหาอสูร'],
-    boots: ['รองเท้าก้าวเงา', 'รองเท้าเกราะทมิฬ', 'รองเท้าลมกรด', 'สนับแข้งสายลม', 'รองเท้าล่องหน'],
-    relic: ['แหวนวิญญาณ', 'จี้หยดโลหิต', 'เครื่องรางตาเหยี่ยว', 'หินมนตราโบราณ', 'ดวงใจมิติอเวจี'],
-    ring: ['แหวนเพลิงอเวจี', 'วงแหวนเงาบรรพกาล', 'แหวนวิญญาณสูบดวงดาว', 'ธำมรงค์มิติว่างเปล่า', 'แหวนราชาไร้นาม'],
-    bracelet: ['กำไลทมิฬ', 'กำไลผลึกวิญญาณ', 'กำไลอัสนีบาต', 'กำไลสายฟ้าราตรี', 'กำไลมิติว่างเปล่า']
-  };
 
   function rollRandomRuneDrop(isBoss = false) {
     const runeKeys = Object.keys(RUNE_DATABASE);
@@ -1039,6 +659,8 @@
     let bonusUltDmg = 0;
     let bonusArmorPierce = 0;
     let bonusUltCharge = 0;
+    let bonusExp = 0;
+    let bonusFlow = 0;
 
     const eq = gameState.equipment;
     ['weapon', 'armor', 'boots', 'relic', 'ring', 'bracelet'].forEach(slot => {
@@ -1080,6 +702,8 @@
           if (r.statType === 'critPlus') { bonusCrit += r.statVal; bonusCritDmg += 0.20; }
           if (r.statType === 'gold') bonusGold += r.statVal;
           if (r.statType === 'ultCharge') bonusUltCharge += r.statVal;
+          if (r.statType === 'exp') bonusExp += r.statVal;
+          if (r.statType === 'flow') bonusFlow += r.statVal;
           if (r.statType === 'lum') { bonusSta += r.statVal; bonusGold += r.statVal; }
         });
       }
@@ -1089,9 +713,13 @@
         if (rw.bonusDmg) bonusDmg += rw.bonusDmg;
         if (rw.bonusSta) bonusSta += rw.bonusSta;
         if (rw.bonusCrit) bonusCrit += rw.bonusCrit;
+        if (rw.bonusCritDmg) bonusCritDmg += rw.bonusCritDmg;
         if (rw.bonusPierce) bonusArmorPierce += rw.bonusPierce;
         if (rw.bonusUltDmg) bonusUltDmg += rw.bonusUltDmg;
         if (rw.bonusUltCharge) bonusUltCharge += rw.bonusUltCharge;
+        if (rw.bonusExp) bonusExp += rw.bonusExp;
+        if (rw.bonusGold) bonusGold += rw.bonusGold;
+        if (rw.bonusFlow) bonusFlow += rw.bonusFlow;
       }
     });
 
@@ -1110,7 +738,19 @@
       bonusDmg += 20;
     }
 
-    return { bonusDmg, bonusSta, bonusCrit, bonusCritDmg, bonusGold, bonusUltDmg, bonusArmorPierce, bonusUltCharge, setCounts };
+    return {
+      bonusDmg,
+      bonusSta,
+      bonusCrit,
+      bonusCritDmg,
+      bonusGold,
+      bonusUltDmg,
+      bonusArmorPierce,
+      bonusUltCharge,
+      bonusExp,
+      bonusFlow,
+      setCounts
+    };
   }
 
   function calculateCritStats() {
@@ -1301,6 +941,10 @@
 
   const runeCountSummaryEl = document.getElementById('rune-count-summary');
   const runeGridEl = document.getElementById('rune-grid');
+  const btnOpenRunewordCodex = document.getElementById('btn-open-runeword-codex');
+  const runewordCodexModalEl = document.getElementById('runeword-codex-modal');
+  const runewordCodexListEl = document.getElementById('runeword-codex-list');
+  const btnRwCodexClose = document.getElementById('btn-rw-codex-close');
 
   const itemModalEl = document.getElementById('item-modal');
   const modalItemIconEl = document.getElementById('modal-item-icon');
@@ -1315,6 +959,8 @@
   const modalRunewordDescBoxEl = document.getElementById('modal-runeword-desc-box');
   const modalRunewordTitleEl = document.getElementById('modal-runeword-title');
   const modalRunewordDescEl = document.getElementById('modal-runeword-desc');
+  const modalRwAdvisorBoxEl = document.getElementById('modal-rw-advisor-box');
+  const modalRwAdvisorListEl = document.getElementById('modal-rw-advisor-list');
   const modalSetBonus2El = document.getElementById('modal-set-bonus-2');
   const modalSetBonus4El = document.getElementById('modal-set-bonus-4');
   const btnModalEquip = document.getElementById('btn-modal-equip');
@@ -1325,11 +971,14 @@
   const socketModalEl = document.getElementById('socket-modal');
   const socketTargetSummaryEl = document.getElementById('socket-target-summary');
   const socketSlotsDisplayEl = document.getElementById('socket-slots-display');
+  const socketAdvisorBoxEl = document.getElementById('socket-advisor-box');
+  const socketAdvisorListEl = document.getElementById('socket-advisor-list');
   const socketRunesListEl = document.getElementById('socket-runes-list');
   const btnModalUnsocket = document.getElementById('btn-modal-unsocket');
   const btnSocketModalClose = document.getElementById('btn-socket-modal-close');
 
   const codexListEl = document.getElementById('codex-list');
+  const codexRoamingListEl = document.getElementById('codex-roaming-list');
   const codexCounterEl = document.getElementById('codex-counter');
   const btnExportBackup = document.getElementById('btn-export-backup');
   const inputImportBackup = document.getElementById('input-import-backup');
@@ -1356,6 +1005,14 @@
     }, 2800);
   }
 
+  function triggerOverdriveBuff(seconds = 60) {
+    isOverdriveActive = true;
+    overdriveSecondsRemaining = Math.max(overdriveSecondsRemaining, seconds);
+    runHudEl.classList.add('overdrive-active');
+    overdriveBannerEl.style.display = 'block';
+    overdriveTimeLeftEl.textContent = overdriveSecondsRemaining;
+  }
+
   function getBladePrice() {
     return Math.floor(400 * Math.pow(1.25, gameState.upgrades.blade || 0));
   }
@@ -1378,7 +1035,10 @@
   }
 
   function addExp(amount) {
-    gameState.currentExp += amount;
+    const eqBonus = calculateEquipmentBonuses();
+    const expScale = 1 + ((eqBonus.bonusExp || 0) * 0.01);
+    const finalExp = Math.floor(amount * expScale);
+    gameState.currentExp += finalExp;
     let leveledUp = false;
     while (gameState.currentExp >= gameState.nextExp) {
       gameState.currentExp -= gameState.nextExp;
@@ -1895,7 +1555,9 @@
 
     addUltimateCharge((distanceDeltaKm * 8) * ultChargeBonusMult);
 
-    const flowThresholdKm = setCounts.voidwalker >= 2 ? 0.15 : 0.30;
+    const baseFlowKm = setCounts.voidwalker >= 2 ? 0.15 : 0.30;
+    const flowSpeedMult = 1 + ((eqBonus.bonusFlow || 0) * 0.01);
+    const flowThresholdKm = baseFlowKm / flowSpeedMult;
     let rollingPace = getRecentRollingPace();
 
     if (rollingPace === null && isSimMode && runDistanceKm >= 0.05) {
@@ -2246,13 +1908,27 @@
       bossDamageMultiplier = (bossDamageMultiplier / (isLoop ? 0.40 : 0.55));
     }
 
-    const effectiveDamage = distanceDeltaKm * strMultiplier * (isCrit ? critDmgMultiplier : 1.0) * bossDamageMultiplier;
+    const baseDamageForField = distanceDeltaKm * strMultiplier * (isCrit ? critDmgMultiplier : 1.0);
+    const effectiveDamage = baseDamageForField * bossDamageMultiplier;
 
     if (isCrit) {
       addUltimateCharge(1);
       const questCrit = gameState.dailyQuests.find(q => q.id === 'dq_crit');
       if (questCrit) questCrit.current = Math.min(questCrit.target, questCrit.current + 1);
       showToast(`💥 CRITICAL! ดาเมจทะลวง x${critDmgMultiplier.toFixed(2)}`);
+    }
+
+    // Apply simultaneous combat damage to any Roaming Field Monster engaged within 10m
+    if (App.MapEngine) {
+      const avgPaceDec = (runDistanceKm >= 0.02 && runSeconds > 0) ? ((runSeconds / 60) / runDistanceKm) : null;
+      App.MapEngine.applyFieldCombatDamage(baseDamageForField, {
+        isCrit,
+        isFlowStateActive,
+        isFrenzyActive,
+        currentHrZone,
+        rollingPace,
+        avgPace: avgPaceDec
+      });
     }
 
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - effectiveDamage);
@@ -2320,12 +1996,12 @@
 
     gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - burstDamageKm);
 
-    isOverdriveActive = true;
+    if (App.MapEngine) {
+      App.MapEngine.applyUltimateBurstToEncounter(burstDamageKm);
+    }
+
     const tempestBonusSec = setCounts.darktempest >= 2 ? 20 : 0;
-    overdriveSecondsRemaining = tierOverdriveSec[tier] + tempestBonusSec;
-    runHudEl.classList.add('overdrive-active');
-    overdriveBannerEl.style.display = 'block';
-    overdriveTimeLeftEl.textContent = overdriveSecondsRemaining;
+    triggerOverdriveBuff(tierOverdriveSec[tier] + tempestBonusSec);
 
     if (gameState.bossHpRemain <= 0.001) {
       handleBossDefeat(currentBoss, tier);
@@ -2383,6 +2059,125 @@
   }
 
   btnOpenChest.addEventListener('click', openMysteryChest);
+
+  // --- Runeword Advisor & Codex Helper ---
+  function getCompatibleRunewordsForItem(item) {
+    if (!item) return [];
+    return RUNEWORD_DATABASE.filter(rw => rw.types.includes(item.type));
+  }
+
+  function renderRunewordAdvisorForItem(item, containerEl, listEl) {
+    if (!containerEl || !listEl || !item) return;
+
+    const typeMatches = getCompatibleRunewordsForItem(item);
+    if (typeMatches.length === 0) {
+      containerEl.style.display = 'none';
+      return;
+    }
+
+    containerEl.style.display = 'flex';
+    listEl.innerHTML = '';
+
+    const inserted = item.socketedRunes || [];
+
+    typeMatches.forEach(rw => {
+      const reqCount = rw.runes.length;
+      const isExactSocketCount = item.socketsMax === reqCount;
+
+      // Check if currently inserted runes match prefix of this runeword
+      let prefixMatches = true;
+      for (let i = 0; i < inserted.length; i++) {
+        if (inserted[i] !== rw.runes[i]) {
+          prefixMatches = false;
+          break;
+        }
+      }
+
+      // Check if player owns all missing runes in Stash
+      const neededCounts = {};
+      for (let i = inserted.length; i < reqCount; i++) {
+        const rk = rw.runes[i];
+        neededCounts[rk] = (neededCounts[rk] || 0) + 1;
+      }
+      let hasAllNeeded = isExactSocketCount && prefixMatches;
+      Object.keys(neededCounts).forEach(rk => {
+        if ((gameState.runeStash[rk] || 0) < neededCounts[rk]) {
+          hasAllNeeded = false;
+        }
+      });
+
+      const card = document.createElement('div');
+      card.className = `rw-advisor-item ${isExactSocketCount ? 'exact-match' : 'incompatible-sockets'}`;
+
+      let statusTagHtml = '';
+      if (!isExactSocketCount) {
+        statusTagHtml = `<span class="rw-advisor-tag warn">ต้องใช้ ${reqCount} ช่อง (ชิ้นนี้มี ${item.socketsMax} ช่อง)</span>`;
+      } else if (item.activeRuneword && item.activeRuneword.id === rw.id) {
+        statusTagHtml = `<span class="rw-advisor-tag ready">⚡ ปลุกพลังแล้ว!</span>`;
+      } else if (!prefixMatches && inserted.length > 0) {
+        statusTagHtml = `<span class="rw-advisor-tag warn">ลำดับรูนที่ฝังไม่ตรง</span>`;
+      } else if (hasAllNeeded) {
+        statusTagHtml = `<span class="rw-advisor-tag ready">✅ รูนในคลังครบ พร้อมสร้าง!</span>`;
+      } else {
+        statusTagHtml = `<span class="rw-advisor-tag">ตรงช่องเจาะ (${reqCount} ช่อง)</span>`;
+      }
+
+      const pillsHtml = rw.runes.map((rk, idx) => {
+        const rInfo = RUNE_DATABASE[rk];
+        const isAlreadyIn = idx < inserted.length && inserted[idx] === rk;
+        const isOwned = (gameState.runeStash[rk] || 0) > 0;
+        const pillClass = isAlreadyIn ? 'inserted' : (isOwned ? 'owned' : '');
+        const mark = isAlreadyIn ? '✓' : (isOwned ? '●' : '○');
+        return `<span class="rw-rune-pill ${pillClass}">${mark} ${rInfo ? rInfo.name : rk} (#${rInfo ? rInfo.number : '?'})</span>`;
+      }).join(' ➔ ');
+
+      card.innerHTML = `
+        <div class="rw-advisor-header">
+          <span class="rw-advisor-name">⚡ ${rw.name}</span>
+          ${statusTagHtml}
+        </div>
+        <div class="rw-recipe-pills">${pillsHtml}</div>
+        <div class="rw-advisor-desc">${rw.desc}</div>
+      `;
+      listEl.appendChild(card);
+    });
+  }
+
+  function openRunewordCodexModal() {
+    if (!runewordCodexModalEl || !runewordCodexListEl) return;
+    runewordCodexListEl.innerHTML = '';
+
+    RUNEWORD_DATABASE.forEach(rw => {
+      const pillsHtml = rw.runes.map(rk => {
+        const rInfo = RUNE_DATABASE[rk];
+        const isOwned = (gameState.runeStash[rk] || 0) > 0;
+        return `<span class="rw-rune-pill ${isOwned ? 'owned' : ''}">${rInfo.name} (#${rInfo.number})</span>`;
+      }).join(' ➔ ');
+
+      const card = document.createElement('div');
+      card.className = 'rw-advisor-item exact-match';
+      card.innerHTML = `
+        <div class="rw-advisor-header">
+          <span class="rw-advisor-name">⚡ ${rw.name}</span>
+          <span class="rw-advisor-tag">${rw.typeLabels || rw.types.join(', ')}</span>
+        </div>
+        <div class="rw-recipe-pills">${pillsHtml}</div>
+        <div class="rw-advisor-desc">${rw.desc}</div>
+      `;
+      runewordCodexListEl.appendChild(card);
+    });
+
+    runewordCodexModalEl.style.display = 'flex';
+  }
+
+  if (btnOpenRunewordCodex) {
+    btnOpenRunewordCodex.addEventListener('click', openRunewordCodexModal);
+  }
+  if (btnRwCodexClose) {
+    btnRwCodexClose.addEventListener('click', () => {
+      runewordCodexModalEl.style.display = 'none';
+    });
+  }
 
   function renderRuneStash() {
     if (!runeGridEl || !runeCountSummaryEl) return;
@@ -2593,6 +2388,9 @@
       modalRunewordDescBoxEl.style.display = 'none';
     }
 
+    // Show Runeword Advisor recommendations for this item type (especially Weapons!)
+    renderRunewordAdvisorForItem(item, modalRwAdvisorBoxEl, modalRwAdvisorListEl);
+
     const statTypeNames = {
       weapon: 'ดาเมจพื้นฐาน',
       armor: 'ความอึด STA',
@@ -2717,6 +2515,9 @@
       socketSlotsDisplayEl.appendChild(row);
     }
 
+    // Live Runeword Recipe Guide inside Socketing Station
+    renderRunewordAdvisorForItem(item, socketAdvisorBoxEl, socketAdvisorListEl);
+
     const hasEmptySlot = item.socketedRunes.length < item.socketsMax;
     socketRunesListEl.innerHTML = '';
 
@@ -2788,8 +2589,6 @@
       return;
     }
 
-    // Clear socketed runes using Hel rune
-
     gameState.runeStash['hel'] -= 1;
     item.socketedRunes = [];
     item.activeRuneword = null;
@@ -2822,14 +2621,34 @@
       `;
       codexListEl.appendChild(card);
     });
-    codexCounterEl.textContent = `บันทึก ${BOSS_DATABASE.length} อสูร`;
+
+    if (codexRoamingListEl) {
+      codexRoamingListEl.innerHTML = '';
+      ROAMING_MONSTER_DATABASE.forEach(rm => {
+        const bInfo = gameState.bestiary[rm.id] || { kills: 0 };
+        const scaled = App.getRoamingMonsterScaledStats(rm, gameState.level || 1);
+        const card = document.createElement('div');
+        card.className = 'codex-item roaming-codex';
+        card.innerHTML = `
+          <div class="codex-avatar">${rm.avatar}</div>
+          <div class="codex-info">
+            <div class="codex-name">${rm.name} (${rm.thName})</div>
+            <div class="codex-tier">${rm.rarityLabel} | HP LV.${scaled.level}: ${scaled.maxHpKm.toFixed(2)} กม. • ${rm.rewardHint}</div>
+          </div>
+          <div class="codex-kills">สยบแล้ว: ${bInfo.kills} ตัว</div>
+        `;
+        codexRoamingListEl.appendChild(card);
+      });
+    }
+
+    codexCounterEl.textContent = `บันทึก ${BOSS_DATABASE.length + ROAMING_MONSTER_DATABASE.length} อสูร`;
   }
 
   btnExportBackup.addEventListener('click', async () => {
     const history = await DB.getAllRunHistory();
     const backupData = {
       app: 'ShadowStrider',
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       playerState: gameState,
       history
@@ -2891,7 +2710,8 @@
     run.gpxTrack.forEach(pt => {
       gpxXml += `      <trkpt lat="${pt.lat}" lon="${pt.lon}">
         <time>${new Date(pt.time).toISOString()}</time>
-      </trkpt>\n`;
+      </trkpt>
+`;
     });
 
     gpxXml += `    </trkseg>
@@ -3559,6 +3379,10 @@
     renderAchievementsList();
     renderCareerUI();
     updateTabBadges();
+    if (App.MapEngine) {
+      App.MapEngine.renderMapAndRadar();
+      App.MapEngine.renderEncounterCard();
+    }
   }
 
   function openCharacterModal() {
@@ -3599,7 +3423,6 @@
   if (btnModalCreateChar) {
     btnModalCreateChar.addEventListener('click', () => {
       const enteredName = (inputCharNameEl ? inputCharNameEl.value.trim() : '') || 'Abyss Stalker';
-      // Create fresh character profile
 
       if (isRunning) {
         pauseRunEngine();
@@ -3607,7 +3430,7 @@
 
       DB.clearActiveRun().catch(() => {});
 
-      const fresh = JSON.parse(JSON.stringify(defaultState));
+      const fresh = App.createDefaultState();
       fresh.playerName = enteredName;
       fresh.lastDailyDate = new Date().toDateString();
       fresh.streak.lastDate = new Date().toDateString();
@@ -3625,6 +3448,10 @@
       runSeconds = 0;
       sessionBossKills = 0;
 
+      if (App.MapEngine) {
+        App.MapEngine.ensureMonstersSpawned();
+      }
+
       saveGame();
       renderUI();
       closeCharacterModal();
@@ -3635,16 +3462,13 @@
 
   if (btnModalDeleteChar) {
     btnModalDeleteChar.addEventListener('click', async () => {
-      const currentName = gameState.playerName || 'ตัวละครนี้';
-      // Delete character profile and reset to fresh initiate
-
       if (isRunning) {
         pauseRunEngine();
       }
 
       await DB.clearActiveRun();
 
-      const fresh = JSON.parse(JSON.stringify(defaultState));
+      const fresh = App.createDefaultState();
       fresh.playerName = 'Shadow Initiate';
       fresh.lastDailyDate = new Date().toDateString();
       fresh.streak.lastDate = new Date().toDateString();
@@ -3661,6 +3485,10 @@
       runDistanceKm = 0.0;
       runSeconds = 0;
       sessionBossKills = 0;
+
+      if (App.MapEngine) {
+        App.MapEngine.ensureMonstersSpawned();
+      }
 
       await DB.savePlayerState(gameState);
       renderUI();
@@ -3974,6 +3802,9 @@
       goblinCooldownSeconds = 0;
       lastGoblinTriggerKm = 0.0;
       goblinBannerEl.style.display = 'none';
+      if (App.MapEngine) {
+        App.MapEngine.ensureMonstersSpawned();
+      }
       saveGame();
       renderHUD();
     }
@@ -3991,6 +3822,10 @@
       timeValEl.textContent = formatTime(runSeconds);
       pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
+
+      if (App.MapEngine) {
+        App.MapEngine.tickSecond();
+      }
 
       if (runSeconds % 3 === 0) {
         saveCurrentActiveRun();
@@ -4174,6 +4009,10 @@
 
           if (accuracy > 35) return;
 
+          if (App.MapEngine) {
+            App.MapEngine.updatePlayerPosition(latitude, longitude, true);
+          }
+
           const now = Date.now();
           if (!lastCoord) {
             lastCoord = { latitude, longitude, time: now };
@@ -4243,37 +4082,35 @@
 
   async function finishRunSession() {
     if (runDistanceKm < 0.05) {
-      if (true) {
-        pauseRunEngine();
-        await DB.clearActiveRun();
-        cancelUnlockHold();
-        pocketOverlay.style.display = 'none';
-        runDistanceKm = 0.0;
-        runSeconds = 0;
-        sessionBossKills = 0;
-        currentGpxTrack = [];
-        paceSamples = [];
-        timeValEl.textContent = '00:00:00';
-        paceValEl.textContent = `--'--"`;
-        btnRunText.textContent = 'เริ่มออกล่า';
-        btnFinishRun.setAttribute('disabled', 'true');
+      pauseRunEngine();
+      await DB.clearActiveRun();
+      cancelUnlockHold();
+      pocketOverlay.style.display = 'none';
+      runDistanceKm = 0.0;
+      runSeconds = 0;
+      sessionBossKills = 0;
+      currentGpxTrack = [];
+      paceSamples = [];
+      timeValEl.textContent = '00:00:00';
+      paceValEl.textContent = `--'--"`;
+      btnRunText.textContent = 'เริ่มออกล่า';
+      btnFinishRun.setAttribute('disabled', 'true');
 
-        gameState.bossLoopCycle = 0;
-        gameState.bossIndex = 0;
-        gameState.bossHpRemain = getBossMaxHp(0, 0);
-        bossVulnerableTimer = 0;
-        gimmickAnnounced = {};
-        mistHealingTick = 0;
-        chronoHealingTick = 0;
-        bloodKnightStallTick = 0;
-        superbossSiphonTick = 0;
-        secretbossSiphonTick = 0;
-        isGoblinActive = false;
-        goblinBannerEl.style.display = 'none';
+      gameState.bossLoopCycle = 0;
+      gameState.bossIndex = 0;
+      gameState.bossHpRemain = getBossMaxHp(0, 0);
+      bossVulnerableTimer = 0;
+      gimmickAnnounced = {};
+      mistHealingTick = 0;
+      chronoHealingTick = 0;
+      bloodKnightStallTick = 0;
+      superbossSiphonTick = 0;
+      secretbossSiphonTick = 0;
+      isGoblinActive = false;
+      goblinBannerEl.style.display = 'none';
 
-        renderUI();
-        showToast('ยกเลิกรอบการล่าเรียบร้อย');
-      }
+      renderUI();
+      showToast('ยกเลิกรอบการล่าเรียบร้อย');
       return;
     }
 
@@ -4396,12 +4233,15 @@
       runDistanceKm += km;
       const now = Date.now();
       recordPaceSample(now, runDistanceKm);
-      currentGpxTrack.push({
-        lat: 13.7314 + (Math.random() * 0.002),
-        lon: 100.5414 + (Math.random() * 0.002),
-        ele: 3,
-        time: now
-      });
+
+      if (App.MapEngine) {
+        const cur = App.MapEngine.getPlayerCoords();
+        const dLat = (km * 0.7) / 111.32;
+        const dLon = (km * 0.7) / (111.32 * Math.cos(cur.lat * Math.PI / 180));
+        App.MapEngine.updatePlayerPosition(cur.lat + dLat, cur.lon + dLon, false);
+        currentGpxTrack.push({ lat: cur.lat + dLat, lon: cur.lon + dLon, ele: 3, time: now });
+      }
+
       applyDistanceDamage(km);
       saveCurrentActiveRun();
       renderHUD();
@@ -4413,6 +4253,11 @@
         return;
       }
       startGoblinChaseEvent();
+    },
+    simulateApproachNearest() {
+      if (App.MapEngine) {
+        App.MapEngine.simulateApproachNearest();
+      }
     }
   };
 
@@ -4500,6 +4345,9 @@
     document.querySelectorAll('.nav-tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
     });
+    if (tabId === 'tab-map' && App.MapEngine) {
+      App.MapEngine.onTabOpened();
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -4515,8 +4363,27 @@
     simToggleBtn.classList.toggle('active', isSimMode);
     simToggleBtn.textContent = `จำลอง: ${isSimMode ? 'เปิด' : 'ปิด'}`;
     simControls.style.display = isSimMode ? 'flex' : 'none';
+    if (App.MapEngine) {
+      App.MapEngine.renderMapAndRadar();
+    }
     showToast(isSimMode ? 'เปิดโหมดจำลองวิ่ง (เทสต์ในห้องได้)' : 'ปิดโหมดจำลอง กลับสู่ระบบ GPS จริง');
   });
+
+  // Expose Core Bridge for MapEngine & Other Modules
+  App.core = {
+    getGameState: () => gameState,
+    saveGame,
+    renderUI,
+    showToast,
+    speakVoice,
+    addExp,
+    addUltimateCharge,
+    rollRandomRuneDrop,
+    triggerOverdriveBuff,
+    calculateDistance,
+    switchTab,
+    isSimMode: () => isSimMode
+  };
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -4528,6 +4395,9 @@
 
   await loadGameState();
   await checkAndRestoreActiveRun();
+  if (App.MapEngine) {
+    App.MapEngine.init();
+  }
   renderUI();
   await renderHistoryAndDailyUI();
 })();
