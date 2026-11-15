@@ -499,8 +499,9 @@
           attributionControl: false
         });
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          maxZoom: 19
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          crossOrigin: true
         }).addTo(leafletMap);
 
         spawnPerimeterCircle = L.circle([playerLat, playerLon], {
