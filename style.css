@@ -3490,6 +3490,12 @@ body {
   box-shadow: 0 0 10px rgba(192, 132, 252, 0.75);
 }
 
+.dark-monster-pin.engaged-pin {
+  border: 2px solid #ef4444;
+  background: rgba(69, 10, 10, 0.95);
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.95);
+}
+
 .dark-player-pin {
   background: #2563eb;
   border: 2px solid #ffffff;

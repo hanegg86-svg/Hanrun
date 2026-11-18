@@ -1,12 +1,12 @@
-// ShadowStrider: Dark Run RPG - Module 2: Dark Fantasy Map, Offline Radar & 10m Proximity Combat
+// ShadowStrider: Dark Run RPG - Module 2: Dark Fantasy Map, Offline Radar & 40m Persistent Combat
 (function () {
   'use strict';
 
   const App = window.ShadowStriderApp = window.ShadowStriderApp || {};
 
-  const SPAWN_RADIUS_KM = 1.00;
-  const ENGAGE_RADIUS_KM = 0.010; // 10 meters
-  const RADAR_WARN_RADIUS_KM = 0.030; // 30 meters
+  const SPAWN_RADIUS_KM = 0.50;      // 500 meters spawn radius
+  const ENGAGE_RADIUS_KM = 0.040;    // 40 meters engage radius
+  const RADAR_WARN_RADIUS_KM = 0.080; // 80 meters radar alert radius
   const MAX_ACTIVE_MONSTERS = 5;
 
   let leafletMap = null;
@@ -14,6 +14,7 @@
   let engageCircle = null;
   let spawnPerimeterCircle = null;
   let monsterMarkersLayer = null;
+  let pursuitLine = null;
   let forceRadarMode = false;
 
   let playerLat = 13.7314;
@@ -53,7 +54,8 @@
   function createRoamingMonsterInstance(centerLat, centerLon, playerLevel) {
     const template = pickWeightedRoamingTemplate();
     const scaled = App.getRoamingMonsterScaledStats(template, playerLevel);
-    const coord = generateRandomCoordWithinRadius(centerLat, centerLon, 0.04, SPAWN_RADIUS_KM * 0.92);
+    // Spawn between 45m and 460m so enemies appear outside the immediate 40m engage zone
+    const coord = generateRandomCoordWithinRadius(centerLat, centerLon, 0.045, SPAWN_RADIUS_KM * 0.92);
 
     return {
       uid: `rm_${Date.now()}_${Math.floor(Math.random() * 100000)}`,
@@ -117,16 +119,19 @@
             playerLon = pos.coords.longitude;
             hasRealGpsFix = true;
             this.ensureMonstersSpawned();
+            this.evaluateProximity();
             this.renderMapAndRadar();
           },
           () => {
             this.ensureMonstersSpawned();
+            this.evaluateProximity();
             this.renderMapAndRadar();
           },
           { enableHighAccuracy: true, timeout: 6000 }
         );
       } else {
         this.ensureMonstersSpawned();
+        this.evaluateProximity();
         this.renderMapAndRadar();
       }
     },
@@ -135,7 +140,7 @@
       setTimeout(() => {
         if (leafletMap) {
           leafletMap.invalidateSize();
-          leafletMap.setView([playerLat, playerLon], leafletMap.getZoom() || 15);
+          leafletMap.setView([playerLat, playerLon], leafletMap.getZoom() || 16);
         }
         this.renderMapAndRadar();
       }, 80);
@@ -152,23 +157,31 @@
         gs.roamingMonsters = [];
       }
 
+      // Restore activeEncounterId if an engaged monster exists in saved state
+      if (!activeEncounterId) {
+        const alreadyEngaged = gs.roamingMonsters.find(m => m.engaged);
+        if (alreadyEngaged) {
+          activeEncounterId = alreadyEngaged.uid;
+        }
+      } else if (!gs.roamingMonsters.some(m => m.uid === activeEncounterId)) {
+        activeEncounterId = null;
+      }
+
       let changed = false;
-      // 1. Check existing pinned monsters: remove only those > 1.00 km away from player
+      // 1. Keep monsters within 500m OR any monster already engaged in persistent combat
       const kept = [];
       for (const m of gs.roamingMonsters) {
         const distKm = App.core.calculateDistance(playerLat, playerLon, m.lat, m.lon);
-        if (distKm > SPAWN_RADIUS_KM) {
+        const isLockedCombat = m.engaged || activeEncounterId === m.uid;
+        if (distKm > SPAWN_RADIUS_KM && !isLockedCombat) {
           changed = true;
-          if (activeEncounterId === m.uid) {
-            activeEncounterId = null;
-          }
         } else {
           kept.push(m);
         }
       }
       gs.roamingMonsters = kept;
 
-      // 2. Spawn new fixed-position monsters up to MAX_ACTIVE_MONSTERS inside <= 1 km radius
+      // 2. Spawn new fixed-position monsters up to MAX_ACTIVE_MONSTERS inside <= 500m radius
       while (gs.roamingMonsters.length < MAX_ACTIVE_MONSTERS) {
         const inst = createRoamingMonsterInstance(playerLat, playerLon, gs.level || 1);
         gs.roamingMonsters.push(inst);
@@ -205,6 +218,7 @@
             App.core.showToast('💨 Void Stalker วาร์ปหนีหายไปในมิติมืด!');
             App.core.speakVoice('นักล่าเงาต่างมิติวาร์ปหนีไปแล้ว');
             this.ensureMonstersSpawned();
+            this.renderMapAndRadar();
             App.core.saveGame();
           }
           this.renderEncounterCard();
@@ -215,6 +229,21 @@
     evaluateProximity() {
       const gs = App.core?.getGameState();
       if (!gs || !Array.isArray(gs.roamingMonsters)) return;
+
+      // Validate existing locked encounter; once engaged within 40m, it persists even if player leaves radius
+      let lockedMonster = null;
+      if (activeEncounterId) {
+        lockedMonster = gs.roamingMonsters.find(m => m.uid === activeEncounterId) || null;
+        if (!lockedMonster) {
+          activeEncounterId = null;
+        }
+      }
+      if (!lockedMonster) {
+        lockedMonster = gs.roamingMonsters.find(m => m.engaged) || null;
+        if (lockedMonster) {
+          activeEncounterId = lockedMonster.uid;
+        }
+      }
 
       let nearest = null;
       let nearestDistKm = Infinity;
@@ -231,34 +260,43 @@
       const nearestHudEl = document.getElementById('nearest-monster-val');
       const badgeMapEl = document.getElementById('badge-map');
 
-      if (nearest) {
-        const distMeters = Math.round(nearestDistKm * 1000);
+      // If not yet locked into combat, check if any monster is within 40m engage radius
+      if (!lockedMonster && nearest && nearestDistKm <= ENGAGE_RADIUS_KM) {
+        activeEncounterId = nearest.uid;
+        nearest.engaged = true;
+        lockedMonster = nearest;
+
+        if (nearest.gimmick === 'mimic') {
+          nearest.mapIcon = '👹';
+          App.core.showToast(`📦 กับดัก! หีบสมบัติกลายร่างเป็น ${nearest.name} (LV.${nearest.level}) ไล่ล่าคุณแล้ว!`);
+          App.core.speakVoice(`ระวังกับดัก หีบสมบัติกลายร่างเป็นปีศาจจำแลง เลเวล ${nearest.level} เข้าปะทะแล้ว`, true);
+        } else {
+          App.core.showToast(`⚔️ ปะทะ ${nearest.name} (LV.${nearest.level}) ในรัศมี 40 เมตร! ศัตรูจะสู้ต่อเนื่องจนกว่าจะจบศึก`);
+          App.core.speakVoice(`พบอสูรพิเศษ ${nearest.thName} เลเวล ${nearest.level} ศัตรูเข้าโจมตีแล้ว`, true);
+        }
+        App.core.saveGame();
+      }
+
+      const displayTarget = lockedMonster || nearest;
+      if (displayTarget) {
+        const displayDistKm = lockedMonster
+          ? App.core.calculateDistance(playerLat, playerLon, lockedMonster.lat, lockedMonster.lon)
+          : nearestDistKm;
+        const distMeters = Math.round(displayDistKm * 1000);
+
         if (nearestHudEl) {
-          nearestHudEl.textContent = distMeters >= 1000 ? `${nearestDistKm.toFixed(2)} กม.` : `${distMeters} ม.`;
-          nearestHudEl.style.color = distMeters <= 10 ? '#4ade80' : (distMeters <= 30 ? '#38bdf8' : '#c084fc');
+          if (lockedMonster) {
+            nearestHudEl.textContent = `⚔️ ${distMeters} ม.`;
+            nearestHudEl.style.color = '#4ade80';
+          } else {
+            nearestHudEl.textContent = distMeters >= 1000 ? `${displayDistKm.toFixed(2)} กม.` : `${distMeters} ม.`;
+            nearestHudEl.style.color = distMeters <= 40 ? '#4ade80' : (distMeters <= 80 ? '#38bdf8' : '#c084fc');
+          }
         }
 
-        if (nearestDistKm <= ENGAGE_RADIUS_KM) {
-          // Within 10 meters: Engage combat automatically!
-          if (activeEncounterId !== nearest.uid) {
-            activeEncounterId = nearest.uid;
-            nearest.engaged = true;
-            if (nearest.gimmick === 'mimic') {
-              nearest.mapIcon = '👹';
-              App.core.showToast(`📦 กับดัก! หีบสมบัติกลายร่างเป็น ${nearest.name} (LV.${nearest.level})!`);
-              App.core.speakVoice(`ระวังกับดัก หีบสมบัติกลายร่างเป็นปีศาจจำแลง เลเวล ${nearest.level}`, true);
-            } else {
-              App.core.showToast(`⚔️ ปะทะ ${nearest.name} (LV.${nearest.level}) ในรัศมี 10 เมตร!`);
-              App.core.speakVoice(`พบอสูรพิเศษ ${nearest.thName} เลเวล ${nearest.level} เข้าสู่การต่อสู้`, true);
-            }
-            App.core.saveGame();
-          }
+        if (lockedMonster) {
           if (badgeMapEl) badgeMapEl.style.display = 'flex';
         } else {
-          if (activeEncounterId === nearest.uid) {
-            // Walked outside 10m before killing; monster stays pinned at its location
-            activeEncounterId = null;
-          }
           if (nearestDistKm <= RADAR_WARN_RADIUS_KM && lastRadarWarnId !== nearest.uid) {
             lastRadarWarnId = nearest.uid;
             App.core.showToast(`📡 เรดาร์ตรวจพบ ${nearest.name} ห่างออกไป ${distMeters} เมตร!`);
@@ -398,7 +436,7 @@
       App.core.showToast(`⚔️ สยบ ${monster.name} (LV.${monster.level})! +${expGain.toLocaleString()} EXP, +${goldGain.toLocaleString()} 🪙${extraMsg}`);
       App.core.speakVoice(`กำจัด ${monster.thName} สำเร็จแล้ว`, true);
 
-      // Spawn replacement inside 1 km radius
+      // Spawn replacement inside 500m radius
       this.ensureMonstersSpawned();
       this.evaluateProximity();
       this.renderMapAndRadar();
@@ -415,7 +453,7 @@
         return;
       }
 
-      // Show active 10m combat OR 30m proximity radar preview
+      // Show locked persistent combat monster OR 80m proximity radar preview
       let target = null;
       let isCombat = false;
 
@@ -444,13 +482,20 @@
       card.style.display = 'block';
       card.classList.toggle('radar-warn', !isCombat);
 
-      document.getElementById('encounter-tag').textContent = isCombat
-        ? '⚔️ ปะทะอสูรพิเศษในรัศมี 10 เมตร!'
-        : `📡 เรดาร์ตรวจพบอสูรใกล้เคียง (เข้าใกล้ 10 ม. เพื่อปะทะ)`;
+      if (isCombat) {
+        document.getElementById('encounter-tag').textContent = distMeters <= 40
+          ? '⚔️ ปะทะอสูรพิเศษในรัศมี 40 เมตร!'
+          : '⚔️ อสูรไล่ล่าต่อเนื่อง! (ล็อกเป้าการต่อสู้แล้ว)';
+      } else {
+        document.getElementById('encounter-tag').textContent = '📡 เรดาร์ตรวจพบอสูรใกล้เคียง (เข้าใกล้ 40 ม. เพื่อปะทะ)';
+      }
+
       document.getElementById('encounter-lvl').textContent = `LV. ${target.level}`;
       document.getElementById('encounter-avatar').textContent = target.mapIcon || target.avatar;
       document.getElementById('encounter-name').textContent = `${target.name} (${target.thName})`;
-      document.getElementById('encounter-dist').textContent = `ห่าง ${distMeters} ม.`;
+      document.getElementById('encounter-dist').textContent = isCombat && distMeters > 40
+        ? `ห่าง ${distMeters} ม. • ติดตามสู้`
+        : `ห่าง ${distMeters} ม.`;
       document.getElementById('encounter-gimmick').textContent = target.gimmickDesc;
 
       const hpPct = Math.max(0, Math.min(100, (target.hpRemainKm / target.maxHpKm) * 100));
@@ -494,7 +539,7 @@
       if (!leafletMap) {
         leafletMap = L.map('dungeon-map', {
           center: [playerLat, playerLon],
-          zoom: 15,
+          zoom: 16,
           zoomControl: false,
           attributionControl: false
         });
@@ -505,7 +550,7 @@
         }).addTo(leafletMap);
 
         spawnPerimeterCircle = L.circle([playerLat, playerLon], {
-          radius: 1000,
+          radius: 500,
           color: '#a855f7',
           weight: 1.5,
           dashArray: '6, 6',
@@ -514,11 +559,11 @@
         }).addTo(leafletMap);
 
         engageCircle = L.circle([playerLat, playerLon], {
-          radius: 10,
+          radius: 40,
           color: '#38bdf8',
           weight: 2,
           fillColor: '#38bdf8',
-          fillOpacity: 0.25
+          fillOpacity: 0.22
         }).addTo(leafletMap);
 
         const pIcon = L.divIcon({
@@ -535,16 +580,30 @@
       }
 
       monsterMarkersLayer.clearLayers();
+      pursuitLine = null;
+
       (gs.roamingMonsters || []).forEach(m => {
         const distM = Math.round(App.core.calculateDistance(playerLat, playerLon, m.lat, m.lon) * 1000);
+        const isEngaged = m.engaged || m.uid === activeEncounterId;
+
+        if (isEngaged) {
+          pursuitLine = L.polyline([[playerLat, playerLon], [m.lat, m.lon]], {
+            color: '#ef4444',
+            weight: 2.5,
+            dashArray: '5, 6',
+            opacity: 0.85
+          }).addTo(monsterMarkersLayer);
+        }
+
         const mIcon = L.divIcon({
-          className: 'dark-monster-pin',
+          className: `dark-monster-pin ${isEngaged ? 'engaged-pin' : ''}`,
           html: `<span>${m.mapIcon || m.avatar}</span>`,
           iconSize: [30, 30],
           iconAnchor: [15, 15]
         });
         const marker = L.marker([m.lat, m.lon], { icon: mIcon });
-        marker.bindPopup(`<strong>${m.name} (LV.${m.level})</strong><br>ระยะห่าง: ${distM} ม.<br>HP: ${m.hpRemainKm.toFixed(2)} กม.`);
+        const statusLine = isEngaged ? '<br><span style="color:#4ade80;">⚔️ กำลังต่อสู้ต่อเนื่อง!</span>' : '';
+        marker.bindPopup(`<strong>${m.name} (LV.${m.level})</strong><br>ระยะห่าง: ${distM} ม.<br>HP: ${m.hpRemainKm.toFixed(2)} กม.${statusLine}`);
         monsterMarkersLayer.addLayer(marker);
       });
     },
@@ -559,7 +618,7 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      // Draw radar rings (250m, 500m, 750m, 1000m)
+      // Draw radar rings (125m, 250m, 375m, 500m)
       [0.25, 0.5, 0.75, 1.0].forEach((ratio, idx) => {
         ctx.beginPath();
         ctx.arc(cx, cy, maxR * ratio, 0, Math.PI * 2);
@@ -567,6 +626,14 @@
         ctx.lineWidth = idx === 3 ? 1.5 : 1;
         ctx.stroke();
       });
+
+      // Draw 40m engage perimeter ring
+      const engageR = Math.max(10, (ENGAGE_RADIUS_KM / SPAWN_RADIUS_KM) * maxR);
+      ctx.beginPath();
+      ctx.arc(cx, cy, engageR, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
 
       // Crosshairs
       ctx.beginPath();
@@ -583,12 +650,33 @@
       ctx.fillStyle = '#38bdf8';
       ctx.fill();
 
-      // Plot monsters within 1 km
+      // Plot monsters within 500m (clamp engaged monsters chasing outside 500m to edge)
       (gs.roamingMonsters || []).forEach(m => {
         const dLatKm = (m.lat - playerLat) * 111.32;
         const dLonKm = (m.lon - playerLon) * (111.32 * Math.cos(playerLat * Math.PI / 180));
-        const px = cx + (dLonKm / SPAWN_RADIUS_KM) * maxR;
-        const py = cy - (dLatKm / SPAWN_RADIUS_KM) * maxR;
+        let offsetX = (dLonKm / SPAWN_RADIUS_KM) * maxR;
+        let offsetY = -(dLatKm / SPAWN_RADIUS_KM) * maxR;
+
+        const distPx = Math.hypot(offsetX, offsetY);
+        if (distPx > maxR) {
+          offsetX = (offsetX / distPx) * maxR;
+          offsetY = (offsetY / distPx) * maxR;
+        }
+
+        const px = cx + offsetX;
+        const py = cy + offsetY;
+
+        if (m.engaged || m.uid === activeEncounterId) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([4, 4]);
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(px, py);
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.85)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+          ctx.restore();
+        }
 
         ctx.font = '16px sans-serif';
         ctx.textAlign = 'center';
@@ -617,8 +705,13 @@
       sorted.forEach(m => {
         const dKm = App.core.calculateDistance(playerLat, playerLon, m.lat, m.lon);
         const distM = Math.round(dKm * 1000);
-        const inRange = distM <= 10;
+        const isEngaged = m.engaged || m.uid === activeEncounterId;
+        const inRange = distM <= 40 || isEngaged;
         const isSim = App.core?.isSimMode ? App.core.isSimMode() : false;
+
+        const statusLabel = isEngaged
+          ? (distM <= 40 ? '⚔️ กำลังปะทะ!' : `⚔️ ไล่ล่า (${distM} ม.)`)
+          : `ห่าง ${distM} ม.`;
 
         const card = document.createElement('div');
         card.className = `roaming-card ${inRange ? 'in-range' : ''}`;
@@ -627,7 +720,7 @@
           <div class="roaming-card-info">
             <div class="roaming-card-top">
               <span class="roaming-card-name">${m.name} (LV.${m.level})</span>
-              <span class="roaming-card-dist">${inRange ? '⚔️ ในระยะปะทะ!' : `ห่าง ${distM} ม.`}</span>
+              <span class="roaming-card-dist">${statusLabel}</span>
             </div>
             <div class="roaming-card-sub">HP: ${m.hpRemainKm.toFixed(2)}/${m.maxHpKm.toFixed(2)} กม. • ${m.thName}</div>
           </div>
@@ -653,8 +746,8 @@
       const target = (gs.roamingMonsters || []).find(m => m.uid === uid);
       if (!target) return;
 
-      // Move player within 5 meters of the pinned monster (without moving the monster!)
-      const offsetLat = 0.00003; // ~3.3 meters
+      // Move player within ~15 meters of the pinned monster (inside 40m engage radius)
+      const offsetLat = 0.00012;
       this.updatePlayerPosition(target.lat + offsetLat, target.lon, false);
       if (leafletMap) {
         leafletMap.setView([playerLat, playerLon], 17);
