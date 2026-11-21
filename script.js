@@ -287,6 +287,7 @@
       gameState.hideCompletedAchievements = typeof saved.hideCompletedAchievements === 'boolean' ? saved.hideCompletedAchievements : false;
       gameState.isClaimedAchAccordionOpen = typeof saved.isClaimedAchAccordionOpen === 'boolean' ? saved.isClaimedAchAccordionOpen : false;
       gameState.autoMagicMode = typeof saved.autoMagicMode === 'boolean' ? saved.autoMagicMode : false;
+      gameState.selectedAutoSpell = saved.selectedAutoSpell || null;
       gameState.spellLevels = Object.assign({}, freshTemplate.spellLevels, saved.spellLevels || {});
       gameState.spellTomes = Object.assign({}, freshTemplate.spellTomes, saved.spellTomes || {});
       gameState.statsTrack = Object.assign({
@@ -375,7 +376,11 @@
       }
     });
 
-    gameState.autoCastMode = gameState.autoCastMode || 'off';
+    // Migrate legacy 'smart' mode to 'tier3' or keep valid modes ('off', 'tier1', 'tier2', 'tier3')
+    const validAutoModes = ['off', 'tier1', 'tier2', 'tier3'];
+    if (!validAutoModes.includes(gameState.autoCastMode)) {
+      gameState.autoCastMode = gameState.autoCastMode === 'smart' ? 'tier3' : 'off';
+    }
 
     const activeRun = await DB.getActiveRun();
     if (!isRunning && !activeRun) {
@@ -2596,13 +2601,13 @@
     btnAutocastToggle.className = 'btn-autocast-toggle';
     if (mode === 'tier1') {
       btnAutocastToggle.classList.add('active');
-      autocastStatusText.textContent = 'ออโต้: Lv.1 รัวๆ';
+      autocastStatusText.textContent = 'ออโต้: ระดับ 1 (100%)';
+    } else if (mode === 'tier2') {
+      btnAutocastToggle.classList.add('active-tier2');
+      autocastStatusText.textContent = 'ออโต้: ระดับ 2 (200%)';
     } else if (mode === 'tier3') {
       btnAutocastToggle.classList.add('active-tier3');
-      autocastStatusText.textContent = 'ออโต้: Lv.3 อัลติ';
-    } else if (mode === 'smart') {
-      btnAutocastToggle.classList.add('active-smart');
-      autocastStatusText.textContent = 'ออโต้: สมาร์ต';
+      autocastStatusText.textContent = 'ออโต้: ระดับ 3 (300%)';
     } else {
       autocastStatusText.textContent = 'ออโต้: ปิด';
     }
@@ -3009,15 +3014,14 @@
         if (questFrenzy) questFrenzy.current = Math.min(questFrenzy.target, questFrenzy.current + 1);
       }
 
+      // Auto-Cast Ultimate Skill by Level (1, 2, or 3)
       if (isRunning && gameState.autoCastMode && gameState.autoCastMode !== 'off' && App.CombatEngine) {
         if (gameState.autoCastMode === 'tier1' && gameState.ultimateCharge >= 100) {
           App.CombatEngine.activateUltimateSkill(1);
+        } else if (gameState.autoCastMode === 'tier2' && gameState.ultimateCharge >= 200) {
+          App.CombatEngine.activateUltimateSkill(2);
         } else if (gameState.autoCastMode === 'tier3' && gameState.ultimateCharge >= 300) {
           App.CombatEngine.activateUltimateSkill(3);
-        } else if (gameState.autoCastMode === 'smart') {
-          if (gameState.ultimateCharge >= 300) App.CombatEngine.activateUltimateSkill(3);
-          else if (gameState.ultimateCharge >= 200) App.CombatEngine.activateUltimateSkill(2);
-          else if (gameState.ultimateCharge >= 100) App.CombatEngine.activateUltimateSkill(1);
         }
       }
 
@@ -3286,7 +3290,7 @@
 
   if (btnAutocastToggle) {
     btnAutocastToggle.addEventListener('click', () => {
-      const modes = ['off', 'tier1', 'tier3', 'smart'];
+      const modes = ['off', 'tier1', 'tier2', 'tier3'];
       const currentIdx = modes.indexOf(gameState.autoCastMode || 'off');
       const nextMode = modes[(currentIdx + 1) % modes.length];
       gameState.autoCastMode = nextMode;
@@ -3294,13 +3298,13 @@
       saveGame();
 
       const modeVoices = {
-        off: 'ปิดระบบร่ายอัตโนมัติ',
+        off: 'ปิดระบบร่ายไม้ตายอัตโนมัติ',
         tier1: 'เปิดระบบร่ายไม้ตายอัตโนมัติ ระดับหนึ่ง',
-        tier3: 'เปิดระบบร่ายไม้ตายอัตโนมัติ ระดับสาม',
-        smart: 'เปิดระบบร่ายไม้ตายอัตโนมัติ แบบสมาร์ต'
+        tier2: 'เปิดระบบร่ายไม้ตายอัตโนมัติ ระดับสอง',
+        tier3: 'เปิดระบบร่ายไม้ตายอัตโนมัติ ระดับสาม'
       };
       speakVoice(modeVoices[nextMode] || 'เปลี่ยนโหมดร่ายอัตโนมัติ', true);
-      showToast(`⚡ โหมดร่ายอัตโนมัติ: ${autocastStatusText.textContent}`);
+      showToast(`⚡ โหมดร่ายไม้ตาย: ${autocastStatusText.textContent}`);
     });
   }
 

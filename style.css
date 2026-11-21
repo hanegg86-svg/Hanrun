@@ -1162,6 +1162,16 @@ body {
   background: #22c55e;
 }
 
+.btn-autocast-toggle.active-tier2 {
+  background: rgba(192, 132, 252, 0.18);
+  border-color: #c084fc;
+  color: #f3e8ff;
+}
+
+.btn-autocast-toggle.active-tier2 .autocast-status-dot {
+  background: #c084fc;
+}
+
 .btn-autocast-toggle.active-tier3 {
   background: rgba(245, 158, 11, 0.18);
   border-color: #f59e0b;
@@ -1170,16 +1180,6 @@ body {
 
 .btn-autocast-toggle.active-tier3 .autocast-status-dot {
   background: #f59e0b;
-}
-
-.btn-autocast-toggle.active-smart {
-  background: rgba(192, 132, 252, 0.18);
-  border-color: #c084fc;
-  color: #f3e8ff;
-}
-
-.btn-autocast-toggle.active-smart .autocast-status-dot {
-  background: #c084fc;
 }
 
 .ultimate-bar-track {

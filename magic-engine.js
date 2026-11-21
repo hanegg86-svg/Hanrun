@@ -87,6 +87,8 @@
   };
 
   let freezeBossSeconds = 0;
+  let autoSpellCooldownSec = 0;
+  const AUTO_SPELL_INTERVAL_SEC = 10;
 
   App.MagicEngine = {
     getMaxMp(gs) {
@@ -121,6 +123,45 @@
       gs.currentMp = Math.min(maxMp, (gs.currentMp || 0) + gained);
     },
 
+    selectAutoSpell(spellKey) {
+      const gs = App.core?.getGameState();
+      const spell = App.SPELL_DATABASE[spellKey];
+      const elemInfo = App.ELEMENT_DATABASE[spellKey];
+      if (!gs || !spell || !elemInfo) return;
+
+      // Toggle off if tapping the currently active auto-spell
+      if (gs.selectedAutoSpell === spellKey) {
+        gs.selectedAutoSpell = null;
+        gs.autoMagicMode = false;
+        autoSpellCooldownSec = 0;
+        App.core.saveGame();
+        this.renderMagicHUD();
+        App.core.showToast(`ยกเลิกออโต้เวทธาตุ${elemInfo.name}`);
+        App.core.speakVoice(`ยกเลิกการร่ายเวทอัตโนมัติ`, true);
+        return;
+      }
+
+      gs.selectedAutoSpell = spellKey;
+      gs.autoMagicMode = true;
+      autoSpellCooldownSec = AUTO_SPELL_INTERVAL_SEC;
+
+      const isRunning = App.core?.isRunning ? App.core.isRunning() : false;
+      this.ensureManaBounds(gs);
+
+      if (isRunning && gs.currentMp >= spell.mpCost) {
+        // Cast immediately on selection and start 10s timer
+        this.castSpell(spellKey, false);
+        autoSpellCooldownSec = AUTO_SPELL_INTERVAL_SEC;
+      } else {
+        autoSpellCooldownSec = 0; // Ready to fire as soon as running & MP >= mpCost
+        App.core.showToast(`${spell.icon} ตั้งค่าออโต้เวท: ${spell.thName} (ทุก 10 วินาที)`);
+        App.core.speakVoice(`ตั้งค่าออโต้เวทธาตุ${elemInfo.name} ทุกสิบวินาที`, true);
+      }
+
+      App.core.saveGame();
+      this.renderMagicHUD();
+    },
+
     tickSecond() {
       if (freezeBossSeconds > 0) {
         freezeBossSeconds--;
@@ -132,15 +173,21 @@
         }
       }
 
-      // Auto-Magic Runner Mode: Cast spell matching Boss's weakElement when MP is sufficient
+      // Selected Elemental Spell Auto-Cast every 10 seconds
       const gs = App.core?.getGameState();
       const isRunning = App.core?.isRunning ? App.core.isRunning() : false;
-      if (isRunning && gs && gs.autoMagicMode) {
-        const currentBoss = App.BOSS_DATABASE[gs.bossIndex];
-        if (currentBoss && currentBoss.weakElement) {
-          const targetSpell = App.SPELL_DATABASE[currentBoss.weakElement];
-          if (targetSpell && (gs.currentMp || 0) >= targetSpell.mpCost) {
-            this.castSpell(targetSpell.id, true);
+      if (isRunning && gs && gs.selectedAutoSpell) {
+        const targetSpell = App.SPELL_DATABASE[gs.selectedAutoSpell];
+        if (targetSpell) {
+          if (autoSpellCooldownSec > 0) {
+            autoSpellCooldownSec--;
+          }
+          if (autoSpellCooldownSec <= 0) {
+            this.ensureManaBounds(gs);
+            if ((gs.currentMp || 0) >= targetSpell.mpCost) {
+              this.castSpell(targetSpell.id, true);
+              autoSpellCooldownSec = AUTO_SPELL_INTERVAL_SEC;
+            }
           }
         }
       }
@@ -152,6 +199,7 @@
 
     resetCombatTimers() {
       freezeBossSeconds = 0;
+      autoSpellCooldownSec = 0;
       const freezeBanner = document.getElementById('freeze-banner');
       if (freezeBanner) freezeBanner.style.display = 'none';
     },
@@ -245,7 +293,8 @@
         ? '💥 ชนะทางธาตุ x2.0!'
         : (affinity.status === 'resist' ? '🛡️ บอสต้านทาน x0.5' : '');
 
-      App.core.showToast(`${spell.icon} ${spell.thName}! ดาเมจ ${finalBossDmg.toFixed(2)} กม. ${affinityTag}${extraEffectText}`);
+      const autoPrefix = isAuto ? '🔄 [Auto] ' : '';
+      App.core.showToast(`${autoPrefix}${spell.icon} ${spell.thName}! ดาเมจ ${finalBossDmg.toFixed(2)} กม. ${affinityTag}${extraEffectText}`);
       if (!isAuto) {
         App.core.speakVoice(`ร่ายเวท ${spell.thName}${affinity.status === 'weak' ? ' โจมตีจุดอ่อนรุนแรงสองเท่า' : ''}`, true);
       }
@@ -311,41 +360,68 @@
       if (manaTextEl) manaTextEl.textContent = `${curMp} / ${maxMp}`;
       if (manaFillEl) manaFillEl.style.width = `${Math.min(100, (curMp / maxMp) * 100)}%`;
 
+      const selectedKey = gs.selectedAutoSpell || null;
+      const isRunning = App.core?.isRunning ? App.core.isRunning() : false;
+
       if (autoBtn && autoText) {
-        autoBtn.classList.toggle('active', !!gs.autoMagicMode);
-        autoText.textContent = gs.autoMagicMode ? 'ออโต้เวท: เปิด' : 'ออโต้เวท: ปิด';
+        if (selectedKey && App.SPELL_DATABASE[selectedKey] && App.ELEMENT_DATABASE[selectedKey]) {
+          const elInfo = App.ELEMENT_DATABASE[selectedKey];
+          autoBtn.classList.add('active');
+          if (!isRunning) {
+            autoText.textContent = `ออโต้: ${elInfo.icon} ${elInfo.name} (รอเริ่ม)`;
+          } else if (autoSpellCooldownSec > 0) {
+            autoText.textContent = `ออโต้: ${elInfo.icon} ${elInfo.name} (${autoSpellCooldownSec}s)`;
+          } else {
+            autoText.textContent = `ออโต้: ${elInfo.icon} ${elInfo.name} (รอ MP)`;
+          }
+        } else {
+          autoBtn.classList.remove('active');
+          autoText.textContent = 'แตะธาตุเพื่อ Auto 10 วิ';
+        }
       }
 
       if (!gridEl) return;
       const currentBoss = App.BOSS_DATABASE[gs.bossIndex];
-      const isRunning = App.core?.isRunning ? App.core.isRunning() : false;
 
       gridEl.innerHTML = '';
       Object.keys(App.SPELL_DATABASE).forEach(sKey => {
         const sp = App.SPELL_DATABASE[sKey];
         const lv = (gs.spellLevels && gs.spellLevels[sKey]) || 1;
         const isWeakness = currentBoss && currentBoss.weakElement === sp.element;
-        const canCast = isRunning && curMp >= sp.mpCost;
+        const isSelectedAuto = selectedKey === sKey;
+        const hasEnoughMp = curMp >= sp.mpCost;
 
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `btn-cast-spell ${canCast ? 'ready' : ''} ${isWeakness ? 'weakness-match' : ''}`;
-        if (canCast) {
+        btn.className = `btn-cast-spell ${hasEnoughMp ? 'ready' : ''} ${isWeakness ? 'weakness-match' : ''} ${isSelectedAuto ? 'auto-selected' : ''}`;
+        if (isSelectedAuto) {
+          btn.style.borderColor = '#38bdf8';
+        } else if (hasEnoughMp) {
           btn.style.borderColor = sp.borderColor;
         }
-        btn.disabled = !canCast;
-        btn.title = `${sp.thName} (Lv.${lv}): ${sp.desc}`;
+        btn.title = `${sp.thName} (Lv.${lv}): แตะเพื่อเปิด/ปิด Auto โจมตีทุก 10 วิ`;
+
+        let statusSubHtml = `💧 ${sp.mpCost} MP`;
+        if (isSelectedAuto) {
+          if (!isRunning) {
+            statusSubHtml = `🔄 Auto (10s) • 💧${sp.mpCost}`;
+          } else if (autoSpellCooldownSec > 0) {
+            statusSubHtml = `⏱ ${autoSpellCooldownSec}s • 💧${sp.mpCost}`;
+          } else {
+            statusSubHtml = `⏳ รอ MP (${sp.mpCost})`;
+          }
+        }
 
         btn.innerHTML = `
-          ${isWeakness ? '<span class="spell-weak-badge">แพ้ทาง x2</span>' : ''}
+          ${isSelectedAuto ? '<span class="spell-auto-badge">AUTO 10s</span>' : (isWeakness ? '<span class="spell-weak-badge">แพ้ทาง x2</span>' : '')}
           <div class="spell-btn-top">
             <span>${sp.icon}</span>
             <span>${App.ELEMENT_DATABASE[sp.element].name} Lv.${lv}</span>
           </div>
-          <div class="spell-btn-sub">💧 ${sp.mpCost} MP</div>
+          <div class="spell-btn-sub">${statusSubHtml}</div>
         `;
 
-        btn.addEventListener('click', () => this.castSpell(sKey, false));
+        btn.addEventListener('click', () => this.selectAutoSpell(sKey));
         gridEl.appendChild(btn);
       });
     },
@@ -407,11 +483,21 @@
         autoBtn.addEventListener('click', () => {
           const gs = App.core?.getGameState();
           if (!gs) return;
-          gs.autoMagicMode = !gs.autoMagicMode;
-          this.renderMagicHUD();
-          App.core.saveGame();
-          App.core.showToast(gs.autoMagicMode ? '💧 เปิดออโต้เวท (ร่ายธาตุที่บอสแพ้ทางอัตโนมัติ)' : 'ปิดระบบร่ายเวทอัตโนมัติ');
-          App.core.speakVoice(gs.autoMagicMode ? 'เปิดระบบร่ายเวทชนะทางธาตุอัตโนมัติ' : 'ปิดระบบร่ายเวทอัตโนมัติ', true);
+
+          if (gs.selectedAutoSpell) {
+            gs.selectedAutoSpell = null;
+            gs.autoMagicMode = false;
+            autoSpellCooldownSec = 0;
+            this.renderMagicHUD();
+            App.core.saveGame();
+            App.core.showToast('ปิดระบบร่ายเวทอัตโนมัติแล้ว');
+            App.core.speakVoice('ปิดระบบร่ายเวทอัตโนมัติ', true);
+          } else {
+            // Auto-select the spell matching the current Boss's weakness
+            const currentBoss = App.BOSS_DATABASE[gs.bossIndex];
+            const weakKey = (currentBoss && currentBoss.weakElement) || 'fire';
+            this.selectAutoSpell(weakKey);
+          }
         });
       }
     }

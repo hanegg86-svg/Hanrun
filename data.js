@@ -300,6 +300,7 @@
       ultimateCharge: 0,
       currentMp: 100, // Scales with STA (50 + STA * 5)
       autoMagicMode: false,
+      selectedAutoSpell: null, // Element key ('earth', 'ice', 'fire', 'lightning', 'light', 'dark') or null
       spellLevels: {
         earth: 1,
         ice: 1,
