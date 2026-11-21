@@ -1,0 +1,1079 @@
+/* ShadowStrider: Dark Run RPG - RPG Systems, Elements, Mana, Spell Tomes, Equipment & Map Styles */
+
+/* ==========================================================================
+   1. ELEMENTAL TAGS (6 ELEMENTS: EARTH, ICE, FIRE, LIGHTNING, LIGHT, DARK)
+   ========================================================================== */
+.boss-element-row, .encounter-elem-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.elem-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  white-space: nowrap;
+}
+
+.elem-earth { background: rgba(180, 83, 9, 0.25); color: #fcd34d; border-color: #d97706; }
+.elem-ice { background: rgba(2, 132, 199, 0.25); color: #7dd3fc; border-color: #38bdf8; }
+.elem-fire { background: rgba(220, 38, 38, 0.25); color: #fca5a5; border-color: #ef4444; }
+.elem-lightning { background: rgba(202, 138, 4, 0.25); color: #fef08a; border-color: #eab308; }
+.elem-light { background: rgba(250, 204, 21, 0.25); color: #fef9c3; border-color: #fde047; }
+.elem-dark { background: rgba(126, 34, 206, 0.28); color: #e9d5ff; border-color: #a855f7; }
+
+.elem-weak-tag {
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  white-space: nowrap;
+}
+
+.elem-res-tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.14);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  white-space: nowrap;
+}
+
+.elem-drop-tag {
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(212, 175, 55, 0.18);
+  color: var(--gold-glow);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   2. MANA BAR & 6 ELEMENTAL SPELL CASTING PANEL (HUD)
+   ========================================================================== */
+.magic-container {
+  width: 100%;
+  background: rgba(8, 15, 28, 0.65);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.magic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.mana-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.mana-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #7dd3fc;
+}
+
+.mana-val {
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #38bdf8;
+  font-family: monospace, -apple-system;
+}
+
+.btn-automagic-toggle {
+  background: #141c2b;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: var(--text-muted);
+  border-radius: 20px;
+  padding: 3px 9px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.automagic-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #71717a;
+}
+
+.btn-automagic-toggle.active {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #7dd3fc;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+.btn-automagic-toggle.active .automagic-dot {
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+}
+
+.mana-bar-track {
+  width: 100%;
+  height: 7px;
+  background: #0f172a;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.mana-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 60%, #bae6fd 100%);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+  transition: width 0.3s ease;
+}
+
+.magic-spells-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.btn-cast-spell {
+  background: #131724;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 5px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: not-allowed;
+  opacity: 0.48;
+  position: relative;
+  transition: transform 0.1s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.btn-cast-spell.ready {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.btn-cast-spell.ready:active {
+  transform: scale(0.95);
+}
+
+.btn-cast-spell.weakness-match.ready {
+  border-width: 1.5px;
+  border-color: #4ade80 !important;
+  box-shadow: 0 0 12px rgba(74, 222, 128, 0.45);
+}
+
+.spell-weak-badge {
+  position: absolute;
+  top: -5px;
+  right: 2px;
+  background: #16a34a;
+  color: #fff;
+  font-size: 0.48rem;
+  font-weight: 900;
+  padding: 0 4px;
+  border-radius: 4px;
+  letter-spacing: 0.2px;
+}
+
+.spell-btn-top {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #f4f4f5;
+}
+
+.spell-btn-sub {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: #7dd3fc;
+}
+
+/* ==========================================================================
+   3. ELEMENTAL SPELL TOMES GRIMOIRE (TAB HERO)
+   ========================================================================== */
+.tomes-section {
+  background: #111016;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.tomes-hint {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.tomes-desc {
+  font-size: 0.64rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+.tomes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.tome-card {
+  background: #161522;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.tome-card-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.tome-icon {
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.tome-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tome-name {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tome-lvl {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--gold-glow);
+}
+
+.tome-effect {
+  font-size: 0.58rem;
+  color: #d4d4d8;
+  line-height: 1.25;
+}
+
+.tome-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 5px;
+}
+
+.tome-count-txt {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #7dd3fc;
+}
+
+.btn-upgrade-tome {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  border: 1px solid #7dd3fc;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-upgrade-tome:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+/* ==========================================================================
+   4. EQUIPMENT, INVENTORY & SET BONUSES
+   ========================================================================== */
+.equipment-section {
+  background: #111016;
+  border: 1px solid var(--border-gold);
+  border-radius: 16px;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.equip-summary {
+  font-size: 0.66rem;
+  color: var(--gold-glow);
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55%;
+}
+
+.equip-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  margin: 10px 0 8px 0;
+  width: 100%;
+}
+
+.slot-box {
+  background: #181720;
+  border: 1px dashed rgba(212, 175, 55, 0.35);
+  border-radius: 10px;
+  padding: 6px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  min-height: 82px;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.slot-box.equipped {
+  border: 1px solid var(--gold-glow);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.slot-label {
+  font-size: 0.54rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.slot-item-icon {
+  font-size: 1.35rem;
+  margin: 2px 0;
+}
+
+.slot-item-name {
+  font-size: 0.55rem;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  padding: 0 2px;
+}
+
+.slot-item-set-tag {
+  font-size: 0.48rem;
+  font-weight: 800;
+  padding: 1px 3px;
+  border-radius: 3px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 95%;
+  display: none;
+}
+
+.slot-box.has-set .slot-item-set-tag {
+  display: block;
+}
+
+.set-bonuses-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 10px 0;
+}
+
+.set-bonus-badge {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 5px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.64rem;
+}
+
+.set-bonus-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 800;
+}
+
+.set-bonus-text {
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  line-height: 1.2;
+}
+
+.set-bonus-text.active {
+  color: #fef08a;
+  font-weight: 600;
+}
+
+.inventory-container {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
+  width: 100%;
+}
+
+.inv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.inv-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inv-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #d4d4d8;
+}
+
+.btn-expand-inv {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.22) 0%, rgba(140, 109, 31, 0.22) 100%);
+  border: 1px solid var(--border-gold-bright);
+  color: var(--gold-glow);
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-expand-inv:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.inv-hint {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+.inv-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 6px 0 8px 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.inv-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.inv-tab-btn {
+  background: #181722;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.inv-tab-btn.active {
+  background: var(--gold-dark);
+  color: #fff;
+  border-color: var(--gold-primary);
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.inv-item-card {
+  background: #171620;
+  border-radius: 8px;
+  padding: 6px 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.inv-item-card.rarity-common { border: 1px solid var(--rarity-common); }
+.inv-item-card.rarity-rare { border: 1px solid var(--rarity-rare); box-shadow: 0 0 6px rgba(56, 189, 248, 0.2); }
+.inv-item-card.rarity-epic { border: 1px solid var(--rarity-epic); box-shadow: 0 0 8px rgba(192, 132, 252, 0.3); }
+.inv-item-card.rarity-legendary { border: 1px solid var(--rarity-legendary); box-shadow: 0 0 10px rgba(251, 191, 36, 0.4); }
+.inv-item-card.rarity-mythic {
+  border: 1px solid var(--rarity-mythic);
+  box-shadow: 0 0 12px var(--rarity-mythic-glow);
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.15) 0%, #171620 100%);
+}
+.inv-item-card.rarity-cosmic {
+  border: 1.5px solid var(--rarity-cosmic);
+  box-shadow: 0 0 16px var(--rarity-cosmic-glow);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22) 0%, rgba(168, 85, 247, 0.22) 50%, rgba(236, 72, 153, 0.22) 100%);
+}
+
+.inv-item-icon { font-size: 1.35rem; }
+
+.inv-item-name {
+  font-size: 0.58rem;
+  margin-top: 3px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  padding: 0 2px;
+}
+
+.inv-item-set-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.inv-item-socket-tag {
+  font-size: 0.52rem;
+  color: #c084fc;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   5. RUNE STASH, RUNEWORD ADVISOR & SOCKETING
+   ========================================================================== */
+.rune-stash-section {
+  background: #111016;
+  border: 1px solid var(--border-gold);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.rune-count-summary {
+  font-size: 0.68rem;
+  color: var(--gold-glow);
+  font-weight: 700;
+}
+
+.rune-stash-hint {
+  font-size: 0.64rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+.rune-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.rune-card {
+  background: #161522;
+  border: 1px solid rgba(192, 132, 252, 0.2);
+  border-radius: 8px;
+  padding: 6px 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.rune-card.has-rune {
+  border-color: #c084fc;
+  background: rgba(192, 132, 252, 0.08);
+}
+
+.rune-card-icon { font-size: 1.15rem; }
+.rune-card-name { font-size: 0.62rem; font-weight: 800; color: #f3e8ff; margin-top: 2px; }
+.rune-card-tier { font-size: 0.5rem; color: #a1a1aa; }
+.rune-card-qty { font-size: 0.65rem; font-weight: 900; color: var(--gold-glow); margin-top: 2px; }
+
+.btn-runeword-codex {
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid #c084fc;
+  color: #f3e8ff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.modal-sockets-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 0;
+  margin-bottom: 2px;
+}
+
+.socket-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(192, 132, 252, 0.15);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 0.65rem;
+  color: #f3e8ff;
+  font-weight: 800;
+}
+
+.socket-node.empty {
+  color: #71717a;
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.modal-runeword-desc-box {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid #c084fc;
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modal-runeword-title { font-size: 0.72rem; font-weight: 900; color: #f5d0fe; }
+.modal-runeword-desc { font-size: 0.64rem; color: #e9d5ff; line-height: 1.25; }
+.modal-stat-line { font-size: 0.78rem; color: var(--gold-glow); font-weight: 700; }
+.modal-stat-line.modal-sub { color: #a1a1aa; font-size: 0.72rem; }
+
+.modal-set-desc-box {
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  margin-top: 4px;
+  padding-top: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.modal-set-title { font-size: 0.68rem; font-weight: 800; color: #fef08a; }
+.modal-set-line { font-size: 0.62rem; color: #d1d5db; line-height: 1.25; }
+
+.modal-rw-advisor-box, .socket-advisor-box {
+  background: rgba(88, 28, 135, 0.18);
+  border: 1px solid rgba(192, 132, 252, 0.45);
+  border-radius: 8px;
+  padding: 7px 8px;
+  margin-top: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.modal-rw-advisor-title, .socket-advisor-title { font-size: 0.68rem; font-weight: 900; color: #f5d0fe; }
+.modal-rw-advisor-list, .socket-advisor-list, .rw-codex-list { display: flex; flex-direction: column; gap: 6px; }
+
+.rw-advisor-item {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(192, 132, 252, 0.25);
+  border-radius: 6px;
+  padding: 5px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rw-advisor-item.exact-match {
+  border-color: #4ade80;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.rw-advisor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+}
+
+.rw-advisor-name { font-size: 0.7rem; font-weight: 800; color: #fde047; }
+.rw-advisor-tag {
+  font-size: 0.56rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.2);
+  color: #7dd3fc;
+}
+
+.rw-advisor-tag.ready { background: rgba(34, 197, 94, 0.25); color: #4ade80; }
+.rw-advisor-tag.warn { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.rw-recipe-pills { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+
+.rw-rune-pill {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #181722;
+  color: #a1a1aa;
+}
+
+.rw-rune-pill.owned { border-color: #4ade80; color: #86efac; background: rgba(34, 197, 94, 0.14); }
+.rw-rune-pill.inserted { border-color: #c084fc; color: #f3e8ff; background: rgba(168, 85, 247, 0.35); }
+.rw-advisor-desc { font-size: 0.6rem; color: #d4d4d8; line-height: 1.25; }
+
+.modal-card-socket { max-width: 350px; }
+.socket-target-summary {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--gold-glow);
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.socket-slots-display { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.socket-slot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed rgba(192, 132, 252, 0.4);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.socket-slot-title { font-size: 0.7rem; font-weight: 700; color: #e9d5ff; }
+.socket-slot-value { font-size: 0.68rem; color: #f5d0fe; font-weight: 800; }
+.socket-select-label { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 5px; display: block; }
+.socket-runes-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; max-height: 160px; overflow-y: auto; }
+.socket-rune-choice {
+  background: #1e1b29;
+  border: 1px solid rgba(192, 132, 252, 0.3);
+  border-radius: 6px;
+  padding: 5px 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+.socket-choice-name { font-size: 0.62rem; font-weight: 800; color: #f3e8ff; }
+.socket-choice-qty { font-size: 0.55rem; color: var(--gold-glow); font-weight: 700; }
+
+/* ==========================================================================
+   6. FIELD ENCOUNTERS, DARK FANTASY MAP & BESTIARY CODEX
+   ========================================================================== */
+.encounter-card {
+  background: linear-gradient(180deg, #1d132e 0%, #110c1c 100%);
+  border: 1.5px solid #c084fc;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.45);
+}
+
+.encounter-card.radar-warn {
+  border-color: #38bdf8;
+  background: linear-gradient(180deg, #111d2e 0%, #0b111c 100%);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
+}
+
+.encounter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.encounter-tag { font-size: 0.72rem; font-weight: 900; color: #f3e8ff; }
+.encounter-lvl-badge {
+  background: rgba(192, 132, 252, 0.25);
+  border: 1px solid #c084fc;
+  color: #fde047;
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+.encounter-body { display: flex; align-items: center; gap: 10px; }
+.encounter-avatar {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: radial-gradient(circle, #3b175c 0%, #150924 100%);
+  border: 1.5px solid #d8b4fe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.85rem;
+}
+
+.encounter-details { flex: 1; min-width: 0; }
+.encounter-name-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 3px; }
+.encounter-name { font-size: 0.88rem; font-weight: 800; color: #f5d0fe; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.encounter-dist-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.encounter-gimmick { font-size: 0.66rem; color: #d4d4d8; margin: 3px 0 5px 0; line-height: 1.25; }
+.encounter-hp-track {
+  width: 100%;
+  height: 7px;
+  background: #231736;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(192, 132, 252, 0.45);
+}
+
+.encounter-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7, #ec4899);
+  transition: width 0.25s ease;
+}
+
+.encounter-hp-row { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; font-size: 0.64rem; color: #e9d5ff; }
+.encounter-timer-txt { color: #fbbf24; font-weight: 800; }
+
+.map-section, .codex-section {
+  background: #111016;
+  border: 1px solid var(--border-gold);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.map-subtitle { font-size: 0.64rem; color: var(--text-muted); margin-top: 2px; line-height: 1.3; }
+.map-actions-cluster { display: flex; gap: 5px; flex-shrink: 0; }
+.btn-map-ctrl {
+  background: #181722;
+  border: 1px solid var(--border-gold);
+  color: var(--gold-glow);
+  font-size: 0.66rem;
+  font-weight: 800;
+  padding: 5px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-map-ctrl.active { background: var(--gold-dark); color: #fff; }
+.map-viewport-wrapper {
+  position: relative;
+  width: 100%;
+  height: 270px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid rgba(212, 175, 55, 0.35);
+  background: #0a0a0f;
+}
+
+.dungeon-map-box { width: 100%; height: 100%; z-index: 1; background: #0a0a0f; }
+.dungeon-map-box .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(95%) saturate(85%); }
+.dungeon-map-box .leaflet-popup-content-wrapper,
+.dungeon-map-box .leaflet-popup-tip { background: #181722; color: #f4f4f5; border: 1px solid rgba(212, 175, 55, 0.45); }
+.offline-radar-canvas { width: 100%; height: 100%; display: block; background: radial-gradient(circle, #141221 0%, #09090d 100%); }
+
+.map-legend-overlay {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  right: 6px;
+  z-index: 500;
+  background: rgba(9, 9, 11, 0.82);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6rem;
+  color: #d4d4d8;
+  pointer-events: none;
+}
+
+.dark-monster-pin {
+  background: rgba(24, 16, 38, 0.92);
+  border: 1.5px solid #c084fc;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.75);
+}
+
+.dark-monster-pin.engaged-pin {
+  border: 2px solid #ef4444;
+  background: rgba(69, 10, 10, 0.95);
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.95);
+}
+
+.dark-player-pin {
+  background: #2563eb;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 12px #38bdf8;
+}
+
+.roaming-list-header { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+.roaming-list-title { font-size: 0.74rem; font-weight: 800; color: #e9d5ff; }
+.roaming-scale-badge {
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: var(--gold-glow);
+  background: rgba(212, 175, 55, 0.14);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.roaming-monsters-list, .codex-list { display: flex; flex-direction: column; gap: 7px; }
+.roaming-card {
+  background: #161522;
+  border: 1px solid rgba(192, 132, 252, 0.28);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.roaming-card.in-range {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.roaming-card-icon {
+  font-size: 1.5rem;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #211933;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.roaming-card-info { flex: 1; min-width: 0; }
+.roaming-card-top { display: flex; justify-content: space-between; align-items: center; gap: 4px; }
+.roaming-card-name { font-size: 0.78rem; font-weight: 800; color: #f3e8ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.roaming-card-dist { font-size: 0.65rem; font-weight: 800; color: #38bdf8; white-space: nowrap; }
+.roaming-card.in-range .roaming-card-dist { color: #4ade80; }
+.roaming-card-sub { font-size: 0.62rem; color: var(--text-muted); margin-top: 2px; }
+
+.btn-sim-engage-target {
+  background: linear-gradient(180deg, #9333ea 0%, #581c87 100%);
+  border: 1px solid #d8b4fe;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 4px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.codex-counter { font-size: 0.68rem; color: var(--text-muted); }
+.codex-sub-header {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--gold-primary);
+  margin-bottom: 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px dashed rgba(212, 175, 55, 0.25);
+}
+
+.codex-item {
+  background: #16151e;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.codex-item.roaming-codex { border-color: rgba(192, 132, 252, 0.35); }
+.codex-item.roaming-codex .codex-name { color: #e9d5ff; }
+.codex-avatar {
+  font-size: 1.6rem;
+  width: 40px;
+  height: 40px;
+  background: #231215;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.codex-info { flex: 1; min-width: 0; }
+.codex-name { font-size: 0.8rem; font-weight: 700; color: #fca5a5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.codex-tier { font-size: 0.62rem; color: #a1a1aa; }
+.codex-kills { font-size: 0.72rem; font-weight: 800; color: var(--gold-glow); flex-shrink: 0; }

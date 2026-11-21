@@ -1,8 +1,9 @@
-// ShadowStrider: Dark Run RPG - Module 3: Core Engine, Runeword Advisor & UI Renderer
+// ShadowStrider: Dark Run RPG - Module 6: IndexedDB, GPS, BLE, Voice & UI Renderer
 (async function () {
   'use strict';
 
   const App = window.ShadowStriderApp = window.ShadowStriderApp || {};
+  const ELEMENT_DATABASE = App.ELEMENT_DATABASE;
   const SET_DATABASE = App.SET_DATABASE;
   const RUNE_DATABASE = App.RUNE_DATABASE;
   const RUNEWORD_DATABASE = App.RUNEWORD_DATABASE;
@@ -214,7 +215,6 @@
     window.speechSynthesis.speak(utterance);
   }
 
-  // --- Debounced Batch Voice System ---
   const voiceDebounceTimers = {};
   const voiceBatchState = {
     elixirCount: 0,
@@ -248,25 +248,8 @@
     return Math.min(100, baseRate + bonusRate);
   }
 
-  const defaultState = App.createDefaultState();
-  let gameState = defaultState;
+  let gameState = App.createDefaultState();
   let currentInvFilter = 'all';
-
-  let bossVulnerableTimer = 0;
-  let mistHealingTick = 0;
-  let chronoHealingTick = 0;
-  let bloodKnightStallTick = 0;
-  let superbossSiphonTick = 0;
-  let secretbossSiphonTick = 0;
-  let gimmickAnnounced = {};
-
-  let isGoblinActive = false;
-  let goblinSecondsLeft = 0;
-  let goblinTargetPaceDec = null;
-  let goblinProgressSec = 0;
-  const GOBLIN_REQUIRED_SECONDS = 7;
-  let lastGoblinTriggerKm = 0.0;
-  let goblinCooldownSeconds = 0;
 
   async function loadGameState() {
     let saved = await DB.getPlayerState();
@@ -303,12 +286,16 @@
       gameState.isHistoryCollapsed = typeof saved.isHistoryCollapsed === 'boolean' ? saved.isHistoryCollapsed : false;
       gameState.hideCompletedAchievements = typeof saved.hideCompletedAchievements === 'boolean' ? saved.hideCompletedAchievements : false;
       gameState.isClaimedAchAccordionOpen = typeof saved.isClaimedAchAccordionOpen === 'boolean' ? saved.isClaimedAchAccordionOpen : false;
+      gameState.autoMagicMode = typeof saved.autoMagicMode === 'boolean' ? saved.autoMagicMode : false;
+      gameState.spellLevels = Object.assign({}, freshTemplate.spellLevels, saved.spellLevels || {});
+      gameState.spellTomes = Object.assign({}, freshTemplate.spellTomes, saved.spellTomes || {});
       gameState.statsTrack = Object.assign({
         berserkSeconds: 0,
         ultCastCount: 0,
         goblinCaughtCount: 0,
         flowStateCount: 0,
-        roamingKills: 0
+        roamingKills: 0,
+        spellsCastCount: 0
       }, saved.statsTrack || {});
     } else {
       gameState = freshTemplate;
@@ -395,18 +382,12 @@
       gameState.bossLoopCycle = 0;
       gameState.bossIndex = 0;
       gameState.bossHpRemain = getBossMaxHp(0, 0);
-      bossVulnerableTimer = 0;
-      gimmickAnnounced = {};
-      mistHealingTick = 0;
-      chronoHealingTick = 0;
-      bloodKnightStallTick = 0;
-      superbossSiphonTick = 0;
-      secretbossSiphonTick = 0;
+      if (App.CombatEngine) App.CombatEngine.resetBossState();
     } else if (activeRun) {
       if (typeof activeRun.bossIndex === 'number') gameState.bossIndex = activeRun.bossIndex;
       if (typeof activeRun.bossHpRemain === 'number') gameState.bossHpRemain = activeRun.bossHpRemain;
       if (typeof activeRun.bossLoopCycle === 'number') gameState.bossLoopCycle = activeRun.bossLoopCycle;
-      bossVulnerableTimer = activeRun.bossVulnerableTimer || 0;
+      if (App.CombatEngine) App.CombatEngine.restoreBossVulnerableTimer(activeRun.bossVulnerableTimer || 0);
     }
 
     verifyDailyAndStreakReset();
@@ -479,18 +460,18 @@
     let selectedIndex = 0;
 
     if (isBoss || (gameState.bossLoopCycle || 0) >= 2) {
-      if (roll < 0.05) selectedIndex = 18; // Fal (#19)
-      else if (roll < 0.12) selectedIndex = 17; // Ko (#18)
-      else if (roll < 0.22) selectedIndex = 16; // Lum (#17)
-      else if (roll < 0.35) selectedIndex = 14; // Hel (#15)
-      else if (roll < 0.50) selectedIndex = 12; // Shael (#13)
-      else if (roll < 0.70) selectedIndex = Math.floor(Math.random() * 5) + 6; // Tal-Sol (#7-#12)
-      else selectedIndex = Math.floor(Math.random() * 6); // El-Ith (#1-#6)
+      if (roll < 0.05) selectedIndex = 18;
+      else if (roll < 0.12) selectedIndex = 17;
+      else if (roll < 0.22) selectedIndex = 16;
+      else if (roll < 0.35) selectedIndex = 14;
+      else if (roll < 0.50) selectedIndex = 12;
+      else if (roll < 0.70) selectedIndex = Math.floor(Math.random() * 5) + 6;
+      else selectedIndex = Math.floor(Math.random() * 6);
     } else {
-      if (roll < 0.02) selectedIndex = 16; // Lum
-      else if (roll < 0.08) selectedIndex = 14; // Hel
-      else if (roll < 0.25) selectedIndex = Math.floor(Math.random() * 5) + 6; // Tal-Sol
-      else selectedIndex = Math.floor(Math.random() * 6); // El-Ith
+      if (roll < 0.02) selectedIndex = 16;
+      else if (roll < 0.08) selectedIndex = 14;
+      else if (roll < 0.25) selectedIndex = Math.floor(Math.random() * 5) + 6;
+      else selectedIndex = Math.floor(Math.random() * 6);
     }
 
     const rKey = runeKeys[selectedIndex] || 'el';
@@ -515,59 +496,31 @@
       const epicThreshold = legThreshold + 0.35;
 
       if (roll < cosmicThreshold) {
-        rarity = 'cosmic';
-        baseMain = 65;
-        baseSub = 28;
-        sub2Val = 25;
+        rarity = 'cosmic'; baseMain = 65; baseSub = 28; sub2Val = 25;
       } else if (roll < mythicThreshold) {
-        rarity = 'mythic';
-        baseMain = 45;
-        baseSub = 20;
-        sub2Val = 15;
+        rarity = 'mythic'; baseMain = 45; baseSub = 20; sub2Val = 15;
       } else if (roll < legThreshold) {
-        rarity = 'legendary';
-        baseMain = 32;
-        baseSub = 14;
+        rarity = 'legendary'; baseMain = 32; baseSub = 14;
       } else if (roll < epicThreshold) {
-        rarity = 'epic';
-        baseMain = 22;
-        baseSub = 8;
+        rarity = 'epic'; baseMain = 22; baseSub = 8;
       } else if (roll < 0.88) {
-        rarity = 'rare';
-        baseMain = 14;
-        baseSub = 4;
+        rarity = 'rare'; baseMain = 14; baseSub = 4;
       } else {
-        rarity = 'common';
-        baseMain = 6;
-        baseSub = 0;
+        rarity = 'common'; baseMain = 6; baseSub = 0;
       }
     } else {
       if (roll < 0.01) {
-        rarity = 'cosmic';
-        baseMain = 65;
-        baseSub = 28;
-        sub2Val = 25;
+        rarity = 'cosmic'; baseMain = 65; baseSub = 28; sub2Val = 25;
       } else if (roll < 0.04) {
-        rarity = 'mythic';
-        baseMain = 45;
-        baseSub = 20;
-        sub2Val = 15;
+        rarity = 'mythic'; baseMain = 45; baseSub = 20; sub2Val = 15;
       } else if (roll < 0.14) {
-        rarity = 'legendary';
-        baseMain = 32;
-        baseSub = 14;
+        rarity = 'legendary'; baseMain = 32; baseSub = 14;
       } else if (roll < 0.38) {
-        rarity = 'epic';
-        baseMain = 22;
-        baseSub = 8;
+        rarity = 'epic'; baseMain = 22; baseSub = 8;
       } else if (roll < 0.70) {
-        rarity = 'rare';
-        baseMain = 14;
-        baseSub = 4;
+        rarity = 'rare'; baseMain = 14; baseSub = 4;
       } else {
-        rarity = 'common';
-        baseMain = 6;
-        baseSub = 0;
+        rarity = 'common'; baseMain = 6; baseSub = 0;
       }
     }
 
@@ -595,17 +548,11 @@
 
     let socketsMax = 0;
     const sRoll = Math.random();
-    if (rarity === 'cosmic') {
-      socketsMax = 3;
-    } else if (rarity === 'mythic') {
-      socketsMax = sRoll < 0.5 ? 3 : 2;
-    } else if (rarity === 'legendary') {
-      socketsMax = sRoll < 0.4 ? 3 : 2;
-    } else if (rarity === 'epic') {
-      socketsMax = sRoll < 0.5 ? 2 : 1;
-    } else if (rarity === 'rare') {
-      socketsMax = sRoll < 0.6 ? 1 : 0;
-    }
+    if (rarity === 'cosmic') socketsMax = 3;
+    else if (rarity === 'mythic') socketsMax = sRoll < 0.5 ? 3 : 2;
+    else if (rarity === 'legendary') socketsMax = sRoll < 0.4 ? 3 : 2;
+    else if (rarity === 'epic') socketsMax = sRoll < 0.5 ? 2 : 1;
+    else if (rarity === 'rare') socketsMax = sRoll < 0.6 ? 1 : 0;
 
     return {
       id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
@@ -661,6 +608,7 @@
     let bonusUltCharge = 0;
     let bonusExp = 0;
     let bonusFlow = 0;
+    let bonusMp = 0;
 
     const eq = gameState.equipment;
     ['weapon', 'armor', 'boots', 'relic', 'ring', 'bracelet'].forEach(slot => {
@@ -705,6 +653,7 @@
           if (r.statType === 'exp') bonusExp += r.statVal;
           if (r.statType === 'flow') bonusFlow += r.statVal;
           if (r.statType === 'lum') { bonusSta += r.statVal; bonusGold += r.statVal; }
+          if (r.mpVal) bonusMp += r.mpVal;
         });
       }
 
@@ -720,23 +669,18 @@
         if (rw.bonusExp) bonusExp += rw.bonusExp;
         if (rw.bonusGold) bonusGold += rw.bonusGold;
         if (rw.bonusFlow) bonusFlow += rw.bonusFlow;
+        if (rw.bonusMp) bonusMp += rw.bonusMp;
       }
     });
 
     const setCounts = getActiveEquippedSets();
-    if (setCounts.shadowstalker >= 2) {
-      bonusCrit += 10;
-    }
+    if (setCounts.shadowstalker >= 2) bonusCrit += 10;
     if (setCounts.bloodknight >= 2) {
       bonusSta += 25;
       bonusGold += 20;
     }
-    if (setCounts.voidannihilator >= 4) {
-      bonusUltDmg += 80;
-    }
-    if (setCounts.darktempest >= 2 && (currentHrZone >= 3 || isFrenzyActive)) {
-      bonusDmg += 20;
-    }
+    if (setCounts.voidannihilator >= 4) bonusUltDmg += 80;
+    if (setCounts.darktempest >= 2 && (currentHrZone >= 3 || isFrenzyActive)) bonusDmg += 20;
 
     return {
       bonusDmg,
@@ -749,6 +693,7 @@
       bonusUltCharge,
       bonusExp,
       bonusFlow,
+      bonusMp,
       setCounts
     };
   }
@@ -814,6 +759,9 @@
   const bossTierEl = document.getElementById('boss-tier');
   const bossAvatarEl = document.getElementById('boss-avatar');
   const bossNameEl = document.getElementById('boss-name');
+  const bossElemMainEl = document.getElementById('boss-elem-main');
+  const bossElemWeakEl = document.getElementById('boss-elem-weak');
+  const bossElemResEl = document.getElementById('boss-elem-res');
   const bossDescEl = document.getElementById('boss-desc');
   const bossHpBarEl = document.getElementById('boss-hp-bar');
   const bossHpRemainEl = document.getElementById('boss-hp-remain');
@@ -830,12 +778,7 @@
   const frenzyBannerEl = document.getElementById('frenzy-banner');
   const overdriveBannerEl = document.getElementById('overdrive-banner');
   const overdriveTimeLeftEl = document.getElementById('overdrive-time-left');
-
   const goblinBannerEl = document.getElementById('goblin-banner');
-  const goblinTimerEl = document.getElementById('goblin-timer');
-  const goblinTargetPaceEl = document.getElementById('goblin-target-pace');
-  const goblinProgressFillEl = document.getElementById('goblin-progress-fill');
-  const goblinStatusHintEl = document.getElementById('goblin-status-hint');
 
   const distanceValEl = document.getElementById('distance-val');
   const timeValEl = document.getElementById('time-val');
@@ -1013,26 +956,12 @@
     overdriveTimeLeftEl.textContent = overdriveSecondsRemaining;
   }
 
-  function getBladePrice() {
-    return Math.floor(400 * Math.pow(1.25, gameState.upgrades.blade || 0));
-  }
-  function getCharmPrice() {
-    return Math.floor(350 * Math.pow(1.30, gameState.upgrades.charm || 0));
-  }
-  function getEyePrice() {
-    return Math.floor(500 * Math.pow(1.32, gameState.upgrades.eye || 0));
-  }
-  function getMaxInventorySlots() {
-    return 30 + (((gameState.upgrades && gameState.upgrades.bag) || 0) * 5);
-  }
-
-  function getBagPrice() {
-    return Math.floor(500 * Math.pow(1.30, (gameState.upgrades && gameState.upgrades.bag) || 0));
-  }
-
-  function getElixirPrice() {
-    return Math.floor(200 * Math.pow(1.28, gameState.upgrades.elixir || 0));
-  }
+  function getBladePrice() { return Math.floor(400 * Math.pow(1.25, gameState.upgrades.blade || 0)); }
+  function getCharmPrice() { return Math.floor(350 * Math.pow(1.30, gameState.upgrades.charm || 0)); }
+  function getEyePrice() { return Math.floor(500 * Math.pow(1.32, gameState.upgrades.eye || 0)); }
+  function getMaxInventorySlots() { return 30 + (((gameState.upgrades && gameState.upgrades.bag) || 0) * 5); }
+  function getBagPrice() { return Math.floor(500 * Math.pow(1.30, (gameState.upgrades && gameState.upgrades.bag) || 0)); }
+  function getElixirPrice() { return Math.floor(200 * Math.pow(1.28, gameState.upgrades.elixir || 0)); }
 
   function addExp(amount) {
     const eqBonus = calculateEquipmentBonuses();
@@ -1097,9 +1026,7 @@
     const oldest = paceSamples[0];
     const newest = paceSamples[paceSamples.length - 1];
 
-    if (now - newest.time > 5000) {
-      return null;
-    }
+    if (now - newest.time > 5000) return null;
 
     const dDist = newest.dist - oldest.dist;
     const dTimeSec = (newest.time - oldest.time) / 1000;
@@ -1108,6 +1035,71 @@
       return (dTimeSec / 60) / dDist;
     }
     return null;
+  }
+
+  function evaluateFlowStateProgress(distanceDeltaKm, rollingPace, setCounts, eqBonus) {
+    const baseFlowKm = setCounts.voidwalker >= 2 ? 0.15 : 0.30;
+    const flowSpeedMult = 1 + ((eqBonus.bonusFlow || 0) * 0.01);
+    const flowThresholdKm = baseFlowKm / flowSpeedMult;
+
+    if (rollingPace !== null && rollingPace >= 2.5 && rollingPace <= 15.0) {
+      if (rhythmBaselinePace === null) {
+        rhythmBaselinePace = rollingPace;
+        rhythmConsistentDistance = 0.0;
+        flowGraceStrikes = 0;
+      } else {
+        const paceDiff = Math.abs(rollingPace - rhythmBaselinePace);
+        if (paceDiff <= 0.45) {
+          rhythmConsistentDistance += distanceDeltaKm;
+          flowGraceStrikes = 0;
+          rhythmBaselinePace = (rhythmBaselinePace * 0.75) + (rollingPace * 0.25);
+
+          if (rhythmConsistentDistance >= flowThresholdKm && !isFlowStateActive) {
+            isFlowStateActive = true;
+            gameState.statsTrack.flowStateCount = (gameState.statsTrack.flowStateCount || 0) + 1;
+            const achFlow = gameState.achievements.find(a => a.id === 'ach_flow_count');
+            if (achFlow) achFlow.current = Math.min(achFlow.target, gameState.statsTrack.flowStateCount);
+
+            const achF60 = gameState.achievements.find(a => a.id === 'ach_flow60');
+            if (achF60) achF60.current = Math.min(achF60.target, gameState.statsTrack.flowStateCount);
+
+            showToast('🌊 เข้าสู่สภาวะ FLOW STATE! ฟื้นฟูมานาไว x1.5 & EXP +50%');
+            speakVoice('เข้าสู่สภาวะโฟลว์สเตท ฟื้นฟูมานาเร็วขึ้น');
+          }
+        } else {
+          flowGraceStrikes++;
+          if (flowGraceStrikes > 3) {
+            rhythmBaselinePace = rollingPace;
+            rhythmConsistentDistance = 0.0;
+            flowGraceStrikes = 0;
+            if (isFlowStateActive) {
+              isFlowStateActive = false;
+              showToast('หลุดจากสภาวะ Flow State');
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function checkDistanceCheckpoints(setCounts) {
+    const bossMaxHp = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
+    if (runDistanceKm >= nextChestKmCheckpoint) {
+      nextChestKmCheckpoint += 1.0;
+      const chestChance = setCounts.darktempest >= 4 ? 0.85 : 0.65;
+      if (Math.random() < chestChance) {
+        gameState.chestsAvailable += 1;
+        showToast('📦 สัญชาตญาณเงาตรวจพบ: คุณค้นพบหีบสมบัติดันเจี้ยน!');
+        speakVoice('ค้นพบหีบสมบัติใหม่');
+      }
+    }
+
+    if (runDistanceKm >= nextKmAnnounceCheckpoint) {
+      const currentPace = calculatePace(runSeconds, runDistanceKm);
+      const bossRemainPct = Math.round((gameState.bossHpRemain / bossMaxHp) * 100);
+      speakVoice(`ผ่านไปแล้ว ${Math.floor(runDistanceKm)} กิโลเมตร เพซเฉลี่ย ${currentPace} เลือดบอสเหลืออีก ${bossRemainPct} เปอร์เซ็นต์`);
+      nextKmAnnounceCheckpoint += 1.0;
+    }
   }
 
   function calculateHrZone(bpm, maxHr) {
@@ -1130,7 +1122,7 @@
     const zoneNames = {
       0: 'ไม่พบสัญญาณ',
       1: 'Zone 1: วอร์มอัป',
-      2: 'Zone 2: สมาธิเงา (+EXP)',
+      2: 'Zone 2: สมาธิเงา (+EXP & MP)',
       3: 'Zone 3: BERSERK FRENZY! ⚡',
       4: 'Zone 4: เขตพลังสูง',
       5: 'Zone 5: อันตราย! (ผ่อนฝีเท้า)'
@@ -1145,7 +1137,7 @@
         speakVoice('คำเตือน! อัตราการเต้นหัวใจสูงเกินพิกัด กรุณาผ่อนฝีเท้าเพื่อความปลอดภัย', true);
         showToast('⚠️ ระวัง! อัตราการเต้นหัวใจแตะ Zone 5 อันตราย');
       } else if (zone === 2) {
-        speakVoice('เข้าสู่โซนสอง สมาธิเงาทำงาน ได้รับโบนัสค่าประสบการณ์');
+        speakVoice('เข้าสู่โซนสอง สมาธิเงาทำงาน ฟื้นฟูมานาและค่าประสบการณ์ไวขึ้น');
       } else if (previousHrZone === 3 && zone !== 3) {
         speakVoice('หลุดจากโซนสาม สภาวะเบอร์เซิร์กสงบลง');
       }
@@ -1164,12 +1156,10 @@
           runHudEl.classList.add('frenzy-active');
           frenzyBannerEl.style.display = 'block';
         }
-      } else {
-        if (isFrenzyActive) {
-          isFrenzyActive = false;
-          runHudEl.classList.remove('frenzy-active');
-          frenzyBannerEl.style.display = 'none';
-        }
+      } else if (isFrenzyActive) {
+        isFrenzyActive = false;
+        runHudEl.classList.remove('frenzy-active');
+        frenzyBannerEl.style.display = 'none';
       }
     } else {
       if (runDistanceKm >= 0.05 && runSeconds > 10) {
@@ -1181,85 +1171,17 @@
             frenzyBannerEl.style.display = 'block';
             speakVoice('เข้าสู่เพซจำลองโซนสาม สภาวะเบอร์เซิร์กทำงาน!', true);
           }
-        } else {
-          if (isFrenzyActive) {
-            isFrenzyActive = false;
-            runHudEl.classList.remove('frenzy-active');
-            frenzyBannerEl.style.display = 'none';
-          }
-        }
-      } else {
-        if (isFrenzyActive) {
+        } else if (isFrenzyActive) {
           isFrenzyActive = false;
           runHudEl.classList.remove('frenzy-active');
           frenzyBannerEl.style.display = 'none';
         }
+      } else if (isFrenzyActive) {
+        isFrenzyActive = false;
+        runHudEl.classList.remove('frenzy-active');
+        frenzyBannerEl.style.display = 'none';
       }
     }
-  }
-
-  function startGoblinChaseEvent() {
-    if (isGoblinActive || !isRunning) return;
-
-    let baselinePace = getRecentRollingPace();
-    if (baselinePace === null) {
-      if (runDistanceKm >= 0.05 && runSeconds > 10) {
-        baselinePace = (runSeconds / 60) / runDistanceKm;
-      } else {
-        baselinePace = 7.0;
-      }
-    }
-
-    goblinTargetPaceDec = Math.max(3.0, baselinePace - 0.5);
-    isGoblinActive = true;
-    goblinSecondsLeft = 45;
-    goblinProgressSec = 0;
-
-    const minPart = Math.floor(goblinTargetPaceDec);
-    const secPart = Math.round((goblinTargetPaceDec - minPart) * 60);
-    const targetPaceStr = `${minPart}'${secPart.toString().padStart(2, '0')}"`;
-
-    goblinTargetPaceEl.textContent = targetPaceStr;
-    goblinTimerEl.textContent = `${goblinSecondsLeft}s`;
-    goblinProgressFillEl.style.width = '0%';
-    goblinStatusHintEl.textContent = 'รักษาเพซเป้าหมายเพื่อจับกุม!';
-    goblinBannerEl.style.display = 'flex';
-
-    speakVoice(`พบโกบลินเงาหลบหนี! เร่งสปีดให้แตะเพซ ${minPart} นาที ${secPart} วินาที เพื่อจับกุม`, true);
-    showToast(`👺 โกบลินเงาปรากฏตัว! เร่งเพซขึ้น 0.5 (${targetPaceStr}) เพื่อสยบ!`);
-  }
-
-  function completeGoblinChaseSuccess() {
-    isGoblinActive = false;
-    goblinBannerEl.style.display = 'none';
-    goblinCooldownSeconds = 240;
-
-    gameState.chestsAvailable += 1;
-    const bonusGold = Math.floor(150 + (Math.random() * 200));
-    gameState.gold += bonusGold;
-    addUltimateCharge(30);
-
-    const droppedRune = rollRandomRuneDrop(false);
-    showToast(`🎉 สยบโกบลินเงาสำเร็จ! +📦 1 หีบ, +${bonusGold} 🪙, +🪨 ${droppedRune.name} Rune!`);
-    speakVoice(`สยบโกบลินเงาสำเร็จ ได้รับหินรูน ${droppedRune.name}`, true);
-
-    gameState.statsTrack.goblinCaughtCount = (gameState.statsTrack.goblinCaughtCount || 0) + 1;
-    const achGoblin = gameState.achievements.find(a => a.id === 'ach_goblin_catch');
-    if (achGoblin) achGoblin.current = Math.min(achGoblin.target, gameState.statsTrack.goblinCaughtCount);
-
-    const achG25 = gameState.achievements.find(a => a.id === 'ach_goblin25');
-    if (achG25) achG25.current = Math.min(achG25.target, gameState.statsTrack.goblinCaughtCount);
-
-    saveGame();
-    renderUI();
-  }
-
-  function failGoblinChase() {
-    isGoblinActive = false;
-    goblinBannerEl.style.display = 'none';
-    goblinCooldownSeconds = 180;
-    showToast('💨 โกบลินเงาวิ่งหลบหนีหายไปในความมืด!');
-    speakVoice('โกบลินเงาหนีรอดไปได้');
   }
 
   async function setupGattConnection(device) {
@@ -1340,12 +1262,7 @@
     const value = event.target.value;
     const flags = value.getUint8(0);
     const is16Bit = (flags & 0x01) !== 0;
-    let hrValue = 0;
-    if (is16Bit) {
-      hrValue = value.getUint16(1, true);
-    } else {
-      hrValue = value.getUint8(1);
-    }
+    let hrValue = is16Bit ? value.getUint16(1, true) : value.getUint8(1);
     updateHeartRate(hrValue);
   }
 
@@ -1361,10 +1278,7 @@
     speakVoice('สายวัดหัวใจตัดการเชื่อมต่อ');
   }
 
-  btnBleConnect.addEventListener('click', () => {
-    connectBluetoothHeartRate(false);
-  });
-
+  btnBleConnect.addEventListener('click', () => connectBluetoothHeartRate(false));
   btnBleConnect.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     showToast('กำลังค้นหาและจับคู่อุปกรณ์บลูทูธตัวใหม่...');
@@ -1405,616 +1319,6 @@
     saveGame();
   });
 
-  function handleBossDefeat(currentBoss, isUltimateTier = 0) {
-    sessionBossKills += 1;
-    gameState.career.totalBossDefeated = (gameState.career.totalBossDefeated || 0) + 1;
-    gameState.chestsAvailable += 1;
-
-    if (!gameState.bestiary[currentBoss.id]) {
-      gameState.bestiary[currentBoss.id] = { kills: 0, name: currentBoss.name };
-    }
-    gameState.bestiary[currentBoss.id].kills += 1;
-
-    const eqBonus = calculateEquipmentBonuses();
-    const setCounts = eqBonus.setCounts;
-    let setExpBonus = 1.0;
-    if (setCounts.bloodknight >= 4 && (currentHrZone === 2 || currentHrZone === 3 || isFrenzyActive)) {
-      setExpBonus = 1.4;
-    }
-
-    const zone2ExpBonus = currentHrZone === 2 ? 1.5 : 1.0;
-    const flowExpBonus = isFlowStateActive ? 1.5 : 1.0;
-    const loopRewardMult = 1 + ((gameState.bossLoopCycle || 0) * 0.20);
-
-    const staMultiplier = (1 + Math.max(0, (gameState.stats.sta - 10) * 0.02) + (eqBonus.bonusSta * 0.01)) * zone2ExpBonus * flowExpBonus * setExpBonus;
-    const charmMultiplier = 1 + (gameState.upgrades.charm * 0.10) + (eqBonus.bonusGold * 0.01);
-    const streakMultiplier = 1 + Math.min(0.20, (gameState.streak.count - 1) * 0.02);
-    const overdriveGoldMult = isOverdriveActive ? 2.0 : 1.0;
-    const totalGoldMultiplier = staMultiplier * charmMultiplier * streakMultiplier * overdriveGoldMult;
-
-    const ultBonusMult = isUltimateTier > 0 ? (1 + (isUltimateTier * 0.35)) : 1.0;
-    const rewardExp = Math.floor(currentBoss.rewardExp * staMultiplier * loopRewardMult * ultBonusMult);
-    const rewardGold = Math.floor(currentBoss.rewardGold * totalGoldMultiplier * loopRewardMult * ultBonusMult);
-
-    const droppedRune = rollRandomRuneDrop(true);
-
-    showToast(`🏆 สยบ ${currentBoss.name}! +${rewardExp.toLocaleString()} EXP & +${rewardGold.toLocaleString()} ทอง & +🪨 ${droppedRune.name} Rune!`);
-    speakVoice(`สยบ ${currentBoss.name} สำเร็จแล้ว ปิดผนึกชัยชนะ ได้รับหินรูน ${droppedRune.name}`, true);
-    addExp(rewardExp);
-    gameState.gold += rewardGold;
-
-    const questBoss = gameState.dailyQuests.find(q => q.id === 'dq_boss');
-    if (questBoss) questBoss.current = Math.min(questBoss.target, questBoss.current + 1);
-
-    if (currentBoss.id === 'boss_2_major') {
-      const ach = gameState.achievements.find(a => a.id === 'ach_boss_juggernaut');
-      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-    } else if (currentBoss.tier === 'TIER III') {
-      const ach = gameState.achievements.find(a => a.id === 'ach_boss_dragon');
-      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-    } else if (currentBoss.tier === 'TIER IV') {
-      const ach = gameState.achievements.find(a => a.id === 'ach_boss_malakor');
-      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-    } else if (currentBoss.tier === 'TIER V') {
-      const ach = gameState.achievements.find(a => a.id === 'ach_boss_titan');
-      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-    } else if (currentBoss.tier === 'TIER VI') {
-      const ach = gameState.achievements.find(a => a.id === 'ach_boss_empress');
-      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-    } else if (currentBoss.tier === 'TIER VII') {
-      const ach = gameState.achievements.find(a => a.id === 'ach_boss_ignis');
-      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-    } else if (currentBoss.tier === 'TIER VIII') {
-      const ach = gameState.achievements.find(a => a.id === 'ach_boss_leviathan');
-      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-    } else if (currentBoss.tier === 'TIER IX') {
-      const ach = gameState.achievements.find(a => a.id === 'ach_boss_chronos');
-      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-    } else if (currentBoss.id === 'boss_super') {
-      const ach = gameState.achievements.find(a => a.id === 'ach_superboss');
-      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-    } else if (currentBoss.id === 'boss_secret') {
-      const ach = gameState.achievements.find(a => a.id === 'ach_secretboss');
-      if (ach) ach.current = Math.min(ach.target, ach.current + 1);
-    }
-
-    const achB100 = gameState.achievements.find(a => a.id === 'ach_boss100');
-    if (achB100) achB100.current = Math.min(achB100.target, gameState.career.totalBossDefeated);
-
-    const achLoop = gameState.achievements.find(a => a.id === 'ach_loop_master');
-    if (achLoop) achLoop.current = Math.min(achLoop.target, gameState.bossLoopCycle || 0);
-
-    const achB25 = gameState.achievements.find(a => a.id === 'ach_boss25');
-    if (achB25) achB25.current = Math.min(achB25.target, gameState.career.totalBossDefeated);
-
-    const achB50 = gameState.achievements.find(a => a.id === 'ach_boss50');
-    if (achB50) achB50.current = Math.min(achB50.target, gameState.career.totalBossDefeated);
-
-    bossVulnerableTimer = 0;
-    gimmickAnnounced = {};
-    mistHealingTick = 0;
-    chronoHealingTick = 0;
-    bloodKnightStallTick = 0;
-    superbossSiphonTick = 0;
-    secretbossSiphonTick = 0;
-
-    let maxBossIndexForCurrentLoop;
-    if ((gameState.bossLoopCycle || 0) >= 3) {
-      maxBossIndexForCurrentLoop = BOSS_DATABASE.length - 1;
-    } else if ((gameState.bossLoopCycle || 0) >= 1) {
-      maxBossIndexForCurrentLoop = BOSS_DATABASE.length - 2;
-    } else {
-      maxBossIndexForCurrentLoop = BOSS_DATABASE.length - 3;
-    }
-
-    let nextBossIndex;
-    if (gameState.bossIndex >= maxBossIndexForCurrentLoop) {
-      gameState.bossLoopCycle = (gameState.bossLoopCycle || 0) + 1;
-      nextBossIndex = 0;
-      showToast(`🔥 วนลูปสังเวียน AWAKENED LOOP ${gameState.bossLoopCycle}! บอสเลือด +${gameState.bossLoopCycle * 15}%!`);
-      speakVoice(`พิชิตบอสรอบนี้สำเร็จแล้ว! เข้าสู่สังเวียนอเวจีรอบที่ ${gameState.bossLoopCycle}`, true);
-    } else {
-      nextBossIndex = gameState.bossIndex + 1;
-      if (nextBossIndex === BOSS_DATABASE.length - 2) {
-        showToast('⚠️ ประตูมิติระดับสูงสุดเปิดออก! COSMIC SUPER BOSS ปรากฏกาย!');
-        speakVoice('ประตูมิติระดับสูงสุดเปิดออก เทพอสูรคอสมิก ปรากฏกาย!', true);
-      } else if (nextBossIndex === BOSS_DATABASE.length - 1) {
-        showToast('🌌 ห้วงอเวจีโบราณแยกออก! มหาอสูรลับ PRIMORDIAL SOVEREIGN ตื่นขึ้นแล้ว!');
-        speakVoice('คำเตือนระดับสูงสุด ประตูมิติมืดมิดเปิดออก เทพอสูรลับ บรรพกาล ปรากฏกาย!', true);
-      }
-    }
-
-    gameState.bossIndex = nextBossIndex;
-    gameState.bossHpRemain = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
-
-    saveGame();
-    renderUI();
-  }
-
-  function applyDistanceDamage(distanceDeltaKm) {
-    if (distanceDeltaKm <= 0) return;
-
-    const currentBoss = BOSS_DATABASE[gameState.bossIndex];
-    const bossMaxHp = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
-    const bossHpPct = gameState.bossHpRemain / bossMaxHp;
-    const eqBonus = calculateEquipmentBonuses();
-    const setCounts = eqBonus.setCounts;
-    const isLoop = (gameState.bossLoopCycle || 0) >= 1;
-
-    let ultChargeBonusMult = isFlowStateActive ? 1.5 : 1.0;
-    
-    if (currentBoss.gimmick === 'empress' && bossHpPct <= 0.65 && bossHpPct > 0.25) {
-      if (currentHrZone === 2 || currentHrZone === 3 || isFrenzyActive) {
-        ultChargeBonusMult *= 2.0;
-      }
-    }
-
-    if (currentBoss.gimmick === 'supernova' && bossHpPct <= 0.50) {
-      ultChargeBonusMult *= 1.5;
-    }
-
-    addUltimateCharge((distanceDeltaKm * 8) * ultChargeBonusMult);
-
-    const baseFlowKm = setCounts.voidwalker >= 2 ? 0.15 : 0.30;
-    const flowSpeedMult = 1 + ((eqBonus.bonusFlow || 0) * 0.01);
-    const flowThresholdKm = baseFlowKm / flowSpeedMult;
-    let rollingPace = getRecentRollingPace();
-
-    if (rollingPace === null && isSimMode && runDistanceKm >= 0.05) {
-      rollingPace = (runSeconds / 60) / runDistanceKm;
-    }
-
-    if (rollingPace !== null && rollingPace >= 2.5 && rollingPace <= 15.0) {
-      if (rhythmBaselinePace === null) {
-        rhythmBaselinePace = rollingPace;
-        rhythmConsistentDistance = 0.0;
-        flowGraceStrikes = 0;
-      } else {
-        const paceDiff = Math.abs(rollingPace - rhythmBaselinePace);
-        if (paceDiff <= 0.45) {
-          rhythmConsistentDistance += distanceDeltaKm;
-          flowGraceStrikes = 0;
-          rhythmBaselinePace = (rhythmBaselinePace * 0.75) + (rollingPace * 0.25);
-
-          if (rhythmConsistentDistance >= flowThresholdKm && !isFlowStateActive) {
-            isFlowStateActive = true;
-            gameState.statsTrack.flowStateCount = (gameState.statsTrack.flowStateCount || 0) + 1;
-            const achFlow = gameState.achievements.find(a => a.id === 'ach_flow_count');
-            if (achFlow) achFlow.current = Math.min(achFlow.target, gameState.statsTrack.flowStateCount);
-
-            const achF60 = gameState.achievements.find(a => a.id === 'ach_flow60');
-            if (achF60) achF60.current = Math.min(achF60.target, gameState.statsTrack.flowStateCount);
-
-            showToast('🌊 เข้าสู่สภาวะ FLOW STATE! โบนัส EXP +50% & เกจไม้ตายชาร์จไว x1.5');
-            speakVoice('เข้าสู่สภาวะโฟลว์สเตท คุมจังหวะยอดเยี่ยม');
-          }
-        } else {
-          flowGraceStrikes++;
-          if (flowGraceStrikes > 3) {
-            rhythmBaselinePace = rollingPace;
-            rhythmConsistentDistance = 0.0;
-            flowGraceStrikes = 0;
-            if (isFlowStateActive) {
-              isFlowStateActive = false;
-              showToast('หลุดจากสภาวะ Flow State');
-            }
-          }
-        }
-      }
-    }
-
-    const questDist = gameState.dailyQuests.find(q => q.id === 'dq_dist');
-    if (questDist) {
-      questDist.current = Math.min(questDist.target, parseFloat((questDist.current + distanceDeltaKm).toFixed(2)));
-    }
-
-    if (runDistanceKm >= nextChestKmCheckpoint) {
-      nextChestKmCheckpoint += 1.0;
-      const chestChance = setCounts.darktempest >= 4 ? 0.85 : 0.65;
-      if (Math.random() < chestChance) {
-        gameState.chestsAvailable += 1;
-        showToast('📦 สัญชาตญาณเงาตรวจพบ: คุณค้นพบหีบสมบัติดันเจี้ยน!');
-        speakVoice('ค้นพบหีบสมบัติใหม่');
-      }
-    }
-
-    if (!isGoblinActive && goblinCooldownSeconds <= 0 && (runDistanceKm - lastGoblinTriggerKm) >= 1.2) {
-      if (Math.random() < 0.35) {
-        lastGoblinTriggerKm = runDistanceKm;
-        startGoblinChaseEvent();
-      }
-    }
-
-    if (runDistanceKm >= nextKmAnnounceCheckpoint) {
-      const currentPace = calculatePace(runSeconds, runDistanceKm);
-      const bossRemainPct = Math.round((gameState.bossHpRemain / bossMaxHp) * 100);
-      speakVoice(`ผ่านไปแล้ว ${Math.floor(runDistanceKm)} กิโลเมตร เพซเฉลี่ย ${currentPace} เลือดบอสเหลืออีก ${bossRemainPct} เปอร์เซ็นต์`);
-      nextKmAnnounceCheckpoint += 1.0;
-    }
-
-    const frenzyDmgBonus = isFrenzyActive ? 1.5 : 1.0;
-    const strMultiplier = (1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01)) * frenzyDmgBonus;
-
-    const critStats = calculateCritStats();
-    let critChance = critStats.effectiveChance;
-    let critDmgMultiplier = critStats.critMultiplier;
-    let bossDamageMultiplier = 1.0;
-
-    if (isLoop && currentBoss.id === 'boss_1') {
-      if (rollingPace === null || rollingPace > 6.75) {
-        bossDamageMultiplier *= 0.65;
-        if (!gimmickAnnounced.gargoyleTremor) {
-          gimmickAnnounced.gargoyleTremor = true;
-          speakVoice('แผ่นดินไหวศิลาทำงาน! เร่งสปีดให้เร็วกว่าเพซ 6:45 มิฉะนั้นดาเมจลด 35%');
-          showToast('🌋 Seismic Tremor: พื้นดินสั่นสะเทือน! เร่งเพซให้ต่ำกว่า 6:45 เพื่อฝ่าดาเมจ');
-        }
-      }
-    }
-
-    if (currentBoss.gimmick === 'juggernaut') {
-      if (bossHpPct > 0.50) {
-        if (isFlowStateActive || bossVulnerableTimer > 0) {
-          bossDamageMultiplier *= 1.25;
-        } else {
-          bossDamageMultiplier *= 0.65;
-          if (!gimmickAnnounced.juggernautIron) {
-            gimmickAnnounced.juggernautIron = true;
-            speakVoice('จอมอสูรเกราะเหล็กเปิดปราการทมิฬ เข้าสู่โฟลว์สเตทเพื่อทลายเกราะ');
-            showToast('🦏 ปราการเหล็กทมิฬ: ดาเมจลด 35% (เข้าสู่ Flow State หรือใช้ท่าไม้ตายเพื่อทะลวง)');
-          }
-        }
-      } else {
-        if (!gimmickAnnounced.juggernautStomp) {
-          gimmickAnnounced.juggernautStomp = true;
-          speakVoice('จอมอสูรทุบแผ่นดินเดือด เร่งเพซและชีพจรแตะโซนสามเพื่อเคาน์เตอร์ดาเมจ', true);
-          showToast('💥 คลื่นทุบแผ่นดินเดือด: ดันชีพจร Zone 3 หรือเร่งเพซต่ำกว่า 6:00 ดาเมจทะยาน x1.75!');
-        }
-        if (isFrenzyActive || currentHrZone >= 3 || (rollingPace !== null && rollingPace <= 6.0)) {
-          bossDamageMultiplier *= 1.75;
-          critChance = Math.min(100, critChance + 25);
-        } else if (rollingPace === null || rollingPace > 7.0) {
-          bossDamageMultiplier *= 0.60;
-        }
-      }
-    }
-
-    if (isLoop && currentBoss.id === 'boss_3' && bossHpPct <= 0.50 && !gimmickAnnounced.dragonRoar) {
-      gimmickAnnounced.dragonRoar = true;
-      const siphoned = Math.floor(gameState.ultimateCharge * 0.5);
-      gameState.ultimateCharge = Math.max(0, gameState.ultimateCharge - siphoned);
-      showToast(`🐉 NECROTIC ROAR! มังกรคำรามเผาผลาญเกจไม้ตาย -${siphoned}%!`);
-      speakVoice('มังกรกระดูกคำรามสังหาร สลายเกจไม้ตายของคุณไปครึ่งหนึ่ง', true);
-    }
-
-    const mistThreshold = isLoop ? 0.85 : 0.75;
-    if (currentBoss.gimmick === 'mist' && bossHpPct <= mistThreshold) {
-      if (isLoop) {
-        critChance = Math.max(0, critChance - 15);
-      }
-      if (rollingPace === null || rollingPace > 7.5) {
-        bossDamageMultiplier *= 0.5;
-        if (!gimmickAnnounced.mistWarn) {
-          gimmickAnnounced.mistWarn = true;
-          speakVoice('หมอกคำสาปสูบวิญญาณทำงาน! เร่งฝีเท้าให้เร็วกว่าเพซ 7 นาทีครึ่งเพื่อสลายหมอก');
-          showToast('🌫️ หมอกคำสาปทำงาน: วิ่งช้ากว่า 7:30/กม. ดาเมจลด 50% และบอสจะฮีล!');
-        }
-      } else {
-        if (gimmickAnnounced.mistWarn && !gimmickAnnounced.mistClear) {
-          gimmickAnnounced.mistClear = true;
-          showToast('💨 วิ่งฉีกหมอกคำสาปสำเร็จ! ดาเมจกลับคืนเต็มอัตรา');
-        }
-      }
-    }
-
-    if (currentBoss.gimmick === 'carapace') {
-      const baseCarapaceReduction = isLoop ? 0.40 : 0.55;
-      if (bossVulnerableTimer > 0) {
-        bossDamageMultiplier *= 2.0;
-      } else {
-        bossDamageMultiplier *= baseCarapaceReduction;
-      }
-
-      if (bossHpPct <= 0.30) {
-        if (!gimmickAnnounced.titanEnrage) {
-          gimmickAnnounced.titanEnrage = true;
-          speakVoice('ไททันศิลาคำรามคลุ้มคลั่ง! เร่งชีพจรแตะโซนสามเพื่อเคาน์เตอร์ดาเมจ', true);
-          showToast('🗿 ไททันคลุ้มคลั่ง: ดันชีพจรเข้า Zone 3 เพื่อทำลายจังหวะทุบแผ่นดิน!');
-        }
-        if (isFrenzyActive || currentHrZone === 3) {
-          bossDamageMultiplier *= 1.5;
-        }
-      }
-    }
-
-    if (currentBoss.gimmick === 'empress') {
-      const empressReduction = isLoop ? 0.40 : 0.55;
-      if (bossHpPct > 0.65) {
-        if (isFlowStateActive) {
-          critChance = Math.min(100, critChance + 20);
-          bossDamageMultiplier *= 1.2;
-        } else {
-          bossDamageMultiplier *= empressReduction;
-          if (!gimmickAnnounced.empressP1) {
-            gimmickAnnounced.empressP1 = true;
-            speakVoice('จักรพรรดินีแยกร่างเงาหลอก วิ่งคุมเพซสม่ำเสมอเพื่อเข้าสู่โฟลว์สเตท');
-            showToast(`👑 ร่างเงาลวง: ดาเมจลด ${Math.round((1 - empressReduction) * 100)}% (เข้าสู่ Flow State เพื่อทลายร่างแยก)`);
-          }
-        }
-      } else if (bossHpPct <= 0.65 && bossHpPct > 0.25) {
-        if (!gimmickAnnounced.empressP2) {
-          gimmickAnnounced.empressP2 = true;
-          speakVoice('เข้าสู่เฟสสอง สนามเรโซแนนซ์ ชาร์จไม้ตายไวขึ้นในโซนสองและสาม');
-          showToast('⚡ เฟส 2 เรโซแนนซ์: วิ่ง Zone 2 หรือ 3 ชาร์จท่าไม้ตายไวขึ้น!');
-        }
-      } else {
-        if (!gimmickAnnounced.empressP3) {
-          gimmickAnnounced.empressP3 = true;
-          speakVoice('เข้าสู่จันทรคราสทมิฬขั้นสุดท้าย! ปลดปล่อยพลังทั้งหมดเพื่อปิดฉาก', true);
-          showToast('🌑 จันทรคราสทมิฬ: พลังโจมตีและคริติคอลพุ่งทะยาน เร่งสปีดสังหาร!');
-        }
-        bossDamageMultiplier *= 1.40;
-        critChance = Math.min(100, critChance + 25);
-      }
-    }
-
-    if (currentBoss.gimmick === 'supernova') {
-      if (bossHpPct > 0.50) {
-        if (!gimmickAnnounced.ignisSolar) {
-          gimmickAnnounced.ignisSolar = true;
-          speakVoice('เทพอสูรเพลิงสุริยคราสปลดปล่อยคลื่นความร้อน สะสมระยะทางฝ่าเปลวเพลิง');
-          showToast('☄️ คลื่นสุริยคราส: วิ่งรักษาระยะทางอย่างมั่นคงเพื่อทลายเกราะสุริยะ');
-        }
-      } else {
-        if (!gimmickAnnounced.ignisSupernova) {
-          gimmickAnnounced.ignisSupernova = true;
-          speakVoice('คำเตือนระดับสูงสุด! อสูรเพลิงเข้าสู่สภาวะซูเปอร์โนวา ปลดปล่อยท่าไม้ตายรัวๆ เพื่อปิดฉาก', true);
-          showToast('💥 SOLAR SUPERNOVA! เกจไม้ตายชาร์จไว x1.5 ปลดปล่อย Shadow Slash สังหาร');
-        }
-        bossDamageMultiplier *= 1.35;
-        critChance = Math.min(100, critChance + 20);
-      }
-    }
-
-    if (currentBoss.gimmick === 'singularity') {
-      if (bossHpPct > 0.50) {
-        if (!gimmickAnnounced.leviathanGrav) {
-          gimmickAnnounced.leviathanGrav = true;
-          speakVoice('เลเวียธานบรรพกาลแผ่สนามแรงโน้มถ่วงมิติอเวจี สะสมระยะทางฝ่าความว่างเปล่า');
-          showToast('🌌 สนามแรงโน้มถ่วง: ก้าววิ่งมั่นคงฝ่าแรงดึงดูดมิติอเวจี');
-        }
-      } else if (bossHpPct <= 0.50 && bossHpPct > 0.20) {
-        if (!gimmickAnnounced.leviathanVoid) {
-          gimmickAnnounced.leviathanVoid = true;
-          speakVoice('หลุมดำมิติอเวจีเริ่มดูดกลืนพลัง! เกจไม้ตายหยุดชาร์จตามเวลา ต้องอาศัยก้าววิ่งเท่านั้น', true);
-          showToast('🕳️ หลุมดำดูดกลืน: เกจไม้ตายไม่ชาร์จตามเวลา วิ่งเร่งก้าวเพื่อสะสมพลัง!');
-        }
-      } else {
-        if (!gimmickAnnounced.leviathanSingularity) {
-          gimmickAnnounced.leviathanSingularity = true;
-          speakVoice('คำเตือนฉุกเฉิน! แกนซิงกูลาริตียุบตัว เร่งสปีดแตะโซนสามหรือทำคริติคอล ดาเมจทวีคูณสองจุดห้าเท่า!', true);
-          showToast('🌀 SINGULARITY COLLAPSE! ชีพจร Zone 3-4 หรือคริติคอล ดาเมจทะลวง x2.5!');
-        }
-        if (isFrenzyActive || currentHrZone >= 3) {
-          bossDamageMultiplier *= 2.5;
-        }
-      }
-    }
-
-    if (currentBoss.gimmick === 'chrono') {
-      const paceTarget = isLoop ? 6.25 : 6.5;
-      const boostMult = isLoop ? 3.5 : 3.0;
-
-      if (rollingPace !== null && rollingPace <= paceTarget) {
-        bossDamageMultiplier *= boostMult;
-        critChance = Math.min(100, critChance + 30);
-        if (!gimmickAnnounced.chronoBreak) {
-          gimmickAnnounced.chronoBreak = true;
-          gimmickAnnounced.chronoRewind = false;
-          speakVoice('มิติเวลาแตกสลาย! เพซทะลวงมิติดาเมจทวีคูณ', true);
-          showToast(`⏳ TIME SHATTER! เพซเร็วกว่า 6:15 ทะลวงมิติดาเมจ x${boostMult.toFixed(1)}!`);
-        }
-      } else if (rollingPace === null || rollingPace > 8.0) {
-        bossDamageMultiplier *= 0.6;
-        if (!gimmickAnnounced.chronoRewind) {
-          gimmickAnnounced.chronoRewind = true;
-          gimmickAnnounced.chronoBreak = false;
-          speakVoice('มิติเวลาหมุนย้อนกลับ! เพซช้ากว่า 8:00 บอสจะฟื้นฟูเลือด');
-          showToast('⏳ CHRONO REWIND: เพซช้ากว่า 8:00 บอสดูดซับเวลาฟื้นฟูเลือด!');
-        }
-      }
-    }
-
-    if (currentBoss.gimmick === 'superboss') {
-      if (bossHpPct > 0.65) {
-        if (bossVulnerableTimer > 0) {
-          bossDamageMultiplier *= 2.0;
-        } else {
-          bossDamageMultiplier *= 0.30;
-          if (!gimmickAnnounced.superbossP1) {
-            gimmickAnnounced.superbossP1 = true;
-            speakVoice('เทพอสูรคอสมิกแผ่เกราะความว่างเปล่าสมบูรณ์ ปลดปล่อยท่าไม้ตายเพื่อทำลายเกราะ', true);
-            showToast('👁️‍🗨️ Void Absolute: เกราะลดดาเมจ 70%! ปลดปล่อย Shadow Slash เพื่อกะเทาะเกราะ');
-          }
-        }
-      } else if (bossHpPct <= 0.65 && bossHpPct > 0.30) {
-        if (!gimmickAnnounced.superbossP2) {
-          gimmickAnnounced.superbossP2 = true;
-          speakVoice('เข้าสู่เฟสสอง มิติว่างเปล่าดูดกลืน รักษาเพซให้เร็วกว่า 7:00');
-          showToast('🕳 Singularity Siphon: เพซช้ากว่า 7:00 บอสจะดูดเกจและฮีลเลือด!');
-        }
-        if (rollingPace === null || rollingPace > 7.0) {
-          bossDamageMultiplier *= 0.50;
-        }
-      } else {
-        if (!gimmickAnnounced.superbossP3) {
-          gimmickAnnounced.superbossP3 = true;
-          speakVoice('คำเตือนฉุกเฉินระดับสูงสุด! เทพอสูรใกล้ดับสูญ ระเบิดพลังทั้งหมดสังหาร!', true);
-          showToast('🌌 Cosmic Collapse: เข้าสู่ Zone 3-4 หรือ Flow State ดาเมจคริติคอลทะยาน x3.0!');
-        }
-        if (isFrenzyActive || currentHrZone >= 3 || isFlowStateActive) {
-          bossDamageMultiplier *= 1.8;
-          critDmgMultiplier *= 1.5;
-        }
-      }
-    }
-
-    if (currentBoss.gimmick === 'secretboss') {
-      if (bossHpPct > 0.60) {
-        if (bossVulnerableTimer > 0 || isFlowStateActive) {
-          bossDamageMultiplier *= 1.8;
-        } else {
-          bossDamageMultiplier *= 0.25;
-          if (!gimmickAnnounced.secretbossP1) {
-            gimmickAnnounced.secretbossP1 = true;
-            speakVoice('มหาอสูรลับแผ่เกราะบิดเบือนมิติ เข้าสู่โฟลว์สเตท หรือปลดปล่อยท่าไม้ตายเพื่อทะลวงเกราะ', true);
-            showToast('🌌 Void Distortion: เกราะลดดาเมจ 75%! เข้าสู่ Flow State หรือใช้ Shadow Slash ทลายเกราะ');
-          }
-        }
-      } else if (bossHpPct <= 0.60 && bossHpPct > 0.30) {
-        if (!gimmickAnnounced.secretbossP2) {
-          gimmickAnnounced.secretbossP2 = true;
-          speakVoice('เข้าสู่เฟสสอง แรงกดดันมิติอเวจี ดันชีพจรแตะโซนสามและคุมเพซให้เร็วกว่า 7:00 มิฉะนั้นเกจไม้ตายจะถูกดูดกลืน');
-          showToast('🕳️ Event Horizon: ดันชีพจร Zone 3 และวิ่งเร็วกว่า 7:00 มิฉะนั้นบอสจะดูดเกจและฟื้นเลือด!');
-        }
-        if (rollingPace === null || rollingPace > 7.0 || currentHrZone < 3) {
-          bossDamageMultiplier *= 0.40;
-        } else {
-          bossDamageMultiplier *= 1.50;
-        }
-      } else {
-        if (!gimmickAnnounced.secretbossP3) {
-          gimmickAnnounced.secretbossP3 = true;
-          speakVoice('คำเตือนฉุกเฉินระดับสูงสุด! ห้วงมิติกำลังดับสูญ ระเบิดคริติคอลพลังทำลายล้างสูงสุดเพื่อปิดฉาก!', true);
-          showToast('💥 Omniverse Collapse: มิติกำลังดับสูญ! ดาเมจคริติคอลทะยาน x3.5 สปรินต์เผด็จศึก!');
-        }
-        bossDamageMultiplier *= 2.2;
-        critDmgMultiplier *= 1.8;
-      }
-    }
-
-    if (eqBonus.bonusArmorPierce > 0 && bossDamageMultiplier < 1.0) {
-      bossDamageMultiplier = Math.min(1.0, bossDamageMultiplier + (eqBonus.bonusArmorPierce * 0.01));
-    }
-
-    if (setCounts.voidwalker >= 4 && isFlowStateActive) {
-      if (bossDamageMultiplier < 1.0) {
-        bossDamageMultiplier = 1.0;
-      }
-    }
-
-    const isCrit = (Math.random() * 100) < critChance;
-
-    if (currentBoss.gimmick === 'carapace' && bossVulnerableTimer <= 0 && isCrit) {
-      bossDamageMultiplier = (bossDamageMultiplier / (isLoop ? 0.40 : 0.55));
-    }
-
-    const baseDamageForField = distanceDeltaKm * strMultiplier * (isCrit ? critDmgMultiplier : 1.0);
-    const effectiveDamage = baseDamageForField * bossDamageMultiplier;
-
-    if (isCrit) {
-      addUltimateCharge(1);
-      const questCrit = gameState.dailyQuests.find(q => q.id === 'dq_crit');
-      if (questCrit) questCrit.current = Math.min(questCrit.target, questCrit.current + 1);
-      showToast(`💥 CRITICAL! ดาเมจทะลวง x${critDmgMultiplier.toFixed(2)}`);
-    }
-
-    // Apply simultaneous combat damage to any Roaming Field Monster engaged within 10m
-    if (App.MapEngine) {
-      const avgPaceDec = (runDistanceKm >= 0.02 && runSeconds > 0) ? ((runSeconds / 60) / runDistanceKm) : null;
-      App.MapEngine.applyFieldCombatDamage(baseDamageForField, {
-        isCrit,
-        isFlowStateActive,
-        isFrenzyActive,
-        currentHrZone,
-        rollingPace,
-        avgPace: avgPaceDec
-      });
-    }
-
-    gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - effectiveDamage);
-
-    if (gameState.bossHpRemain <= 0.001) {
-      handleBossDefeat(currentBoss, 0);
-    }
-
-    saveGame();
-    renderHUD();
-  }
-
-  function activateUltimateSkill(tier = 1) {
-    const cost = tier * 100;
-    if (gameState.ultimateCharge < cost || !isRunning) {
-      if (!isRunning) showToast('กรุณากดเริ่มออกล่าก่อนใช้ท่าไม้ตาย');
-      return;
-    }
-
-    gameState.ultimateCharge = Math.max(0, gameState.ultimateCharge - cost);
-    const eqBonus = calculateEquipmentBonuses();
-    const setCounts = eqBonus.setCounts;
-    const strMultiplier = 1 + Math.max(0, (gameState.stats.str - 10) * 0.05) + (gameState.upgrades.blade * 0.05) + (eqBonus.bonusDmg * 0.01);
-    const shadowSetDmgMult = setCounts.shadowstalker >= 4 ? 1.5 : 1.0;
-    const ringUltDmgMult = 1 + ((eqBonus.bonusUltDmg || 0) * 0.01);
-
-    const tierBaseDamages = { 1: 0.40, 2: 1.00, 3: 2.20 };
-    const tierOverdriveSec = { 1: 30, 2: 60, 3: 90 };
-    const tierVulnSec = { 1: 60, 2: 90, 3: 120 };
-
-    let burstDamageKm = tierBaseDamages[tier] * strMultiplier * shadowSetDmgMult * ringUltDmgMult;
-    const currentBoss = BOSS_DATABASE[gameState.bossIndex];
-
-    if (setCounts.darktempest >= 4) {
-      burstDamageKm += 0.35;
-      tempestCritBuffSeconds = 15;
-      showToast('⚡ TEMPEST WRATH! สายฟ้าฟาด +0.35 กม. และล็อกคริติคอล 100% 15 วิ!');
-    }
-
-    if (setCounts.voidannihilator >= 4) {
-      const refund = cost * 0.30;
-      gameState.ultimateCharge = Math.min(300, gameState.ultimateCharge + refund);
-      showToast(`⚡ มหาอสูรล้างดารา: รีฟันด์เกจคืน +${refund.toFixed(0)}%!`);
-    }
-
-    gameState.statsTrack.ultCastCount = (gameState.statsTrack.ultCastCount || 0) + 1;
-    const achUlt = gameState.achievements.find(a => a.id === 'ach_ult_cast');
-    if (achUlt) achUlt.current = Math.min(achUlt.target, gameState.statsTrack.ultCastCount);
-
-    const achUlt150 = gameState.achievements.find(a => a.id === 'ach_ult150');
-    if (achUlt150) achUlt150.current = Math.min(achUlt150.target, gameState.statsTrack.ultCastCount);
-
-    const questUlt = gameState.dailyQuests.find(q => q.id === 'dq_ult');
-    if (questUlt) questUlt.current = Math.min(questUlt.target, questUlt.current + 1);
-
-    if (currentBoss.gimmick === 'carapace' || currentBoss.gimmick === 'superboss' || currentBoss.gimmick === 'juggernaut' || currentBoss.gimmick === 'secretboss') {
-      const bonusVuln = setCounts.shadowstalker >= 4 ? 30 : 0;
-      bossVulnerableTimer = tierVulnSec[tier] + bonusVuln;
-      showToast(`💥 SHADOW SLASH (Lv.${tier}) กะเทาะเกราะแตก! บอสเปราะบาง (${bossVulnerableTimer} วิ)`);
-      speakVoice(`คมดาบระดับ ${tier} ผ่าเกราะแตกสะบั้น บอสติดสถานะเปราะบาง`, true);
-    } else {
-      showToast(`🗡️ SHADOW SLASH (Lv.${tier})! เฉือนบอส ${burstDamageKm.toFixed(2)} กม.!`);
-      speakVoice(`ปลดปล่อยคมดาบอเวจีระดับ ${tier}! เข้าสู่สภาวะโอเวอร์ไดรฟ์`, true);
-    }
-
-    gameState.bossHpRemain = Math.max(0, gameState.bossHpRemain - burstDamageKm);
-
-    if (App.MapEngine) {
-      App.MapEngine.applyUltimateBurstToEncounter(burstDamageKm);
-    }
-
-    const tempestBonusSec = setCounts.darktempest >= 2 ? 20 : 0;
-    triggerOverdriveBuff(tierOverdriveSec[tier] + tempestBonusSec);
-
-    if (gameState.bossHpRemain <= 0.001) {
-      handleBossDefeat(currentBoss, tier);
-    }
-
-    saveGame();
-    renderUI();
-  }
-
-  btnCastUlt1.addEventListener('click', () => activateUltimateSkill(1));
-  btnCastUlt2.addEventListener('click', () => activateUltimateSkill(2));
-  btnCastUlt3.addEventListener('click', () => activateUltimateSkill(3));
-
   function openMysteryChest() {
     if (gameState.chestsAvailable <= 0) return;
     gameState.chestsAvailable -= 1;
@@ -2025,16 +1329,8 @@
       const newItem = rollRandomItem(true, gameState.bossLoopCycle || 0);
       gameState.inventory.push(newItem);
       const setLabel = SET_DATABASE[newItem.setId] ? ` [${SET_DATABASE[newItem.setId].name}]` : '';
-      if (newItem.rarity === 'cosmic') {
-        showToast(`🌌 ULTRA JACKPOT COSMIC! [${newItem.name}]${setLabel}!`);
-        speakVoice('ค้นพบอุปกรณ์ระดับจักรวาล คอสมิก', true);
-      } else if (newItem.rarity === 'mythic') {
-        showToast(`🌟 JACKPOT MYTHIC! [${newItem.name}]${setLabel}!`);
-        speakVoice('ค้นพบอุปกรณ์ระดับอเวจีโบราณ มิธทิค', true);
-      } else {
-        showToast(`🎁 พบอุปกรณ์: [${newItem.rarity.toUpperCase()}] ${newItem.name}${setLabel}!`);
-        speakVoice(`ได้รับอุปกรณ์ระดับ ${newItem.rarity}`);
-      }
+      showToast(`🎁 พบอุปกรณ์: [${newItem.rarity.toUpperCase()}] ${newItem.name}${setLabel}!`);
+      speakVoice(`ได้รับอุปกรณ์ระดับ ${newItem.rarity}`);
     } else if (roll < 0.65) {
       const droppedRune = rollRandomRuneDrop(false);
       showToast(`🪨 พบหินรูนโบราณ: ${droppedRune.name} Rune! (${droppedRune.statDesc})`);
@@ -2084,7 +1380,6 @@
       const reqCount = rw.runes.length;
       const isExactSocketCount = item.socketsMax === reqCount;
 
-      // Check if currently inserted runes match prefix of this runeword
       let prefixMatches = true;
       for (let i = 0; i < inserted.length; i++) {
         if (inserted[i] !== rw.runes[i]) {
@@ -2093,7 +1388,6 @@
         }
       }
 
-      // Check if player owns all missing runes in Stash
       const neededCounts = {};
       for (let i = inserted.length; i < reqCount; i++) {
         const rk = rw.runes[i];
@@ -2170,14 +1464,8 @@
     runewordCodexModalEl.style.display = 'flex';
   }
 
-  if (btnOpenRunewordCodex) {
-    btnOpenRunewordCodex.addEventListener('click', openRunewordCodexModal);
-  }
-  if (btnRwCodexClose) {
-    btnRwCodexClose.addEventListener('click', () => {
-      runewordCodexModalEl.style.display = 'none';
-    });
-  }
+  if (btnOpenRunewordCodex) btnOpenRunewordCodex.addEventListener('click', openRunewordCodexModal);
+  if (btnRwCodexClose) btnRwCodexClose.addEventListener('click', () => { runewordCodexModalEl.style.display = 'none'; });
 
   function renderRuneStash() {
     if (!runeGridEl || !runeCountSummaryEl) return;
@@ -2337,12 +1625,7 @@
     const loopText = item.loopLevel ? ` [Loop ${item.loopLevel}]` : '';
     modalItemRarityEl.className = `modal-item-rarity rarity-${item.rarity}`;
     modalItemRarityEl.textContent = `ระดับ: ${item.rarity.toUpperCase()}${loopText}`;
-
-    if (item.rarity === 'cosmic') {
-      modalItemRarityEl.style.color = '#38bdf8';
-    } else {
-      modalItemRarityEl.style.color = `var(--rarity-${item.rarity})`;
-    }
+    modalItemRarityEl.style.color = item.rarity === 'cosmic' ? '#38bdf8' : `var(--rarity-${item.rarity})`;
 
     if (item.setId && SET_DATABASE[item.setId]) {
       const s = SET_DATABASE[item.setId];
@@ -2388,7 +1671,6 @@
       modalRunewordDescBoxEl.style.display = 'none';
     }
 
-    // Show Runeword Advisor recommendations for this item type (especially Weapons!)
     renderRunewordAdvisorForItem(item, modalRwAdvisorBoxEl, modalRwAdvisorListEl);
 
     const statTypeNames = {
@@ -2433,9 +1715,7 @@
     const currentEquipped = gameState.equipment[type];
 
     gameState.inventory = gameState.inventory.filter(i => i.id !== selectedInventoryItem.id);
-    if (currentEquipped) {
-      gameState.inventory.push(currentEquipped);
-    }
+    if (currentEquipped) gameState.inventory.push(currentEquipped);
     gameState.equipment[type] = selectedInventoryItem;
 
     showToast(`⚔️ สวมใส่ ${selectedInventoryItem.name} เรียบร้อย!`);
@@ -2473,20 +1753,16 @@
     });
   });
 
-  // --- Rune Socketing Modal Engine ---
   function openSocketModal() {
     if (!selectedInventoryItem || selectedInventoryItem.socketsMax <= 0) return;
     itemModalEl.style.display = 'none';
-
     renderSocketModalUI();
     socketModalEl.style.display = 'flex';
   }
 
   function closeSocketModal() {
     socketModalEl.style.display = 'none';
-    if (selectedInventoryItem) {
-      openItemModal(selectedInventoryItem);
-    }
+    if (selectedInventoryItem) openItemModal(selectedInventoryItem);
   }
 
   function renderSocketModalUI() {
@@ -2515,7 +1791,6 @@
       socketSlotsDisplayEl.appendChild(row);
     }
 
-    // Live Runeword Recipe Guide inside Socketing Station
     renderRunewordAdvisorForItem(item, socketAdvisorBoxEl, socketAdvisorListEl);
 
     const hasEmptySlot = item.socketedRunes.length < item.socketsMax;
@@ -2609,15 +1884,17 @@
     codexListEl.innerHTML = '';
     BOSS_DATABASE.forEach(boss => {
       const bInfo = gameState.bestiary[boss.id] || { kills: 0 };
+      const weakEl = ELEMENT_DATABASE[boss.weakElement];
+      const resEl = ELEMENT_DATABASE[boss.resistElement];
       const card = document.createElement('div');
       card.className = 'codex-item';
       card.innerHTML = `
         <div class="codex-avatar">${boss.avatar}</div>
         <div class="codex-info">
           <div class="codex-name">${boss.name}</div>
-          <div class="codex-tier">${boss.tier} | เลือดฐาน ${boss.maxHpKm.toFixed(2)} กม.</div>
+          <div class="codex-tier">${boss.tier} • แพ้: ${weakEl ? weakEl.icon + weakEl.name : '-'} | ต้าน: ${resEl ? resEl.icon + resEl.name : '-'}</div>
         </div>
-        <div class="codex-kills">สยบแล้ว: ${bInfo.kills} ตัว</div>
+        <div class="codex-kills">สยบ: ${bInfo.kills}</div>
       `;
       codexListEl.appendChild(card);
     });
@@ -2627,15 +1904,16 @@
       ROAMING_MONSTER_DATABASE.forEach(rm => {
         const bInfo = gameState.bestiary[rm.id] || { kills: 0 };
         const scaled = App.getRoamingMonsterScaledStats(rm, gameState.level || 1);
+        const tomeInfo = ELEMENT_DATABASE[rm.dropTomeElement];
         const card = document.createElement('div');
         card.className = 'codex-item roaming-codex';
         card.innerHTML = `
           <div class="codex-avatar">${rm.avatar}</div>
           <div class="codex-info">
             <div class="codex-name">${rm.name} (${rm.thName})</div>
-            <div class="codex-tier">${rm.rarityLabel} | HP LV.${scaled.level}: ${scaled.maxHpKm.toFixed(2)} กม. • ${rm.rewardHint}</div>
+            <div class="codex-tier">HP LV.${scaled.level}: ${scaled.maxHpKm.toFixed(2)} กม. • ดรอป: 📕 คัมภีร์${tomeInfo ? tomeInfo.name : '-'}</div>
           </div>
-          <div class="codex-kills">สยบแล้ว: ${bInfo.kills} ตัว</div>
+          <div class="codex-kills">สยบ: ${bInfo.kills}</div>
         `;
         codexRoamingListEl.appendChild(card);
       });
@@ -2648,7 +1926,7 @@
     const history = await DB.getAllRunHistory();
     const backupData = {
       app: 'ShadowStrider',
-      version: 2,
+      version: 3,
       exportedAt: new Date().toISOString(),
       playerState: gameState,
       history
@@ -2854,9 +2132,7 @@
   }
 
   function renderHUD() {
-    if (playerNameEl) {
-      playerNameEl.textContent = gameState.playerName || 'Abyss Stalker';
-    }
+    if (playerNameEl) playerNameEl.textContent = gameState.playerName || 'Abyss Stalker';
     playerTitleEl.textContent = gameState.title || getTitleForLevel(gameState.level);
     playerLevelEl.textContent = `LV. ${gameState.level}`;
     const expPercent = Math.min(100, Math.round((gameState.currentExp / gameState.nextExp) * 100));
@@ -2870,9 +2146,7 @@
     statPointsBarEl.style.display = hasPoints ? 'block' : 'none';
     statPointsValEl.textContent = gameState.statPoints || 0;
 
-    [btnAddStr, btnAddSta, btnAddAgi].forEach(btn => {
-      btn.classList.toggle('active', hasPoints);
-    });
+    [btnAddStr, btnAddSta, btnAddAgi].forEach(btn => btn.classList.toggle('active', hasPoints));
 
     statStrEl.textContent = gameState.stats.str;
     statStaEl.textContent = gameState.stats.sta;
@@ -2894,15 +2168,32 @@
       agiCritEl.textContent = `คริติคอล ${critStats.agiCritRate.toFixed(1)}% (แรง x${critStats.critMultiplier.toFixed(2)})`;
     }
 
+    // Boss Display & Elemental Weakness/Resistance Tags
     const boss = BOSS_DATABASE[gameState.bossIndex];
     const isLoop = (gameState.bossLoopCycle || 0) >= 1;
     const currentBossMaxHp = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
+    const combatSnap = App.CombatEngine ? App.CombatEngine.getCombatSnapshot() : { bossVulnerableTimer: 0 };
 
     bossTierEl.textContent = isLoop ? `${boss.tier} [LOOP ${gameState.bossLoopCycle}]` : boss.tier;
     bossTierEl.classList.toggle('loop-active', isLoop);
     bossCardEl.classList.toggle('awakened-active', isLoop);
     bossAvatarEl.textContent = boss.avatar;
     bossNameEl.textContent = isLoop ? `Awakened ${boss.name}` : boss.name;
+
+    const mainEl = ELEMENT_DATABASE[boss.element];
+    const weakEl = ELEMENT_DATABASE[boss.weakElement];
+    const resEl = ELEMENT_DATABASE[boss.resistElement];
+    if (bossElemMainEl && mainEl) {
+      bossElemMainEl.className = `elem-badge ${mainEl.cssClass}`;
+      bossElemMainEl.textContent = `${mainEl.icon} ธาตุ${mainEl.name}`;
+    }
+    if (bossElemWeakEl && weakEl) {
+      bossElemWeakEl.textContent = `แพ้ทาง: ${weakEl.icon} ${weakEl.name} (x2)`;
+    }
+    if (bossElemResEl && resEl) {
+      bossElemResEl.textContent = `ต้านทาน: ${resEl.icon} ${resEl.name}`;
+    }
+
     bossDescEl.textContent = boss.desc;
     bossHpMaxEl.textContent = currentBossMaxHp.toFixed(2);
     bossHpRemainEl.textContent = gameState.bossHpRemain.toFixed(2);
@@ -2913,52 +2204,46 @@
     bossGimmickBannerEl.className = 'boss-gimmick-banner';
     bossCardEl.classList.remove('eclipse-active', 'supernova-active', 'singularity-active', 'chrono-active', 'superboss-active', 'secretboss-active', 'juggernaut-active');
 
-    if (isLoop) {
-      bossGimmickBannerEl.classList.add('active-awakened');
-    }
+    if (isLoop) bossGimmickBannerEl.classList.add('active-awakened');
 
     if (boss.gimmick === 'juggernaut') {
       bossGimmickBannerEl.style.display = 'flex';
       bossCardEl.classList.add('juggernaut-active');
       if (bossHpPct > 0.50) {
         bossGimmickTagEl.textContent = '🦏 ปราการเหล็กทมิฬ';
-        bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทะลวงเกราะเหล็กแล้ว!' : 'เกราะเหล็กลดดาเมจ 35% (เข้าสู่ Flow State หรือร่ายไม้ตายเพื่อเจาะเกราะ)';
+        bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทะลวงเกราะเหล็กแล้ว!' : 'เกราะเหล็กลดดาเมจ 35% (เข้าสู่ Flow State หรือร่ายไม้ตาย/เวทดินเพื่อเจาะเกราะ)';
       } else {
         bossGimmickBannerEl.classList.add('active-supernova');
         bossGimmickTagEl.textContent = '💥 ทุบแผ่นดินเดือด';
-        bossGimmickTextEl.textContent = 'เร่งเพซ < 6:00 หรือดันชีพจร Zone 3 เคาน์เตอร์ดาเมจ x1.75! (ช้ากว่า 7:00 ดาเมจลด 40%)';
+        bossGimmickTextEl.textContent = 'เร่งเพซ < 6:00 หรือดันชีพจร Zone 3 เคาน์เตอร์ดาเมจ x1.75!';
       }
     } else if (boss.gimmick === 'mist') {
       bossGimmickBannerEl.style.display = 'flex';
       const mistThresh = isLoop ? 0.85 : 0.75;
       if (bossHpPct <= mistThresh) {
         bossGimmickBannerEl.classList.add('active-mist');
-        bossGimmickTagEl.textContent = isLoop ? '🌫️ หมอกอเวจีกลืนแสง' : '🌫️ หมอกสูบวิญญาณ';
-        bossGimmickTextEl.textContent = isLoop ? 'หมอกทำงานที่ 85% คริติคอล -15% และสูบเลือดหากช้ากว่า 7:30' : 'คุมเพซให้เร็วกว่า 7:30/กม. มิฉะนั้นดาเมจลด 50% และบอสจะฮีล';
+        bossGimmickTagEl.textContent = '🌫️ หมอกสูบวิญญาณ';
+        bossGimmickTextEl.textContent = 'คุมเพซให้เร็วกว่า 7:30/กม. หรือแช่แข็งด้วยเวทน้ำแข็งเพื่อหยุดการฮีล!';
       } else {
         bossGimmickTagEl.textContent = '⏳ ผนึกหมอก';
         bossGimmickTextEl.textContent = `หมอกคำสาปจะปะทุเมื่อเลือดบอสต่ำกว่า ${Math.round(mistThresh * 100)}%`;
       }
     } else if (boss.gimmick === 'carapace') {
       bossGimmickBannerEl.style.display = 'flex';
-      if (bossVulnerableTimer > 0) {
+      if (combatSnap.bossVulnerableTimer > 0) {
         bossGimmickBannerEl.classList.add('active-vulnerable');
         bossGimmickTagEl.textContent = '🛡️ เกราะแตกสะบั้น!';
-        bossGimmickTextEl.textContent = `บอสเปราะบาง รับดาเมจ x2 นานอีก ${bossVulnerableTimer} วิ`;
-      } else if (bossHpPct <= 0.30) {
-        bossGimmickBannerEl.classList.add('active-carapace');
-        bossGimmickTagEl.textContent = '⚡ คลุ้มคลั่ง!';
-        bossGimmickTextEl.textContent = 'ดันชีพจรแตะ Zone 3 เพื่อเคาน์เตอร์ดาเมจสวนกลับ x1.5';
+        bossGimmickTextEl.textContent = `บอสเปราะบาง รับดาเมจ x2 นานอีก ${combatSnap.bossVulnerableTimer} วิ`;
       } else {
         bossGimmickBannerEl.classList.add('active-carapace');
-        bossGimmickTagEl.textContent = isLoop ? '🗿 ปราการศิลาสมบูรณ์' : '🗿 เกราะศิลาหนา';
-        bossGimmickTextEl.textContent = isLoop ? 'เกราะลดดาเมจ 60% (ต้องทำคริติคอลหรือ Shadow Slash ทลายเกราะ)' : 'ลดดาเมจ 45% (กะเทาะเกราะด้วยคริติคอล หรือ Shadow Slash)';
+        bossGimmickTagEl.textContent = '🗿 เกราะศิลาหนา';
+        bossGimmickTextEl.textContent = 'ลดดาเมจ 45% (กะเทาะเกราะด้วยคริติคอล, Shadow Slash หรือเวทพสุธา)';
       }
     } else if (boss.gimmick === 'empress') {
       bossGimmickBannerEl.style.display = 'flex';
       if (bossHpPct > 0.65) {
-        bossGimmickTagEl.textContent = isLoop ? '👑 เพลงสวดเงาลวง' : '👑 เฟส 1: ร่างเงาหลอก';
-        bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทลายร่างลวงตาแล้ว!' : `วิ่งคุมเพซเพื่อเข้าสู่ Flow State มิฉะนั้นดาเมจลด ${isLoop ? 60 : 45}%`;
+        bossGimmickTagEl.textContent = '👑 เฟส 1: ร่างเงาหลอก';
+        bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทลายร่างลวงตาแล้ว!' : 'วิ่งคุมเพซเพื่อเข้าสู่ Flow State มิฉะนั้นดาเมจลด 45%';
       } else if (bossHpPct > 0.25) {
         bossGimmickBannerEl.classList.add('active-vulnerable');
         bossGimmickTagEl.textContent = '⚡ เฟส 2: เรโซแนนซ์';
@@ -2967,7 +2252,7 @@
         bossGimmickBannerEl.classList.add('active-eclipse');
         bossCardEl.classList.add('eclipse-active');
         bossGimmickTagEl.textContent = '🌑 เฟส 3: จันทรคราส';
-        bossGimmickTextEl.textContent = 'จันทรคราสปะทุ! ดาเมจ +40% และคริติคอล +25% สปรินต์เผด็จศึก!';
+        bossGimmickTextEl.textContent = 'จันทรคราสปะทุ! ดาเมจ +40% และคริติคอล +25%';
       }
     } else if (boss.gimmick === 'supernova') {
       bossGimmickBannerEl.style.display = 'flex';
@@ -3001,68 +2286,20 @@
       bossGimmickBannerEl.style.display = 'flex';
       bossCardEl.classList.add('chrono-active');
       bossGimmickBannerEl.classList.add('active-chrono');
-      const rollingPace = getRecentRollingPace();
-      const paceTarget = isLoop ? 6.25 : 6.5;
-      if (rollingPace !== null && rollingPace <= paceTarget) {
-        bossGimmickTagEl.textContent = '⚡ TIME SHATTER';
-        bossGimmickTextEl.textContent = `ทะลวงมิติเวลาสำเร็จ (เพซ < ${isLoop ? '6:15' : '6:30'})! ดาเมจ x${isLoop ? '3.5' : '3.0'}`;
-      } else {
-        bossGimmickTagEl.textContent = '⏳ CHRONO DISTORTION';
-        bossGimmickTextEl.textContent = `เร่งเพซต่ำกว่า ${isLoop ? '6:15' : '6:30'} เพื่อทำดาเมจ x${isLoop ? '3.5' : '3.0'}! ช้ากว่า 8:00 บอสจะฮีล`;
-      }
+      bossGimmickTagEl.textContent = '⏳ CHRONO DISTORTION';
+      bossGimmickTextEl.textContent = 'เร่งเพซต่ำกว่า 6:30 เพื่อทำดาเมจ x3.0! ช้ากว่า 8:00 บอสจะฮีล (หยุดฮีลด้วยเวทน้ำแข็ง)';
     } else if (boss.gimmick === 'superboss') {
       bossGimmickBannerEl.style.display = 'flex';
       bossCardEl.classList.add('superboss-active');
       bossGimmickBannerEl.classList.add('active-superboss');
-      if (bossHpPct > 0.65) {
-        if (bossVulnerableTimer > 0) {
-          bossGimmickTagEl.textContent = '🛡️ เกราะมิติแตกสะบั้น!';
-          bossGimmickTextEl.textContent = `บอสเปราะบาง รับดาเมจ x2 นานอีก ${bossVulnerableTimer} วิ`;
-        } else {
-          bossGimmickTagEl.textContent = '👁️‍🗨️ Void Absolute (เฟส 1)';
-          bossGimmickTextEl.textContent = 'เกราะลดดาเมจ 70%! ปลดปล่อย Shadow Slash สลายเกราะ';
-        }
-      } else if (bossHpPct > 0.30) {
-        bossGimmickTagEl.textContent = '🕳️ Singularity Siphon (เฟส 2)';
-        bossGimmickTextEl.textContent = 'วิ่งเพซเร็วกว่า 7:00 มิฉะนั้นเกจไม้ตายจะถูกดูดและบอสจะฮีลเลือด!';
-      } else {
-        bossGimmickTagEl.textContent = '🌌 Cosmic Collapse (เฟส 3)';
-        bossGimmickTextEl.textContent = 'วิ่ง Zone 3-4 หรือ Flow State ดาเมจคริติคอลพุ่งทะยาน x3.0 สปรินต์ปิดฉาก!';
-      }
+      bossGimmickTagEl.textContent = '👁️‍🗨️ Cosmic Dread';
+      bossGimmickTextEl.textContent = 'เกราะมิติลดดาเมจ 70%! สลายด้วย Shadow Slash หรือทัณฑ์แสงพิพากษา';
     } else if (boss.gimmick === 'secretboss') {
       bossGimmickBannerEl.style.display = 'flex';
       bossCardEl.classList.add('secretboss-active');
       bossGimmickBannerEl.classList.add('active-secretboss');
-      if (bossHpPct > 0.60) {
-        if (bossVulnerableTimer > 0 || isFlowStateActive) {
-          bossGimmickTagEl.textContent = '🛡️ เกราะมิติบิดเบือนแตกสะบั้น!';
-          bossGimmickTextEl.textContent = isFlowStateActive ? '🌊 Flow State ทะลวงมิติสำเร็จ! ดาเมจทะลวง x1.8' : `บอสเปราะบาง รับดาเมจ x2 นานอีก ${bossVulnerableTimer} วิ`;
-        } else {
-          bossGimmickTagEl.textContent = '🌌 Void Distortion (เฟส 1)';
-          bossGimmickTextEl.textContent = 'เกราะลดดาเมจ 75%! เข้าสู่ Flow State หรือร่ายไม้ตายเพื่อทำลายเกราะ';
-        }
-      } else if (bossHpPct > 0.30) {
-        bossGimmickTagEl.textContent = '🕳️ Event Horizon (เฟส 2)';
-        bossGimmickTextEl.textContent = 'ดันชีพจร Zone 3 และคุมเพซ < 7:00 มิฉะนั้นเกจจะถูกสูบ -20% และบอสฮีลเลือด!';
-      } else {
-        bossGimmickTagEl.textContent = '💥 Omniverse Collapse (เฟส 3)';
-        bossGimmickTextEl.textContent = 'จักรวาลดับสูญ! ดาเมจคริติคอลพุ่งทะยาน x3.5 สปรินต์ปิดฉากมหาอสูรลับ!';
-      }
-    } else if (isLoop && boss.id === 'boss_1') {
-      bossGimmickBannerEl.style.display = 'flex';
-      bossGimmickBannerEl.classList.add('active-carapace');
-      bossGimmickTagEl.textContent = '🌋 Seismic Tremor';
-      bossGimmickTextEl.textContent = 'แผ่นดินไหวศิลา: วิ่งช้ากว่า 6:45 ดาเมจลด 35%';
-    } else if (isLoop && boss.id === 'boss_2') {
-      bossGimmickBannerEl.style.display = 'flex';
-      bossGimmickBannerEl.classList.add('active-mist');
-      bossGimmickTagEl.textContent = '🩸 Vampiric Drain';
-      bossGimmickTextEl.textContent = 'หากหยุดนิ่งหรือเพซช้าเกิน 8:30 นาน 12 วินาที อัศวินจะดูดเลือดคืน';
-    } else if (isLoop && boss.id === 'boss_3') {
-      bossGimmickBannerEl.style.display = 'flex';
-      bossGimmickBannerEl.classList.add('active-awakened');
-      bossGimmickTagEl.textContent = '🐉 Necrotic Roar';
-      bossGimmickTextEl.textContent = 'คำรามสูบเกจ: เมื่อเลือดแตะ 50% เกจไม้ตายจะถูกเผาผลาญ 50%';
+      bossGimmickTagEl.textContent = '🌌 Primordial Sovereign';
+      bossGimmickTextEl.textContent = 'มหาอสูรลับแห่งห้วงอเวจี! แพ้ทางอัสนีบาตฟาดพิภพ';
     } else {
       bossGimmickBannerEl.style.display = 'none';
     }
@@ -3075,9 +2312,13 @@
     }
 
     distanceValEl.textContent = runDistanceKm.toFixed(2);
-    const calValue = Math.floor(runDistanceKm * 65);
-    calValEl.textContent = `${calValue} kcal`;
+    calValEl.textContent = `${Math.floor(runDistanceKm * 65)} kcal`;
     updatePace();
+
+    // Render Mana & 6 Elemental Spells HUD
+    if (App.MagicEngine && App.MagicEngine.renderMagicHUD) {
+      App.MagicEngine.renderMagicHUD();
+    }
 
     const ultCharge = Math.min(300, Math.floor(gameState.ultimateCharge));
     const stockCount = Math.floor(ultCharge / 100);
@@ -3087,10 +2328,8 @@
     if (isRunning) {
       btnCastUlt1.disabled = ultCharge < 100;
       btnCastUlt1.className = `btn-cast-ult ${ultCharge >= 100 ? 'ready' : ''}`;
-
       btnCastUlt2.disabled = ultCharge < 200;
       btnCastUlt2.className = `btn-cast-ult ${ultCharge >= 200 ? 'ready-tier2' : ''}`;
-
       btnCastUlt3.disabled = ultCharge < 300;
       btnCastUlt3.className = `btn-cast-ult ${ultCharge >= 300 ? 'ready-tier3' : ''}`;
 
@@ -3129,9 +2368,7 @@
     }
 
     updateAutoCastUI();
-
     flowBadgeEl.style.display = isFlowStateActive ? 'inline-block' : 'none';
-
     pocketDistVal.textContent = `${runDistanceKm.toFixed(2)} KM`;
     pocketTimeVal.textContent = timeValEl.textContent;
 
@@ -3338,11 +2575,13 @@
   }
 
   function updateTabBadges() {
+    const combatSnap = App.CombatEngine ? App.CombatEngine.getCombatSnapshot() : { isGoblinActive: false };
     if (badgeHunt) {
-      badgeHunt.style.display = (gameState.chestsAvailable > 0 || isGoblinActive) ? 'flex' : 'none';
+      badgeHunt.style.display = (gameState.chestsAvailable > 0 || combatSnap.isGoblinActive) ? 'flex' : 'none';
     }
     if (badgeHero) {
-      badgeHero.style.display = (gameState.statPoints > 0) ? 'flex' : 'none';
+      const hasTomeUpgrade = Object.keys(App.SPELL_DATABASE || {}).some(k => ((gameState.spellTomes && gameState.spellTomes[k]) || 0) >= ((gameState.spellLevels && gameState.spellLevels[k]) || 1));
+      badgeHero.style.display = (gameState.statPoints > 0 || hasTomeUpgrade) ? 'flex' : 'none';
     }
     if (badgeQuests) {
       const hasUnclaimedQuest = (gameState.dailyQuests || []).some(q => q.current >= q.target && !q.claimed);
@@ -3371,6 +2610,9 @@
 
   function renderUI() {
     renderHUD();
+    if (App.MagicEngine && App.MagicEngine.renderTomesGrimoire) {
+      App.MagicEngine.renderTomesGrimoire();
+    }
     renderEquipmentAndInventory();
     renderRuneStash();
     renderMonsterCodex();
@@ -3386,18 +2628,12 @@
   }
 
   function openCharacterModal() {
-    if (inputCharNameEl) {
-      inputCharNameEl.value = gameState.playerName || 'Abyss Stalker';
-    }
-    if (charModalEl) {
-      charModalEl.style.display = 'flex';
-    }
+    if (inputCharNameEl) inputCharNameEl.value = gameState.playerName || 'Abyss Stalker';
+    if (charModalEl) charModalEl.style.display = 'flex';
   }
 
   function closeCharacterModal() {
-    if (charModalEl) {
-      charModalEl.style.display = 'none';
-    }
+    if (charModalEl) charModalEl.style.display = 'none';
   }
 
   if (btnCharManage) btnCharManage.addEventListener('click', openCharacterModal);
@@ -3423,11 +2659,7 @@
   if (btnModalCreateChar) {
     btnModalCreateChar.addEventListener('click', () => {
       const enteredName = (inputCharNameEl ? inputCharNameEl.value.trim() : '') || 'Abyss Stalker';
-
-      if (isRunning) {
-        pauseRunEngine();
-      }
-
+      if (isRunning) pauseRunEngine();
       DB.clearActiveRun().catch(() => {});
 
       const fresh = App.createDefaultState();
@@ -3436,21 +2668,12 @@
       fresh.streak.lastDate = new Date().toDateString();
 
       gameState = fresh;
-      bossVulnerableTimer = 0;
-      gimmickAnnounced = {};
-      mistHealingTick = 0;
-      chronoHealingTick = 0;
-      bloodKnightStallTick = 0;
-      superbossSiphonTick = 0;
-      secretbossSiphonTick = 0;
-      isGoblinActive = false;
+      if (App.CombatEngine) App.CombatEngine.resetSessionCombat();
       runDistanceKm = 0.0;
       runSeconds = 0;
       sessionBossKills = 0;
 
-      if (App.MapEngine) {
-        App.MapEngine.ensureMonstersSpawned();
-      }
+      if (App.MapEngine) App.MapEngine.ensureMonstersSpawned();
 
       saveGame();
       renderUI();
@@ -3462,10 +2685,7 @@
 
   if (btnModalDeleteChar) {
     btnModalDeleteChar.addEventListener('click', async () => {
-      if (isRunning) {
-        pauseRunEngine();
-      }
-
+      if (isRunning) pauseRunEngine();
       await DB.clearActiveRun();
 
       const fresh = App.createDefaultState();
@@ -3474,30 +2694,19 @@
       fresh.streak.lastDate = new Date().toDateString();
 
       gameState = fresh;
-      bossVulnerableTimer = 0;
-      gimmickAnnounced = {};
-      mistHealingTick = 0;
-      chronoHealingTick = 0;
-      bloodKnightStallTick = 0;
-      superbossSiphonTick = 0;
-      secretbossSiphonTick = 0;
-      isGoblinActive = false;
+      if (App.CombatEngine) App.CombatEngine.resetSessionCombat();
       runDistanceKm = 0.0;
       runSeconds = 0;
       sessionBossKills = 0;
 
-      if (App.MapEngine) {
-        App.MapEngine.ensureMonstersSpawned();
-      }
+      if (App.MapEngine) App.MapEngine.ensureMonstersSpawned();
 
       await DB.savePlayerState(gameState);
       renderUI();
       closeCharacterModal();
       showToast(`🗑️ ลบตัวละครเดิมเรียบร้อยแล้ว กรุณาตั้งชื่อตัวละครใหม่`);
       speakVoice('ลบตัวละครเดิมเรียบร้อยแล้ว');
-      setTimeout(() => {
-        openCharacterModal();
-      }, 500);
+      setTimeout(() => openCharacterModal(), 500);
     });
   }
 
@@ -3507,17 +2716,13 @@
       gameState.gold -= cost;
       gameState.upgrades.elixir = (gameState.upgrades.elixir || 0) + 1;
       gameState.statPoints = (gameState.statPoints || 0) + 1;
-      showToast(`🧪 ดื่มน้ำยาจิตวิญญาณ: ได้รับ +1 แต้มสเตตัส! (ราคาขวดถัดไป: ${getElixirPrice()} 🪙)`);
+      showToast(`🧪 ดื่มน้ำยาจิตวิญญาณ: ได้รับ +1 แต้มสเตตัส!`);
 
       voiceBatchState.elixirCount++;
       scheduleBatchVoice('elixir', () => {
         const count = voiceBatchState.elixirCount;
         voiceBatchState.elixirCount = 0;
-        if (count === 1) {
-          speakVoice('ดื่มน้ำยาจิตวิญญาณ ได้รับหนึ่งแต้มสเตตัส', true);
-        } else {
-          speakVoice(`ดื่มน้ำยาจิตวิญญาณ ${count} ขวด ได้รับ ${count} แต้มสเตตัส`, true);
-        }
+        speakVoice(count === 1 ? 'ดื่มน้ำยาจิตวิญญาณ ได้รับหนึ่งแต้มสเตตัส' : `ดื่มน้ำยาจิตวิญญาณ ${count} ขวด ได้รับ ${count} แต้มสเตตัส`, true);
       }, 900);
 
       saveGame();
@@ -3530,29 +2735,19 @@
     if (gameState.gold >= cost) {
       gameState.gold -= cost;
       const rate = getUpgradeEffectiveSuccessRate('blade');
-      const roll = Math.random() * 100;
-
-      if (roll < rate) {
+      if (Math.random() * 100 < rate) {
         gameState.upgrades.blade += 1;
         gameState.upgradeFailStreak.blade = 0;
-        showToast(`🗡️ ตีบวกดาบเงาสำเร็จเป็น Lv.${gameState.upgrades.blade} (+${gameState.upgrades.blade * 5}% ดาเมจ)!`);
+        showToast(`🗡️ ตีบวกดาบเงาสำเร็จเป็น Lv.${gameState.upgrades.blade}!`);
         voiceBatchState.bladeSuccessLevel = gameState.upgrades.blade;
       } else {
         gameState.upgradeFailStreak.blade = (gameState.upgradeFailStreak.blade || 0) + 1;
-        showToast(`❌ ตีบวกล้มเหลว! ได้รับโบนัสโอกาสสำเร็จครั้งถัดไป +10% (สะสม: +${gameState.upgradeFailStreak.blade * 10}%)`);
+        showToast(`❌ ตีบวกล้มเหลว! โอกาสสำเร็จครั้งถัดไป +10%`);
       }
-      voiceBatchState.bladeAttempts++;
-
       scheduleBatchVoice('blade', () => {
-        if (voiceBatchState.bladeSuccessLevel !== null) {
-          speakVoice(`ตีบวกดาบเงาสำเร็จ เลเวล ${voiceBatchState.bladeSuccessLevel}`, true);
-        } else {
-          speakVoice('การตีบวกล้มเหลว ได้รับโบนัสก้าวหน้าเพิ่มโอกาสครั้งถัดไป', true);
-        }
-        voiceBatchState.bladeAttempts = 0;
+        speakVoice(voiceBatchState.bladeSuccessLevel !== null ? `ตีบวกดาบเงาสำเร็จ เลเวล ${voiceBatchState.bladeSuccessLevel}` : 'การตีบวกล้มเหลว ได้รับโบนัสก้าวหน้า', true);
         voiceBatchState.bladeSuccessLevel = null;
       }, 850);
-
       saveGame();
       renderUI();
     }
@@ -3563,29 +2758,19 @@
     if (gameState.gold >= cost) {
       gameState.gold -= cost;
       const rate = getUpgradeEffectiveSuccessRate('charm');
-      const roll = Math.random() * 100;
-
-      if (roll < rate) {
+      if (Math.random() * 100 < rate) {
         gameState.upgrades.charm += 1;
         gameState.upgradeFailStreak.charm = 0;
-        showToast(`🧿 เสริมพลังเครื่องรางสำเร็จเป็น Lv.${gameState.upgrades.charm} (+${gameState.upgrades.charm * 10}% ทอง)!`);
+        showToast(`🧿 เสริมพลังเครื่องรางสำเร็จเป็น Lv.${gameState.upgrades.charm}!`);
         voiceBatchState.charmSuccessLevel = gameState.upgrades.charm;
       } else {
         gameState.upgradeFailStreak.charm = (gameState.upgradeFailStreak.charm || 0) + 1;
-        showToast(`❌ เสริมพลังล้มเหลว! ได้รับโบนัสโอกาสสำเร็จครั้งถัดไป +10% (สะสม: +${gameState.upgradeFailStreak.charm * 10}%)`);
+        showToast(`❌ เสริมพลังล้มเหลว! โอกาสสำเร็จครั้งถัดไป +10%`);
       }
-      voiceBatchState.charmAttempts++;
-
       scheduleBatchVoice('charm', () => {
-        if (voiceBatchState.charmSuccessLevel !== null) {
-          speakVoice(`เสริมพลังเครื่องรางสำเร็จ เลเวล ${voiceBatchState.charmSuccessLevel}`, true);
-        } else {
-          speakVoice('การอัปเกรดล้มเหลว ได้รับโบนัสก้าวหน้าเพิ่มโอกาสครั้งถัดไป', true);
-        }
-        voiceBatchState.charmAttempts = 0;
+        speakVoice(voiceBatchState.charmSuccessLevel !== null ? `เสริมพลังเครื่องรางสำเร็จ เลเวล ${voiceBatchState.charmSuccessLevel}` : 'การอัปเกรดล้มเหลว ได้รับโบนัสก้าวหน้า', true);
         voiceBatchState.charmSuccessLevel = null;
       }, 850);
-
       saveGame();
       renderUI();
     }
@@ -3620,29 +2805,19 @@
     if (gameState.gold >= cost) {
       gameState.gold -= cost;
       const rate = getUpgradeEffectiveSuccessRate('eye');
-      const roll = Math.random() * 100;
-
-      if (roll < rate) {
+      if (Math.random() * 100 < rate) {
         gameState.upgrades.eye += 1;
         gameState.upgradeFailStreak.eye = 0;
-        showToast(`👁️ เบิกเนตรอเวจีสำเร็จเป็น Lv.${gameState.upgrades.eye} (+${gameState.upgrades.eye * 10}% ดาเมจคริติคอล)!`);
+        showToast(`👁️ เบิกเนตรอเวจีสำเร็จเป็น Lv.${gameState.upgrades.eye}!`);
         voiceBatchState.eyeSuccessLevel = gameState.upgrades.eye;
       } else {
         gameState.upgradeFailStreak.eye = (gameState.upgradeFailStreak.eye || 0) + 1;
-        showToast(`❌ เบิกเนตรล้มเหลว! ได้รับโบนัสโอกาสสำเร็จครั้งถัดไป +10% (สะสม: +${gameState.upgradeFailStreak.eye * 10}%)`);
+        showToast(`❌ เบิกเนตรล้มเหลว! โอกาสสำเร็จครั้งถัดไป +10%`);
       }
-      voiceBatchState.eyeAttempts++;
-
       scheduleBatchVoice('eye', () => {
-        if (voiceBatchState.eyeSuccessLevel !== null) {
-          speakVoice(`เบิกเนตรอเวจีสำเร็จ เลเวล ${voiceBatchState.eyeSuccessLevel}`, true);
-        } else {
-          speakVoice('การอัปเกรดล้มเหลว ได้รับโบนัสก้าวหน้าเพิ่มโอกาสครั้งถัดไป', true);
-        }
-        voiceBatchState.eyeAttempts = 0;
+        speakVoice(voiceBatchState.eyeSuccessLevel !== null ? `เบิกเนตรอเวจีสำเร็จ เลเวล ${voiceBatchState.eyeSuccessLevel}` : 'การอัปเกรดล้มเหลว ได้รับโบนัสก้าวหน้า', true);
         voiceBatchState.eyeSuccessLevel = null;
       }, 850);
-
       saveGame();
       renderUI();
     }
@@ -3659,14 +2834,10 @@
     const displayDist = Math.round(distanceKm * 100) / 100;
     if (displayDist >= 0.02 && totalSecs > 0) {
       const paceDec = (totalSecs / 60) / distanceKm;
-      if (paceDec > 30 || paceDec < 2) {
-        return `--'--"`;
-      }
+      if (paceDec > 30 || paceDec < 2) return `--'--"`;
       const paceMin = Math.floor(paceDec);
       let paceSec = Math.round((paceDec - paceMin) * 60);
-      if (paceSec === 60) {
-        return `${paceMin + 1}'00"`;
-      }
+      if (paceSec === 60) return `${paceMin + 1}'00"`;
       return `${paceMin}'${paceSec.toString().padStart(2, '0')}"`;
     }
     return `--'--"`;
@@ -3735,6 +2906,7 @@
       DB.clearActiveRun().catch(() => {});
       return;
     }
+    const combatSnap = App.CombatEngine ? App.CombatEngine.getCombatSnapshot() : { bossVulnerableTimer: 0 };
     const runSnapshot = {
       runDistanceKm,
       runSeconds,
@@ -3743,7 +2915,7 @@
       isFrenzyActive,
       isOverdriveActive,
       overdriveSecondsRemaining,
-      bossVulnerableTimer,
+      bossVulnerableTimer: combatSnap.bossVulnerableTimer,
       nextChestKmCheckpoint,
       nextKmAnnounceCheckpoint,
       bossIndex: gameState.bossIndex,
@@ -3763,7 +2935,7 @@
       currentGpxTrack = activeRun.currentGpxTrack || [];
       isOverdriveActive = activeRun.isOverdriveActive || false;
       overdriveSecondsRemaining = activeRun.overdriveSecondsRemaining || 0;
-      bossVulnerableTimer = activeRun.bossVulnerableTimer || 0;
+      if (App.CombatEngine) App.CombatEngine.restoreBossVulnerableTimer(activeRun.bossVulnerableTimer || 0);
       nextChestKmCheckpoint = activeRun.nextChestKmCheckpoint || 1.0;
       nextKmAnnounceCheckpoint = activeRun.nextKmAnnounceCheckpoint || 1.0;
 
@@ -3791,19 +2963,10 @@
       gameState.bossLoopCycle = 0;
       gameState.bossIndex = 0;
       gameState.bossHpRemain = getBossMaxHp(0, 0);
-      bossVulnerableTimer = 0;
-      gimmickAnnounced = {};
-      mistHealingTick = 0;
-      chronoHealingTick = 0;
-      bloodKnightStallTick = 0;
-      superbossSiphonTick = 0;
-      secretbossSiphonTick = 0;
-      isGoblinActive = false;
-      goblinCooldownSeconds = 0;
-      lastGoblinTriggerKm = 0.0;
-      goblinBannerEl.style.display = 'none';
-      if (App.MapEngine) {
-        App.MapEngine.ensureMonstersSpawned();
+      if (App.CombatEngine) App.CombatEngine.resetSessionCombat();
+      if (App.MapEngine) App.MapEngine.ensureMonstersSpawned();
+      if (App.MagicEngine) {
+        gameState.currentMp = App.MagicEngine.getMaxMp(gameState);
       }
       saveGame();
       renderHUD();
@@ -3823,25 +2986,19 @@
       pocketTimeVal.textContent = timeValEl.textContent;
       updatePace();
 
-      if (App.MapEngine) {
-        App.MapEngine.tickSecond();
-      }
+      if (App.MapEngine) App.MapEngine.tickSecond();
+      if (App.CombatEngine) App.CombatEngine.tickSecond();
+      if (App.MagicEngine) App.MagicEngine.tickSecond();
 
-      if (runSeconds % 3 === 0) {
-        saveCurrentActiveRun();
-      }
-
-      if (tempestCritBuffSeconds > 0) {
-        tempestCritBuffSeconds--;
-      }
+      if (runSeconds % 3 === 0) saveCurrentActiveRun();
+      if (tempestCritBuffSeconds > 0) tempestCritBuffSeconds--;
 
       if (isFrenzyActive || currentHrZone === 3) {
         const currentBoss = BOSS_DATABASE[gameState.bossIndex];
         const bossMaxHp = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
         const bossHpPct = gameState.bossHpRemain / bossMaxHp;
         if (!(currentBoss.gimmick === 'singularity' && bossHpPct <= 0.50)) {
-          const ultTimeRate = isFlowStateActive ? 0.2 : 0.1;
-          addUltimateCharge(ultTimeRate);
+          addUltimateCharge(isFlowStateActive ? 0.2 : 0.1);
         }
 
         gameState.statsTrack.berserkSeconds = (gameState.statsTrack.berserkSeconds || 0) + 1;
@@ -3852,16 +3009,15 @@
         if (questFrenzy) questFrenzy.current = Math.min(questFrenzy.target, questFrenzy.current + 1);
       }
 
-      // Auto-Cast Runner Engine Execution
-      if (isRunning && gameState.autoCastMode && gameState.autoCastMode !== 'off') {
+      if (isRunning && gameState.autoCastMode && gameState.autoCastMode !== 'off' && App.CombatEngine) {
         if (gameState.autoCastMode === 'tier1' && gameState.ultimateCharge >= 100) {
-          activateUltimateSkill(1);
+          App.CombatEngine.activateUltimateSkill(1);
         } else if (gameState.autoCastMode === 'tier3' && gameState.ultimateCharge >= 300) {
-          activateUltimateSkill(3);
+          App.CombatEngine.activateUltimateSkill(3);
         } else if (gameState.autoCastMode === 'smart') {
-          if (gameState.ultimateCharge >= 300) activateUltimateSkill(3);
-          else if (gameState.ultimateCharge >= 200) activateUltimateSkill(2);
-          else if (gameState.ultimateCharge >= 100) activateUltimateSkill(1);
+          if (gameState.ultimateCharge >= 300) App.CombatEngine.activateUltimateSkill(3);
+          else if (gameState.ultimateCharge >= 200) App.CombatEngine.activateUltimateSkill(2);
+          else if (gameState.ultimateCharge >= 100) App.CombatEngine.activateUltimateSkill(1);
         }
       }
 
@@ -3877,127 +3033,14 @@
         }
       }
 
-      if (bossVulnerableTimer > 0) {
-        bossVulnerableTimer--;
-      }
-
-      if (goblinCooldownSeconds > 0) {
-        goblinCooldownSeconds--;
-      }
-
-      if (isGoblinActive) {
-        goblinSecondsLeft--;
-        goblinTimerEl.textContent = `${goblinSecondsLeft}s`;
-
-        const rollingPace = getRecentRollingPace();
-        if (rollingPace !== null && goblinTargetPaceDec !== null && rollingPace <= goblinTargetPaceDec) {
-          goblinProgressSec++;
-          goblinStatusHintEl.textContent = `⚡ กำลังประชิดตัว! (${goblinProgressSec}/${GOBLIN_REQUIRED_SECONDS}s)`;
-        } else {
-          goblinStatusHintEl.textContent = 'เร่งความเร็วให้แตะเพซเป้าหมาย!';
-        }
-
-        const pct = Math.min(100, Math.round((goblinProgressSec / GOBLIN_REQUIRED_SECONDS) * 100));
-        goblinProgressFillEl.style.width = `${pct}%`;
-
-        if (goblinProgressSec >= GOBLIN_REQUIRED_SECONDS) {
-          completeGoblinChaseSuccess();
-        } else if (goblinSecondsLeft <= 0) {
-          failGoblinChase();
-        }
-      }
-
-      const currentBoss = BOSS_DATABASE[gameState.bossIndex];
-      const bossMaxHp = getBossMaxHp(gameState.bossIndex, gameState.bossLoopCycle || 0);
-      const bossHpPct = gameState.bossHpRemain / bossMaxHp;
-      const isLoop = (gameState.bossLoopCycle || 0) >= 1;
-
-      const mistThresh = isLoop ? 0.85 : 0.75;
-      if (currentBoss.gimmick === 'mist' && bossHpPct <= mistThresh) {
-        const rollingPace = getRecentRollingPace();
-        if (rollingPace === null || rollingPace > 7.5) {
-          mistHealingTick++;
-          if (mistHealingTick >= 15) {
-            mistHealingTick = 0;
-            gameState.bossHpRemain = Math.min(bossMaxHp, gameState.bossHpRemain + 0.02);
-            showToast('🌫️ หมอกคำสาปสูบพลัง! บอสฟื้นฟูเลือด +0.02 กม.');
-          }
-        } else {
-          mistHealingTick = 0;
-        }
-      }
-
-      if (isLoop && currentBoss.id === 'boss_2') {
-        const rollingPace = getRecentRollingPace();
-        if (rollingPace === null || rollingPace > 8.5) {
-          bloodKnightStallTick++;
-          if (bloodKnightStallTick >= 12) {
-            bloodKnightStallTick = 0;
-            const drainHp = parseFloat((bossMaxHp * 0.03).toFixed(2));
-            gameState.bossHpRemain = Math.min(bossMaxHp, gameState.bossHpRemain + drainHp);
-            showToast(`🩸 Vampiric Drain: อัศวินโลหิตสูบเลือดฟื้นฟู +${drainHp} กม.!`);
-            speakVoice('อัศวินโลหิตใช้ท่าสูบพลัง ฟื้นฟูเลือดตนเอง');
-          }
-        } else {
-          bloodKnightStallTick = 0;
-        }
-      }
-
-      if (currentBoss.gimmick === 'chrono') {
-        const rollingPace = getRecentRollingPace();
-        if (rollingPace === null || rollingPace > 8.0) {
-          chronoHealingTick++;
-          if (chronoHealingTick >= 15) {
-            chronoHealingTick = 0;
-            gameState.bossHpRemain = Math.min(bossMaxHp, gameState.bossHpRemain + 0.05);
-            showToast('⏳ นาฬิกาทรายทมิฬหมุนกลับ! บอสฟื้นฟูเลือด +0.05 กม.');
-          }
-        } else {
-          chronoHealingTick = 0;
-        }
-      }
-
-      if (currentBoss.gimmick === 'superboss' && bossHpPct <= 0.65 && bossHpPct > 0.30) {
-        const rollingPace = getRecentRollingPace();
-        if (rollingPace === null || rollingPace > 7.0) {
-          superbossSiphonTick++;
-          if (superbossSiphonTick >= 10) {
-            superbossSiphonTick = 0;
-            gameState.ultimateCharge = Math.max(0, gameState.ultimateCharge - 15);
-            gameState.bossHpRemain = Math.min(bossMaxHp, gameState.bossHpRemain + 0.05);
-            showToast('🕳️ Singularity Siphon: เพซช้า! บอสดูดเกจ -15% และฮีลเลือด +0.05 กม.');
-          }
-        } else {
-          superbossSiphonTick = 0;
-        }
-      }
-
-      if (currentBoss.gimmick === 'secretboss' && bossHpPct <= 0.60 && bossHpPct > 0.30) {
-        const rollingPace = getRecentRollingPace();
-        if (rollingPace === null || rollingPace > 7.0 || (isBleConnected && currentHrZone < 3)) {
-          secretbossSiphonTick++;
-          if (secretbossSiphonTick >= 8) {
-            secretbossSiphonTick = 0;
-            gameState.ultimateCharge = Math.max(0, gameState.ultimateCharge - 20);
-            gameState.bossHpRemain = Math.min(bossMaxHp, gameState.bossHpRemain + 0.08);
-            showToast('🕳️ Event Horizon: แรงกดดันมิติ! บอสดูดเกจ -20% และฮีลเลือด +0.08 กม.');
-          }
-        } else {
-          secretbossSiphonTick = 0;
-        }
-      }
-
       const questTime = gameState.dailyQuests.find(q => q.id === 'dq_time');
-      if (questTime) {
-        questTime.current = Math.min(questTime.target, questTime.current + 1);
-      }
+      if (questTime) questTime.current = Math.min(questTime.target, questTime.current + 1);
 
       const questCal = gameState.dailyQuests.find(q => q.id === 'dq_cal');
-      if (questCal) {
-        questCal.current = Math.min(questCal.target, Math.floor(runDistanceKm * 65));
-      }
+      if (questCal) questCal.current = Math.min(questCal.target, Math.floor(runDistanceKm * 65));
 
       evaluateFrenzyState();
+      renderHUD();
     }, 1000);
 
     if (!isSimMode && 'geolocation' in navigator) {
@@ -4009,9 +3052,7 @@
 
           if (accuracy > 35) return;
 
-          if (App.MapEngine) {
-            App.MapEngine.updatePlayerPosition(latitude, longitude, true);
-          }
+          if (App.MapEngine) App.MapEngine.updatePlayerPosition(latitude, longitude, true);
 
           const now = Date.now();
           if (!lastCoord) {
@@ -4031,12 +3072,10 @@
             runDistanceKm += deltaKm;
             recordPaceSample(now, runDistanceKm);
             currentGpxTrack.push({ lat: latitude, lon: longitude, ele: altitude || 0, time: now });
-            applyDistanceDamage(deltaKm);
+            if (App.CombatEngine) App.CombatEngine.applyDistanceDamage(deltaKm);
             saveCurrentActiveRun();
             lastCoord = { latitude, longitude, time: now };
-          } else if (speedKmh < 1.2) {
-            lastCoord = { latitude, longitude, time: now };
-          } else if (speedKmh > 26.0) {
+          } else {
             lastCoord = { latitude, longitude, time: now };
           }
 
@@ -4099,15 +3138,7 @@
       gameState.bossLoopCycle = 0;
       gameState.bossIndex = 0;
       gameState.bossHpRemain = getBossMaxHp(0, 0);
-      bossVulnerableTimer = 0;
-      gimmickAnnounced = {};
-      mistHealingTick = 0;
-      chronoHealingTick = 0;
-      bloodKnightStallTick = 0;
-      superbossSiphonTick = 0;
-      secretbossSiphonTick = 0;
-      isGoblinActive = false;
-      goblinBannerEl.style.display = 'none';
+      if (App.CombatEngine) App.CombatEngine.resetSessionCombat();
 
       renderUI();
       showToast('ยกเลิกรอบการล่าเรียบร้อย');
@@ -4123,9 +3154,7 @@
 
     const staMultiplier = 1 + Math.max(0, (gameState.stats.sta - 10) * 0.02);
     const bonusExp = Math.floor(runDistanceKm * 800 * staMultiplier);
-    if (bonusExp > 0) {
-      addExp(bonusExp);
-    }
+    if (bonusExp > 0) addExp(bonusExp);
 
     gameState.career.totalRuns = (gameState.career.totalRuns || 0) + 1;
     gameState.career.totalDistanceKm = parseFloat(((gameState.career.totalDistanceKm || 0) + runDistanceKm).toFixed(2));
@@ -4137,32 +3166,21 @@
     const achFirst = gameState.achievements.find(a => a.id === 'ach_first');
     if (achFirst) achFirst.current = Math.min(achFirst.target, achFirst.current + 1);
 
-    const ach10 = gameState.achievements.find(a => a.id === 'ach_dist10');
-    if (ach10) ach10.current = Math.min(ach10.target, gameState.career.totalDistanceKm);
-
-    const ach50 = gameState.achievements.find(a => a.id === 'ach_dist50');
-    if (ach50) ach50.current = Math.min(ach50.target, gameState.career.totalDistanceKm);
-
-    const ach100 = gameState.achievements.find(a => a.id === 'ach_dist100');
-    if (ach100) ach100.current = Math.min(ach100.target, gameState.career.totalDistanceKm);
-
-    const ach250 = gameState.achievements.find(a => a.id === 'ach_dist250');
-    if (ach250) ach250.current = Math.min(ach250.target, gameState.career.totalDistanceKm);
-
-    const achSingleLong = gameState.achievements.find(a => a.id === 'ach_single_long');
-    if (achSingleLong) achSingleLong.current = Math.min(achSingleLong.target, Math.max(achSingleLong.current, runDistanceKm));
-
-    const ach500 = gameState.achievements.find(a => a.id === 'ach_dist500');
-    if (ach500) ach500.current = Math.min(ach500.target, gameState.career.totalDistanceKm);
-
-    const ach1000 = gameState.achievements.find(a => a.id === 'ach_dist1000');
-    if (ach1000) ach1000.current = Math.min(ach1000.target, gameState.career.totalDistanceKm);
-
-    const achHalf = gameState.achievements.find(a => a.id === 'ach_single_halfmarathon');
-    if (achHalf) achHalf.current = Math.min(achHalf.target, Math.max(achHalf.current, runDistanceKm));
-
-    const achFull = gameState.achievements.find(a => a.id === 'ach_single_marathon');
-    if (achFull) achFull.current = Math.min(achFull.target, Math.max(achFull.current, runDistanceKm));
+    const distAchievements = [
+      ['ach_dist10', gameState.career.totalDistanceKm],
+      ['ach_dist50', gameState.career.totalDistanceKm],
+      ['ach_dist100', gameState.career.totalDistanceKm],
+      ['ach_dist250', gameState.career.totalDistanceKm],
+      ['ach_dist500', gameState.career.totalDistanceKm],
+      ['ach_dist1000', gameState.career.totalDistanceKm],
+      ['ach_single_long', runDistanceKm],
+      ['ach_single_halfmarathon', runDistanceKm],
+      ['ach_single_marathon', runDistanceKm]
+    ];
+    distAchievements.forEach(([id, val]) => {
+      const a = gameState.achievements.find(item => item.id === id);
+      if (a) a.current = Math.min(a.target, Math.max(a.current, val));
+    });
 
     const historyItem = {
       timestamp: Date.now(),
@@ -4195,15 +3213,7 @@
     gameState.bossLoopCycle = 0;
     gameState.bossIndex = 0;
     gameState.bossHpRemain = getBossMaxHp(0, 0);
-    bossVulnerableTimer = 0;
-    gimmickAnnounced = {};
-    mistHealingTick = 0;
-    chronoHealingTick = 0;
-    bloodKnightStallTick = 0;
-    superbossSiphonTick = 0;
-    secretbossSiphonTick = 0;
-    isGoblinActive = false;
-    goblinBannerEl.style.display = 'none';
+    if (App.CombatEngine) App.CombatEngine.resetSessionCombat();
 
     saveGame();
     renderUI();
@@ -4214,7 +3224,13 @@
     if ((gameState.statPoints || 0) > 0) {
       gameState.statPoints -= 1;
       gameState.stats[statKey] += 1;
-      showToast(`💪 เสริมพลัง ${statKey.toUpperCase()} เป็น ${gameState.stats[statKey]}!`);
+      if (statKey === 'sta' && App.MagicEngine) {
+        // Refill the newly gained +5 Max MP immediately
+        gameState.currentMp = Math.min(App.MagicEngine.getMaxMp(gameState), (gameState.currentMp || 0) + 5);
+        showToast(`💪 เสริมพลัง STA เป็น ${gameState.stats.sta}! (Max MP: ${App.MagicEngine.getMaxMp(gameState)})`);
+      } else {
+        showToast(`💪 เสริมพลัง ${statKey.toUpperCase()} เป็น ${gameState.stats[statKey]}!`);
+      }
       saveGame();
       renderUI();
     }
@@ -4223,6 +3239,10 @@
   btnAddStr.addEventListener('click', () => upgradeStat('str'));
   btnAddSta.addEventListener('click', () => upgradeStat('sta'));
   btnAddAgi.addEventListener('click', () => upgradeStat('agi'));
+
+  btnCastUlt1.addEventListener('click', () => App.CombatEngine && App.CombatEngine.activateUltimateSkill(1));
+  btnCastUlt2.addEventListener('click', () => App.CombatEngine && App.CombatEngine.activateUltimateSkill(2));
+  btnCastUlt3.addEventListener('click', () => App.CombatEngine && App.CombatEngine.activateUltimateSkill(3));
 
   window.shadowStrider = {
     simulateStep(km) {
@@ -4242,7 +3262,7 @@
         currentGpxTrack.push({ lat: cur.lat + dLat, lon: cur.lon + dLon, ele: 3, time: now });
       }
 
-      applyDistanceDamage(km);
+      if (App.CombatEngine) App.CombatEngine.applyDistanceDamage(km);
       saveCurrentActiveRun();
       renderHUD();
       showToast(`⚡ จำลองวิ่งก้าวหน้า +${(km * 1000).toFixed(0)} เมตร!`);
@@ -4252,24 +3272,18 @@
         showToast('กรุณากด "เริ่มออกล่า" ก่อนเพื่อสปอว์นโกบลิน');
         return;
       }
-      startGoblinChaseEvent();
+      if (App.CombatEngine) App.CombatEngine.startGoblinChaseEvent();
     },
     simulateApproachNearest() {
-      if (App.MapEngine) {
-        App.MapEngine.simulateApproachNearest();
-      }
+      if (App.MapEngine) App.MapEngine.simulateApproachNearest();
     }
   };
 
   btnToggleRun.addEventListener('click', () => {
-    if (!isRunning) {
-      startRunEngine();
-    } else {
-      pauseRunEngine();
-    }
+    if (!isRunning) startRunEngine();
+    else pauseRunEngine();
   });
 
-  // --- Auto-Cast Toggle Listener ---
   if (btnAutocastToggle) {
     btnAutocastToggle.addEventListener('click', () => {
       const modes = ['off', 'tier1', 'tier3', 'smart'];
@@ -4290,32 +3304,23 @@
     });
   }
 
-  // --- Large Tactile Quick Cast Button Listener ---
   if (btnQuickCastUlt) {
     btnQuickCastUlt.addEventListener('click', () => {
-      if (gameState.ultimateCharge >= 300) {
-        activateUltimateSkill(3);
-      } else if (gameState.ultimateCharge >= 200) {
-        activateUltimateSkill(2);
-      } else if (gameState.ultimateCharge >= 100) {
-        activateUltimateSkill(1);
-      } else {
-        showToast('เกจไม้ตายยังไม่ถึง 100%');
-      }
+      if (!App.CombatEngine) return;
+      if (gameState.ultimateCharge >= 300) App.CombatEngine.activateUltimateSkill(3);
+      else if (gameState.ultimateCharge >= 200) App.CombatEngine.activateUltimateSkill(2);
+      else if (gameState.ultimateCharge >= 100) App.CombatEngine.activateUltimateSkill(1);
+      else showToast('เกจไม้ตายยังไม่ถึง 100%');
     });
   }
 
-  // --- Safe Finish Run with Confirmation Modal ---
   btnFinishRun.addEventListener('click', () => {
     if (runDistanceKm < 0.05) {
       finishRunSession();
       return;
     }
-    if (confirmFinishModal) {
-      confirmFinishModal.style.display = 'flex';
-    } else {
-      finishRunSession();
-    }
+    if (confirmFinishModal) confirmFinishModal.style.display = 'flex';
+    else finishRunSession();
   });
 
   if (btnModalFinishConfirm) {
@@ -4331,7 +3336,6 @@
     });
   }
 
-  // --- Fixed Bottom Navigation Tab Switching ---
   function switchTab(tabId) {
     document.querySelectorAll('.tab-page').forEach(page => {
       page.classList.remove('active');
@@ -4363,17 +3367,16 @@
     simToggleBtn.classList.toggle('active', isSimMode);
     simToggleBtn.textContent = `จำลอง: ${isSimMode ? 'เปิด' : 'ปิด'}`;
     simControls.style.display = isSimMode ? 'flex' : 'none';
-    if (App.MapEngine) {
-      App.MapEngine.renderMapAndRadar();
-    }
+    if (App.MapEngine) App.MapEngine.renderMapAndRadar();
     showToast(isSimMode ? 'เปิดโหมดจำลองวิ่ง (เทสต์ในห้องได้)' : 'ปิดโหมดจำลอง กลับสู่ระบบ GPS จริง');
   });
 
-  // Expose Core Bridge for MapEngine & Other Modules
+  // Expose Core Bridge for CombatEngine, MagicEngine & MapEngine
   App.core = {
     getGameState: () => gameState,
     saveGame,
     renderUI,
+    renderHUD,
     showToast,
     speakVoice,
     addExp,
@@ -4381,8 +3384,25 @@
     rollRandomRuneDrop,
     triggerOverdriveBuff,
     calculateDistance,
+    calculateEquipmentBonuses,
+    calculateCritStats,
+    getRecentRollingPace,
+    evaluateFlowStateProgress,
+    checkDistanceCheckpoints,
     switchTab,
-    isSimMode: () => isSimMode
+    isRunning: () => isRunning,
+    isSimMode: () => isSimMode,
+    getRunDistanceKm: () => runDistanceKm,
+    getRunSeconds: () => runSeconds,
+    incrementSessionBossKills: () => { sessionBossKills += 1; },
+    setTempestCritBuffSeconds: (sec) => { tempestCritBuffSeconds = sec; },
+    getCombatFlags: () => ({
+      isFrenzyActive,
+      isFlowStateActive,
+      isOverdriveActive,
+      currentHrZone,
+      isBleConnected
+    })
   };
 
   if ('serviceWorker' in navigator) {
@@ -4395,9 +3415,8 @@
 
   await loadGameState();
   await checkAndRestoreActiveRun();
-  if (App.MapEngine) {
-    App.MapEngine.init();
-  }
+  if (App.MagicEngine) App.MagicEngine.initControls();
+  if (App.MapEngine) App.MapEngine.init();
   renderUI();
   await renderHistoryAndDailyUI();
 })();

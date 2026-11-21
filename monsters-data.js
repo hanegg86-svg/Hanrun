@@ -1,0 +1,388 @@
+// ShadowStrider: Dark Run RPG - Module 2: Bosses (12), Roaming Monsters (10) & Elemental Affinities
+(function () {
+  'use strict';
+
+  const App = window.ShadowStriderApp = window.ShadowStriderApp || {};
+
+  // --- Boss List Database (12 Dungeon Bosses with Elemental Weakness & Resistance) ---
+  App.BOSS_DATABASE = [
+    {
+      id: 'boss_1',
+      tier: 'TIER I',
+      name: 'Gargoyle of the Crypt',
+      avatar: '👹',
+      maxHpKm: 2.00,
+      element: 'earth',
+      weakElement: 'lightning',
+      resistElement: 'earth',
+      desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 2.00 กม. หรือฟาดด้วยเวทสายฟ้าเพื่อทำลายมัน!',
+      rewardExp: 2200,
+      rewardGold: 260,
+      gimmick: 'none'
+    },
+    {
+      id: 'boss_2',
+      tier: 'TIER II',
+      name: 'Abyssal Blood Knight',
+      avatar: '🤺',
+      maxHpKm: 4.50,
+      element: 'dark',
+      weakElement: 'light',
+      resistElement: 'dark',
+      desc: 'อัศวินเกราะดำกระหายการต่อสู้ แพ้ทางเวทแสงศักดิ์สิทธิ์อย่างรุนแรง!',
+      rewardExp: 5500,
+      rewardGold: 600,
+      gimmick: 'none'
+    },
+    {
+      id: 'boss_2_major',
+      tier: 'TIER II (MAJOR)',
+      name: 'Abyssal Juggernaut: Gorgoroth',
+      avatar: '🦏',
+      maxHpKm: 6.50,
+      element: 'earth',
+      weakElement: 'ice',
+      resistElement: 'fire',
+      desc: 'จอมพลังเกราะหนาทมิฬ ทลายเกราะเหล็กด้วย Flow State, Shadow Slash หรือเวทน้ำแข็ง!',
+      rewardExp: 8500,
+      rewardGold: 1200,
+      gimmick: 'juggernaut'
+    },
+    {
+      id: 'boss_3',
+      tier: 'TIER III',
+      name: 'Ancient Bone Dragon',
+      avatar: '🐉',
+      maxHpKm: 8.00,
+      element: 'ice',
+      weakElement: 'fire',
+      resistElement: 'ice',
+      desc: 'มังกรกระดูกเหมันต์บรรพกาล แผดเผาโครงกระดูกน้ำแข็งด้วยเวทไฟ!',
+      rewardExp: 12000,
+      rewardGold: 1300,
+      gimmick: 'none'
+    },
+    {
+      id: 'boss_4',
+      tier: 'TIER IV',
+      name: 'Shadow Lich: Malakor',
+      avatar: '🧙‍♂️',
+      maxHpKm: 12.50,
+      element: 'dark',
+      weakElement: 'light',
+      resistElement: 'ice',
+      desc: 'จอมเวทอเวจีโบราณ เมื่อเลือดต่ำกว่า 75% หมอกคำสาปจะสูบเลือดคืนหากเพซช้ากว่า 7:30!',
+      rewardExp: 21000,
+      rewardGold: 2600,
+      gimmick: 'mist'
+    },
+    {
+      id: 'boss_5',
+      tier: 'TIER V',
+      name: 'Void Behemoth: Titan of Ruin',
+      avatar: '🗿',
+      maxHpKm: 18.00,
+      element: 'earth',
+      weakElement: 'earth',
+      resistElement: 'lightning',
+      desc: 'ไททันศิลาแห่งความว่างเปล่า เกราะหนาลดดาเมจ 45% ทลายด้วยคริติคอล, Shadow Slash หรือเวทพสุธา!',
+      rewardExp: 38000,
+      rewardGold: 4800,
+      gimmick: 'carapace'
+    },
+    {
+      id: 'boss_6',
+      tier: 'TIER VI',
+      name: 'Abyssal Empress: Nyxaria',
+      avatar: '👑',
+      maxHpKm: 25.00,
+      element: 'ice',
+      weakElement: 'fire',
+      resistElement: 'dark',
+      desc: 'จักรพรรดินีเงาเหมันต์ 3 เฟส: ร่างเงาหลอก, สนามเรโซแนนซ์ และจันทรคราสทมิฬ!',
+      rewardExp: 62000,
+      rewardGold: 8500,
+      gimmick: 'empress'
+    },
+    {
+      id: 'boss_7',
+      tier: 'TIER VII',
+      name: 'Eclipse Harbinger: Ignis-Vorax',
+      avatar: '☄',
+      maxHpKm: 36.00,
+      element: 'fire',
+      weakElement: 'ice',
+      resistElement: 'fire',
+      desc: 'เทพอสูรเพลิงสุริยคราส เลือด 36 กม. แพ้ทางความเย็นจัดของเวทน้ำแข็ง!',
+      rewardExp: 95000,
+      rewardGold: 15000,
+      gimmick: 'supernova'
+    },
+    {
+      id: 'boss_8',
+      tier: 'TIER VIII',
+      name: 'Primordial Void Leviathan: Nihil-Khaos',
+      avatar: '🌌',
+      maxHpKm: 50.00,
+      element: 'lightning',
+      weakElement: 'earth',
+      resistElement: 'ice',
+      desc: 'เลเวียธานมิติอเวจี เลือด 50 กม. ต่ำกว่า 50% หลุมดำดูดกลืนเกจ ต่ำกว่า 20% ซิงกูลาริตียุบตัว!',
+      rewardExp: 145000,
+      rewardGold: 26000,
+      gimmick: 'singularity'
+    },
+    {
+      id: 'boss_9',
+      tier: 'TIER IX',
+      name: 'Chrono-Abyss Overlord: Chronos-Nox',
+      avatar: '⏳',
+      maxHpKm: 70.00,
+      element: 'light',
+      weakElement: 'dark',
+      resistElement: 'light',
+      desc: 'เทพอสูรบิดผันกาลเวลา เลือด 70 กม. วิ่งเพซเร็วกว่า 6:30 ดาเมจ x3 หรือกลืนกินด้วยเวทความมืด!',
+      rewardExp: 220000,
+      rewardGold: 40000,
+      gimmick: 'chrono'
+    },
+    {
+      id: 'boss_super',
+      tier: 'TIER X',
+      name: 'Cosmic Dread: Azathoth-Nox',
+      avatar: '👁️‍🗨️',
+      maxHpKm: 90.00,
+      element: 'dark',
+      weakElement: 'light',
+      resistElement: 'dark',
+      desc: 'เทพอสูรความว่างเปล่าบรรพกาล เลือด 90 กม.! เกราะหนาลดดาเมจ 70% สลายด้วย Shadow Slash หรือทัณฑ์แสง!',
+      rewardExp: 350000,
+      rewardGold: 70000,
+      gimmick: 'superboss'
+    },
+    {
+      id: 'boss_secret',
+      tier: 'TIER EX (SECRET)',
+      name: 'Primordial Void Sovereign: Ouroboros-Null',
+      avatar: '🌌',
+      maxHpKm: 120.00,
+      element: 'dark',
+      weakElement: 'lightning',
+      resistElement: 'earth',
+      desc: 'ผู้กลืนกินมิติบรรพกาล ปรากฏเฉพาะผู้พิชิตจบลูป 3 ขึ้นไป! แพ้ทางอัสนีบาตฟาดพิภพ!',
+      rewardExp: 500000,
+      rewardGold: 100000,
+      gimmick: 'secretboss'
+    }
+  ];
+
+  // --- 10 Special Roaming Monsters Database (Drops Elemental Spell Tomes!) ---
+  App.ROAMING_MONSTER_DATABASE = [
+    {
+      id: 'rm_wisp',
+      name: 'Shadow Wisp',
+      thName: 'ภูตวิญญาณเร่ร่อน',
+      avatar: '👻',
+      mapIcon: '👻',
+      rarityLabel: 'ทั่วไป',
+      weight: 16,
+      baseHpKm: 0.05,
+      baseExp: 450,
+      baseGold: 90,
+      element: 'dark',
+      weakElement: 'light',
+      resistElement: 'dark',
+      dropTomeElement: 'light',
+      gimmick: 'wisp',
+      gimmickDesc: 'วิญญาณเปราะบาง สลายไว ฟื้นเกจไม้ตาย +25% & ดรอปคัมภีร์ธาตุแสง',
+      rewardHint: '📕 คัมภีร์แสง & เกจ +25%'
+    },
+    {
+      id: 'rm_hound',
+      name: 'Crypt Hound',
+      thName: 'สุนัขล่าเนื้อสุสาน',
+      avatar: '🐺',
+      mapIcon: '🐺',
+      rarityLabel: 'ทั่วไป',
+      weight: 15,
+      baseHpKm: 0.08,
+      baseExp: 650,
+      baseGold: 180,
+      element: 'lightning',
+      weakElement: 'earth',
+      resistElement: 'lightning',
+      dropTomeElement: 'lightning',
+      gimmick: 'hound',
+      gimmickDesc: 'เร่งเพซเร็วกว่าเพซเฉลี่ย 0.3 นาที/กม. รับดาเมจพุ่งทะยาน x2.5!',
+      rewardHint: '📕 คัมภีร์สายฟ้า & ทองสูง'
+    },
+    {
+      id: 'rm_scarab',
+      name: 'Ironclad Scarab',
+      thName: 'ด้วงเกราะเหล็กทมิฬ',
+      avatar: '🪲',
+      mapIcon: '🪲',
+      rarityLabel: 'เกราะหนา',
+      weight: 13,
+      baseHpKm: 0.10,
+      baseExp: 850,
+      baseGold: 150,
+      element: 'earth',
+      weakElement: 'lightning',
+      resistElement: 'earth',
+      dropTomeElement: 'earth',
+      gimmick: 'scarab',
+      gimmickDesc: 'เกราะเหล็กทนทานลดดาเมจ 70% แพ้ทาง Critical Hit, Shadow Slash หรือเวทสายฟ้า',
+      rewardHint: '📕 คัมภีร์ดิน & หินรูน'
+    },
+    {
+      id: 'rm_leech',
+      name: 'Blood Leech',
+      thName: 'ปลิงดูดโลหิตอเวจี',
+      avatar: '🩸',
+      mapIcon: '🩸',
+      rarityLabel: 'ก่อกวน',
+      weight: 12,
+      baseHpKm: 0.12,
+      baseExp: 900,
+      baseGold: 260,
+      element: 'dark',
+      weakElement: 'fire',
+      resistElement: 'ice',
+      dropTomeElement: 'dark',
+      gimmick: 'leech',
+      gimmickDesc: 'หากวิ่งช้ากว่าเพซ 8:00 จะดูดเกจไม้ตายคืน ต้องวิ่งต่อเนื่องหรือเผาด้วยเวทไฟ',
+      rewardHint: '📕 คัมภีร์มืด & ทอง +150%'
+    },
+    {
+      id: 'rm_banshee',
+      name: 'Banshee of the Mist',
+      thName: 'นางพรายหมอกอาถรรพ์',
+      avatar: '🌫️',
+      mapIcon: '🌫️',
+      rarityLabel: 'คุมจังหวะ',
+      weight: 11,
+      baseHpKm: 0.15,
+      baseExp: 1400,
+      baseGold: 210,
+      element: 'ice',
+      weakElement: 'fire',
+      resistElement: 'ice',
+      dropTomeElement: 'ice',
+      gimmick: 'banshee',
+      gimmickDesc: 'แพ้ทางสภาวะ Flow State (โดนดาเมจ x3) และเวทไฟ ดรอปคัมภีร์น้ำแข็ง',
+      rewardHint: '📕 คัมภีร์น้ำแข็ง & EXP สูง'
+    },
+    {
+      id: 'rm_mimic',
+      name: 'Abyssal Mimic',
+      thName: 'หีบปีศาจจำแลง',
+      avatar: '📦',
+      mapIcon: '📦',
+      rarityLabel: 'กับดักสมบัติ',
+      weight: 10,
+      baseHpKm: 0.15,
+      baseExp: 1200,
+      baseGold: 320,
+      element: 'lightning',
+      weakElement: 'earth',
+      resistElement: 'dark',
+      dropTomeElement: 'lightning',
+      gimmick: 'mimic',
+      gimmickDesc: 'พรางตัวเป็นหีบสมบัติบนแผนที่! สยบได้การันตีหีบสมบัติ + คัมภีร์สายฟ้า',
+      rewardHint: '📕 คัมภีร์สายฟ้า & หีบ +1'
+    },
+    {
+      id: 'rm_berserker',
+      name: 'Infernal Berserker',
+      thName: 'นักรบคลั่งเพลิงนรก',
+      avatar: '🔥',
+      mapIcon: '🔥',
+      rarityLabel: 'สายชีพจร',
+      weight: 9,
+      baseHpKm: 0.18,
+      baseExp: 1600,
+      baseGold: 380,
+      element: 'fire',
+      weakElement: 'ice',
+      resistElement: 'fire',
+      dropTomeElement: 'fire',
+      gimmick: 'berserker',
+      gimmickDesc: 'แพ้ทางชีพจร HR Zone 3–4 (ติดคริ 100%) และเวทน้ำแข็ง ดรอปคัมภีร์ไฟ',
+      rewardHint: '📕 คัมภีร์ไฟ & ทองก้อนโต'
+    },
+    {
+      id: 'rm_stalker',
+      name: 'Void Stalker',
+      thName: 'นักล่าเงาต่างมิติ',
+      avatar: '👤',
+      mapIcon: '👤',
+      rarityLabel: 'ล่องหน',
+      weight: 7,
+      baseHpKm: 0.20,
+      baseExp: 2000,
+      baseGold: 420,
+      element: 'dark',
+      weakElement: 'light',
+      resistElement: 'dark',
+      dropTomeElement: 'dark',
+      gimmick: 'stalker',
+      gimmickDesc: 'จะวาร์ปหนีหากปราบไม่ทันภายใน 40 วินาที ต้องเร่งสปรินต์หรือใช้เวทแสงปิดฉาก!',
+      rewardHint: '📕 คัมภีร์มืด & รูนหายาก'
+    },
+    {
+      id: 'rm_golem',
+      name: 'Cursed Totem Golem',
+      thName: 'โกเล็มเสาอาถรรพ์',
+      avatar: '🗿',
+      mapIcon: '🗿',
+      rarityLabel: 'มินิบอส',
+      weight: 5,
+      baseHpKm: 0.30,
+      baseExp: 2800,
+      baseGold: 550,
+      element: 'earth',
+      weakElement: 'ice',
+      resistElement: 'lightning',
+      dropTomeElement: 'earth',
+      gimmick: 'golem',
+      gimmickDesc: 'เฝ้าจุดยุทธศาสตร์ โค่นสำเร็จเปิดบัฟ Overdrive 60 วิ + คัมภีร์ดิน 2 เล่ม!',
+      rewardHint: '📕 คัมภีร์ดิน x2 & Overdrive'
+    },
+    {
+      id: 'rm_archdemon',
+      name: 'Arch-Demon Harbinger',
+      thName: 'จอมมารผู้ส่งสาร',
+      avatar: '😈',
+      mapIcon: '😈',
+      rarityLabel: 'หายากสุด',
+      weight: 2,
+      baseHpKm: 0.50,
+      baseExp: 5000,
+      baseGold: 1200,
+      element: 'dark',
+      weakElement: 'light',
+      resistElement: 'fire',
+      dropTomeElement: 'dark',
+      gimmick: 'archdemon',
+      gimmickDesc: 'มีเกราะมิติลดดาเมจ 50% แพ้ทาง Shadow Slash และเวทแสง ดรอปคัมภีร์มืด 2 เล่ม!',
+      rewardHint: '📕 คัมภีร์มืด x2 & หีบ+รูนสูง'
+    }
+  ];
+
+  // --- Level Scaling Helpers ---
+  App.getRoamingMonsterScaledStats = function (template, playerLevel) {
+    const lv = Math.max(1, playerLevel || 1);
+    const hpMult = 1 + ((lv - 1) * 0.12);
+    const rewardMult = 1 + ((lv - 1) * 0.18);
+    const maxHpKm = parseFloat((template.baseHpKm * hpMult).toFixed(3));
+    const rewardExp = Math.floor(template.baseExp * rewardMult);
+    const rewardGold = Math.floor(template.baseGold * rewardMult);
+    return { level: lv, maxHpKm, rewardExp, rewardGold };
+  };
+
+  App.getBossMaxHp = function (bossIndex, loopCycle = 0) {
+    const base = App.BOSS_DATABASE[bossIndex].maxHpKm;
+    return parseFloat((base * (1 + (loopCycle * 0.15))).toFixed(2));
+  };
+})();

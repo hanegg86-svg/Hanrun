@@ -1,8 +1,18 @@
-// ShadowStrider: Dark Run RPG - Module 1: Databases, Constants & Level Scaling Formulas
+// ShadowStrider: Dark Run RPG - Module 1: Equipment, Sets, Runes, Elements, Quests & State
 (function () {
   'use strict';
 
   const App = window.ShadowStriderApp = window.ShadowStriderApp || {};
+
+  // --- 6 Elemental Affinities Database ---
+  App.ELEMENT_DATABASE = {
+    earth: { id: 'earth', name: 'ดิน', enName: 'Earth', icon: '🌍', color: '#d97706', cssClass: 'elem-earth' },
+    ice: { id: 'ice', name: 'น้ำแข็ง', enName: 'Ice', icon: '❄️', color: '#38bdf8', cssClass: 'elem-ice' },
+    fire: { id: 'fire', name: 'ไฟ', enName: 'Fire', icon: '🔥', color: '#ef4444', cssClass: 'elem-fire' },
+    lightning: { id: 'lightning', name: 'สายฟ้า', enName: 'Lightning', icon: '⚡', color: '#eab308', cssClass: 'elem-lightning' },
+    light: { id: 'light', name: 'แสงสว่าง', enName: 'Light', icon: '✨', color: '#fde047', cssClass: 'elem-light' },
+    dark: { id: 'dark', name: 'ความมืด', enName: 'Dark', icon: '🌑', color: '#a855f7', cssClass: 'elem-dark' }
+  };
 
   // --- Equipment Set System Database ---
   App.SET_DATABASE = {
@@ -24,7 +34,7 @@
       icon: '🩸',
       color: '#f87171',
       bonuses: {
-        2: 'ค่าความอึด STA +25% & ได้รับทองคำเพิ่มขึ้น +20%',
+        2: 'ค่าความอึด STA +25% (เพิ่ม Max MP) & ได้รับทองคำเพิ่มขึ้น +20%',
         4: 'ขณะอยู่ใน Heart Rate Zone 2-3 จะได้รับโบนัส EXP เพิ่มขึ้น +40%'
       }
     },
@@ -67,13 +77,13 @@
   App.RUNE_DATABASE = {
     el: { id: 'el', name: 'El', number: 1, icon: '🪨', statDesc: 'ดาเมจ +5%', statType: 'dmg', statVal: 5 },
     eld: { id: 'eld', name: 'Eld', number: 2, icon: '🪨', statDesc: 'ความอึด STA +5%', statType: 'sta', statVal: 5 },
-    tir: { id: 'tir', name: 'Tir', number: 3, icon: '🪨', statDesc: 'เกจไม้ตายชาร์จไว +8%', statType: 'ultCharge', statVal: 8 },
+    tir: { id: 'tir', name: 'Tir', number: 3, icon: '🪨', statDesc: 'เกจไม้ตายชาร์จไว +8% & Max MP +15', statType: 'ultCharge', statVal: 8, mpVal: 15 },
     nef: { id: 'nef', name: 'Nef', number: 4, icon: '🪨', statDesc: 'ความอึด STA +8%', statType: 'sta', statVal: 8 },
     eth: { id: 'eth', name: 'Eth', number: 5, icon: '🪨', statDesc: 'เจาะเกราะบอส +8%', statType: 'pierce', statVal: 8 },
     ith: { id: 'ith', name: 'Ith', number: 6, icon: '🪨', statDesc: 'ดาเมจ +8%', statType: 'dmg', statVal: 8 },
     tal: { id: 'tal', name: 'Tal', number: 7, icon: '🪨', statDesc: 'ดาเมจพิษ +12%', statType: 'dmg', statVal: 12 },
     ral: { id: 'ral', name: 'Ral', number: 8, icon: '🪨', statDesc: 'ดาเมจเพลิง +15%', statType: 'dmg', statVal: 15 },
-    ort: { id: 'ort', name: 'Ort', number: 9, icon: '🪨', statDesc: 'เกจไม้ตายไวขึ้น +15%', statType: 'ultCharge', statVal: 15 },
+    ort: { id: 'ort', name: 'Ort', number: 9, icon: '🪨', statDesc: 'เกจไม้ตายไวขึ้น +15% & Max MP +25', statType: 'ultCharge', statVal: 15, mpVal: 25 },
     thul: { id: 'thul', name: 'Thul', number: 10, icon: '🪨', statDesc: 'คริติคอล +5%', statType: 'crit', statVal: 5 },
     amn: { id: 'amn', name: 'Amn', number: 11, icon: '🪨', statDesc: 'โบนัส EXP +15%', statType: 'exp', statVal: 15 },
     sol: { id: 'sol', name: 'Sol', number: 12, icon: '🪨', statDesc: 'ดาเมจสุทธิ +14%', statType: 'dmg', statVal: 14 },
@@ -86,7 +96,7 @@
     fal: { id: 'fal', name: 'Fal', number: 19, icon: '🪨', statDesc: 'ดาเมจพลังกาย +25%', statType: 'dmg', statVal: 25 }
   };
 
-  // --- Runewords Database (Original 4 Sets + 5 New Weapon/Speed Sets = 9 Sets Total) ---
+  // --- Runewords Database (9 Sets Total) ---
   App.RUNEWORD_DATABASE = [
     {
       id: 'steel',
@@ -163,10 +173,11 @@
       runes: ['ort', 'sol'],
       types: ['relic', 'ring'],
       typeLabels: 'เครื่องราง / แหวน (2 ช่อง)',
-      desc: 'ดูดซับ EXP เพิ่มขึ้น +35%, ดาเมจ +15%, เกจไม้ตายแรงขึ้น +20%',
+      desc: 'ดูดซับ EXP เพิ่มขึ้น +35%, ดาเมจ +15%, เกจไม้ตายแรงขึ้น +20%, Max MP +40',
       bonusExp: 35,
       bonusDmg: 15,
-      bonusUltDmg: 20
+      bonusUltDmg: 20,
+      bonusMp: 40
     },
     {
       id: 'ancients_pledge',
@@ -190,312 +201,6 @@
       bonusCrit: 15
     }
   ];
-
-  // --- Boss List Database (12 Dungeon Bosses) ---
-  App.BOSS_DATABASE = [
-    {
-      id: 'boss_1',
-      tier: 'TIER I',
-      name: 'Gargoyle of the Crypt',
-      avatar: '👹',
-      maxHpKm: 2.00,
-      desc: 'อสูรหินเฝ้าประตูสุสาน จงวิ่ง 2.00 กม. เพื่อทำลายมัน!',
-      rewardExp: 2200,
-      rewardGold: 260,
-      gimmick: 'none'
-    },
-    {
-      id: 'boss_2',
-      tier: 'TIER II',
-      name: 'Abyssal Blood Knight',
-      avatar: '🤺',
-      maxHpKm: 4.50,
-      desc: 'อัศวินเกราะดำกระหายการต่อสู้ วิ่ง 4.50 กม. เพื่อสยบดาบโลหิต!',
-      rewardExp: 5500,
-      rewardGold: 600,
-      gimmick: 'none'
-    },
-    {
-      id: 'boss_2_major',
-      tier: 'TIER II (MAJOR)',
-      name: 'Abyssal Juggernaut: Gorgoroth',
-      avatar: '🦏',
-      maxHpKm: 6.50,
-      desc: 'บอสใหญ่แห่งเทียร์สอง จอมพลังเกราะหนาทมิฬ ทลายเกราะเหล็กด้วย Flow State หรือ Shadow Slash!',
-      rewardExp: 8500,
-      rewardGold: 1200,
-      gimmick: 'juggernaut'
-    },
-    {
-      id: 'boss_3',
-      tier: 'TIER III',
-      name: 'Ancient Bone Dragon',
-      avatar: '🐉',
-      maxHpKm: 8.00,
-      desc: 'มังกรกระดูกบรรพกาล วิ่งสะสม 8.00 กม. เพื่อปิดผนึกลมหายใจมรณะ!',
-      rewardExp: 12000,
-      rewardGold: 1300,
-      gimmick: 'none'
-    },
-    {
-      id: 'boss_4',
-      tier: 'TIER IV',
-      name: 'Shadow Lich: Malakor',
-      avatar: '🧙‍♂️',
-      maxHpKm: 12.50,
-      desc: 'จอมเวทอเวจีโบราณ เมื่อเลือดต่ำกว่า 75% หมอกคำสาปจะสูบเลือดคืนหากเพซวิ่งช้ากว่า 7:30!',
-      rewardExp: 21000,
-      rewardGold: 2600,
-      gimmick: 'mist'
-    },
-    {
-      id: 'boss_5',
-      tier: 'TIER V',
-      name: 'Void Behemoth: Titan of Ruin',
-      avatar: '🗿',
-      maxHpKm: 18.00,
-      desc: 'ไททันศิลาแห่งความว่างเปล่า เกราะหนาลดดาเมจ 45% ทลายเกราะด้วยคริติคอลหรือท่าไม้ตาย Shadow Slash!',
-      rewardExp: 38000,
-      rewardGold: 4800,
-      gimmick: 'carapace'
-    },
-    {
-      id: 'boss_6',
-      tier: 'TIER VI',
-      name: 'Abyssal Empress: Nyxaria',
-      avatar: '👑',
-      maxHpKm: 25.00,
-      desc: 'จักรพรรดินีเงาราตรี 3 เฟส: ร่างเงาหลอก (ทลายด้วย Flow State), สนามเรโซแนนซ์ และจันทรคราสทมิฬ!',
-      rewardExp: 62000,
-      rewardGold: 8500,
-      gimmick: 'empress'
-    },
-    {
-      id: 'boss_7',
-      tier: 'TIER VII',
-      name: 'Eclipse Harbinger: Ignis-Vorax',
-      avatar: '☄',
-      maxHpKm: 36.00,
-      desc: 'เทพอสูรเพลิงสุริยคราส เลือด 36 กม. ครึ่งแรกคลื่นความร้อนแผดเผา ครึ่งหลังระเบิดซูเปอร์โนวา ชาร์จไม้ตายไว x2!',
-      rewardExp: 95000,
-      rewardGold: 15000,
-      gimmick: 'supernova'
-    },
-    {
-      id: 'boss_8',
-      tier: 'TIER VIII',
-      name: 'Primordial Void Leviathan: Nihil-Khaos',
-      avatar: '🌌',
-      maxHpKm: 50.00,
-      desc: 'เลเวียธานมิติอเวจีบรรพกาล เลือด 50 กม. ต่ำกว่า 50% หลุมดำดูดกลืนเกจ ต่ำกว่า 20% ซิงกูลาริตียุบตัว ดาเมจ x2.5 ในโซนสูง!',
-      rewardExp: 145000,
-      rewardGold: 26000,
-      gimmick: 'singularity'
-    },
-    {
-      id: 'boss_9',
-      tier: 'TIER IX',
-      name: 'Chrono-Abyss Overlord: Chronos-Nox',
-      avatar: '⏳',
-      maxHpKm: 70.00,
-      desc: 'เทพอสูรบิดผันกาลเวลา เลือด 70 กม. วิ่งเพซเร็วกว่า 6:30 ทะลวงมิติดาเมจ x3! แต่หากช้ากว่า 8:00 มิติเวลาจะหมุนกลับสูบเลือดฟื้นฟู!',
-      rewardExp: 220000,
-      rewardGold: 40000,
-      gimmick: 'chrono'
-    },
-    {
-      id: 'boss_super',
-      tier: 'TIER X',
-      name: 'Cosmic Dread: Azathoth-Nox',
-      avatar: '👁️‍🗨️',
-      maxHpKm: 90.00,
-      desc: 'เทพอสูรความว่างเปล่าบรรพกาล เลือด 90 กม.! เกราะหนาลดดาเมจ 70% สลายด้วย Shadow Slash และสูบเกจหากเพซช้ากว่า 7:00!',
-      rewardExp: 350000,
-      rewardGold: 70000,
-      gimmick: 'superboss'
-    },
-    {
-      id: 'boss_secret',
-      tier: 'TIER EX (SECRET)',
-      name: 'Primordial Void Sovereign: Ouroboros-Null',
-      avatar: '🌌',
-      maxHpKm: 120.00,
-      desc: 'ผู้กลืนกินมิติบรรพกาล ปรากฏเฉพาะผู้พิชิตจบลูป 3 ขึ้นไป! ทลายเกราะด้วย Flow State หรือไม้ตาย และเร่งชีพจร Zone 3 เพื่อสยบการดูดกลืนพลัง!',
-      rewardExp: 500000,
-      rewardGold: 100000,
-      gimmick: 'secretboss'
-    }
-  ];
-
-  // --- 10 Special Roaming Monsters Database (Spawn <= 1 km, Engage <= 10 m, Scales with Player Level) ---
-  App.ROAMING_MONSTER_DATABASE = [
-    {
-      id: 'rm_wisp',
-      name: 'Shadow Wisp',
-      thName: 'ภูตวิญญาณเร่ร่อน',
-      avatar: '👻',
-      mapIcon: '👻',
-      rarityLabel: 'ทั่วไป',
-      weight: 16,
-      baseHpKm: 0.05,
-      baseExp: 450,
-      baseGold: 90,
-      gimmick: 'wisp',
-      gimmickDesc: 'วิญญาณเปราะบาง วิ่งผ่านระยะสั้นๆ สลายทันที ฟื้นเกจไม้ตาย +25%',
-      rewardHint: 'เกจไม้ตาย +25% & EXP'
-    },
-    {
-      id: 'rm_hound',
-      name: 'Crypt Hound',
-      thName: 'สุนัขล่าเนื้อสุสาน',
-      avatar: '🐺',
-      mapIcon: '🐺',
-      rarityLabel: 'ทั่วไป',
-      weight: 15,
-      baseHpKm: 0.08,
-      baseExp: 650,
-      baseGold: 180,
-      gimmick: 'hound',
-      gimmickDesc: 'เร่งเพซเร็วกว่าเพซเฉลี่ย 0.3 นาที/กม. รับดาเมจพุ่งทะยาน x2.5!',
-      rewardHint: 'เหรียญทองสูง'
-    },
-    {
-      id: 'rm_scarab',
-      name: 'Ironclad Scarab',
-      thName: 'ด้วงเกราะเหล็กทมิฬ',
-      avatar: '🪲',
-      mapIcon: '🪲',
-      rarityLabel: 'เกราะหนา',
-      weight: 13,
-      baseHpKm: 0.10,
-      baseExp: 850,
-      baseGold: 150,
-      gimmick: 'scarab',
-      gimmickDesc: 'เกราะเหล็กทนทานลดดาเมจ 70% แพ้ทาง Critical Hit หรือ Shadow Slash',
-      rewardHint: 'การันตีหินรูน (El–Ith)'
-    },
-    {
-      id: 'rm_leech',
-      name: 'Blood Leech',
-      thName: 'ปลิงดูดโลหิตอเวจี',
-      avatar: '🩸',
-      mapIcon: '🩸',
-      rarityLabel: 'ก่อกวน',
-      weight: 12,
-      baseHpKm: 0.12,
-      baseExp: 900,
-      baseGold: 260,
-      gimmick: 'leech',
-      gimmickDesc: 'หากวิ่งช้ากว่าเพซ 8:00 จะดูดเกจไม้ตายคืน ต้องวิ่งต่อเนื่องเพื่อกำจัด',
-      rewardHint: 'โบนัสทองคำ +150%'
-    },
-    {
-      id: 'rm_banshee',
-      name: 'Banshee of the Mist',
-      thName: 'นางพรายหมอกอาถรรพ์',
-      avatar: '🌫️',
-      mapIcon: '🌫️',
-      rarityLabel: 'คุมจังหวะ',
-      weight: 11,
-      baseHpKm: 0.15,
-      baseExp: 1400,
-      baseGold: 210,
-      gimmick: 'banshee',
-      gimmickDesc: 'แพ้ทางสภาวะ Flow State (โดนดาเมจ x3 เมื่อคุมเพซนิ่งสม่ำเสมอ)',
-      rewardHint: 'EXP สูงพิเศษ'
-    },
-    {
-      id: 'rm_mimic',
-      name: 'Abyssal Mimic',
-      thName: 'หีบปีศาจจำแลง',
-      avatar: '📦',
-      mapIcon: '📦',
-      rarityLabel: 'กับดักสมบัติ',
-      weight: 10,
-      baseHpKm: 0.15,
-      baseExp: 1200,
-      baseGold: 320,
-      gimmick: 'mimic',
-      gimmickDesc: 'พรางตัวเป็นหีบสมบัติบนแผนที่! สยบได้การันตีหีบสมบัติ + อุปกรณ์',
-      rewardHint: 'การันตีหีบสมบัติ +1'
-    },
-    {
-      id: 'rm_berserker',
-      name: 'Infernal Berserker',
-      thName: 'นักรบคลั่งเพลิงนรก',
-      avatar: '🔥',
-      mapIcon: '🔥',
-      rarityLabel: 'สายชีพจร',
-      weight: 9,
-      baseHpKm: 0.18,
-      baseExp: 1600,
-      baseGold: 380,
-      gimmick: 'berserker',
-      gimmickDesc: 'แพ้ทางชีพจร HR Zone 3–4 (ติดคริติคอล 100% ทันทีเมื่อชีพจรถึงโซน)',
-      rewardHint: 'ทองก้อนโต / ลุ้นแต้มสเตตัส'
-    },
-    {
-      id: 'rm_stalker',
-      name: 'Void Stalker',
-      thName: 'นักล่าเงาต่างมิติ',
-      avatar: '👤',
-      mapIcon: '👤',
-      rarityLabel: 'ล่องหน',
-      weight: 7,
-      baseHpKm: 0.20,
-      baseExp: 2000,
-      baseGold: 420,
-      gimmick: 'stalker',
-      gimmickDesc: 'จะวาร์ปหนีหากปราบไม่ทันภายใน 40 วินาที ต้องเร่งสปรินต์ปิดฉาก!',
-      rewardHint: 'หินรูนหายาก (Shael–Hel)'
-    },
-    {
-      id: 'rm_golem',
-      name: 'Cursed Totem Golem',
-      thName: 'โกเล็มเสาอาถรรพ์',
-      avatar: '🗿',
-      mapIcon: '🗿',
-      rarityLabel: 'มินิบอส',
-      weight: 5,
-      baseHpKm: 0.30,
-      baseExp: 2800,
-      baseGold: 550,
-      gimmick: 'golem',
-      gimmickDesc: 'เฝ้าจุดยุทธศาสตร์ โค่นสำเร็จเปิดบัฟ Overdrive (ทอง x2) ทันที 60 วิ!',
-      rewardHint: 'บัฟ Overdrive 60 วิ + หินรูน'
-    },
-    {
-      id: 'rm_archdemon',
-      name: 'Arch-Demon Harbinger',
-      thName: 'จอมมารผู้ส่งสาร',
-      avatar: '😈',
-      mapIcon: '😈',
-      rarityLabel: 'หายากสุด',
-      weight: 2,
-      baseHpKm: 0.50,
-      baseExp: 5000,
-      baseGold: 1200,
-      gimmick: 'archdemon',
-      gimmickDesc: 'มีเกราะมิติลดดาเมจ 50% ทลายด้วย Shadow Slash หรือความเร็วสูง!',
-      rewardHint: 'การันตีอุปกรณ์ Epic–Mythic & รูนสูง'
-    }
-  ];
-
-  // --- Level Scaling Helpers for Roaming Monsters ---
-  App.getRoamingMonsterScaledStats = function (template, playerLevel) {
-    const lv = Math.max(1, playerLevel || 1);
-    const hpMult = 1 + ((lv - 1) * 0.12);
-    const rewardMult = 1 + ((lv - 1) * 0.18);
-    const maxHpKm = parseFloat((template.baseHpKm * hpMult).toFixed(3));
-    const rewardExp = Math.floor(template.baseExp * rewardMult);
-    const rewardGold = Math.floor(template.baseGold * rewardMult);
-    return { level: lv, maxHpKm, rewardExp, rewardGold };
-  };
-
-  App.getBossMaxHp = function (bossIndex, loopCycle = 0) {
-    const base = App.BOSS_DATABASE[bossIndex].maxHpKm;
-    return parseFloat((base * (1 + (loopCycle * 0.15))).toFixed(2));
-  };
 
   App.getTitleForLevel = function (level) {
     if (level >= 80) return 'Ouroboros God Sovereign';
@@ -573,12 +278,16 @@
 
   App.createDefaultState = function () {
     const bestiaryInit = {};
-    App.BOSS_DATABASE.forEach(b => {
-      bestiaryInit[b.id] = { kills: 0, name: b.name };
-    });
-    App.ROAMING_MONSTER_DATABASE.forEach(rm => {
-      bestiaryInit[rm.id] = { kills: 0, name: rm.name };
-    });
+    if (Array.isArray(App.BOSS_DATABASE)) {
+      App.BOSS_DATABASE.forEach(b => {
+        bestiaryInit[b.id] = { kills: 0, name: b.name };
+      });
+    }
+    if (Array.isArray(App.ROAMING_MONSTER_DATABASE)) {
+      App.ROAMING_MONSTER_DATABASE.forEach(rm => {
+        bestiaryInit[rm.id] = { kills: 0, name: rm.name };
+      });
+    }
 
     return {
       playerName: 'Abyss Stalker',
@@ -589,6 +298,24 @@
       gold: 0,
       statPoints: 0,
       ultimateCharge: 0,
+      currentMp: 100, // Scales with STA (50 + STA * 5)
+      autoMagicMode: false,
+      spellLevels: {
+        earth: 1,
+        ice: 1,
+        fire: 1,
+        lightning: 1,
+        light: 1,
+        dark: 1
+      },
+      spellTomes: {
+        earth: 0,
+        ice: 0,
+        fire: 0,
+        lightning: 0,
+        light: 0,
+        dark: 0
+      },
       stats: { str: 10, sta: 10, agi: 10 },
       upgrades: { blade: 0, charm: 0, eye: 0, elixir: 0, bag: 0 },
       upgradeFailStreak: { blade: 0, charm: 0, eye: 0 },
@@ -618,7 +345,8 @@
         ultCastCount: 0,
         goblinCaughtCount: 0,
         flowStateCount: 0,
-        roamingKills: 0
+        roamingKills: 0,
+        spellsCastCount: 0
       },
       career: {
         totalRuns: 0,

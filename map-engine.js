@@ -1,4 +1,4 @@
-// ShadowStrider: Dark Run RPG - Module 2: Dark Fantasy Map, Offline Radar & 80m Persistent Combat
+// ShadowStrider: Dark Run RPG - Module 4: Dark Fantasy Map, Offline Radar & 80m Persistent Combat
 (function () {
   'use strict';
 
@@ -36,7 +36,6 @@
   }
 
   function generateRandomCoordWithinRadius(centerLat, centerLon, minKm, maxKm) {
-    // Uniform area distribution within [minKm, maxKm]
     const minSq = minKm * minKm;
     const maxSq = maxKm * maxKm;
     const distKm = Math.sqrt(minSq + Math.random() * (maxSq - minSq));
@@ -54,7 +53,6 @@
   function createRoamingMonsterInstance(centerLat, centerLon, playerLevel) {
     const template = pickWeightedRoamingTemplate();
     const scaled = App.getRoamingMonsterScaledStats(template, playerLevel);
-    // Spawn between 85m and 460m so enemies appear outside the immediate 80m engage zone
     const coord = generateRandomCoordWithinRadius(centerLat, centerLon, 0.085, SPAWN_RADIUS_KM * 0.92);
 
     return {
@@ -64,6 +62,10 @@
       thName: template.thName,
       avatar: template.avatar,
       mapIcon: template.gimmick === 'mimic' ? '📦' : template.mapIcon,
+      element: template.element || 'dark',
+      weakElement: template.weakElement || 'light',
+      resistElement: template.resistElement || 'dark',
+      dropTomeElement: template.dropTomeElement || 'dark',
       gimmick: template.gimmick,
       gimmickDesc: template.gimmickDesc,
       level: scaled.level,
@@ -111,7 +113,6 @@
         });
       }
 
-      // Initialize default coordinates via browser geolocation if available
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
@@ -157,7 +158,6 @@
         gs.roamingMonsters = [];
       }
 
-      // Restore activeEncounterId if an engaged monster exists in saved state
       if (!activeEncounterId) {
         const alreadyEngaged = gs.roamingMonsters.find(m => m.engaged);
         if (alreadyEngaged) {
@@ -168,9 +168,20 @@
       }
 
       let changed = false;
-      // 1. Keep monsters within 500m OR any monster already engaged in persistent combat
       const kept = [];
       for (const m of gs.roamingMonsters) {
+        // Hydrate legacy monsters without elemental fields
+        if (!m.dropTomeElement) {
+          const tpl = App.ROAMING_MONSTER_DATABASE.find(t => t.id === m.templateId);
+          if (tpl) {
+            m.element = tpl.element;
+            m.weakElement = tpl.weakElement;
+            m.resistElement = tpl.resistElement;
+            m.dropTomeElement = tpl.dropTomeElement;
+            changed = true;
+          }
+        }
+
         const distKm = App.core.calculateDistance(playerLat, playerLon, m.lat, m.lon);
         const isLockedCombat = m.engaged || activeEncounterId === m.uid;
         if (distKm > SPAWN_RADIUS_KM && !isLockedCombat) {
@@ -181,7 +192,6 @@
       }
       gs.roamingMonsters = kept;
 
-      // 2. Spawn new fixed-position monsters up to MAX_ACTIVE_MONSTERS inside <= 500m radius
       while (gs.roamingMonsters.length < MAX_ACTIVE_MONSTERS) {
         const inst = createRoamingMonsterInstance(playerLat, playerLon, gs.level || 1);
         gs.roamingMonsters.push(inst);
@@ -212,7 +222,6 @@
         if (m && m.gimmick === 'stalker' && typeof m.timerLeft === 'number') {
           m.timerLeft--;
           if (m.timerLeft <= 0) {
-            // Void Stalker warps away if not defeated in 40s
             gs.roamingMonsters = gs.roamingMonsters.filter(item => item.uid !== m.uid);
             activeEncounterId = null;
             App.core.showToast('💨 Void Stalker วาร์ปหนีหายไปในมิติมืด!');
@@ -230,7 +239,6 @@
       const gs = App.core?.getGameState();
       if (!gs || !Array.isArray(gs.roamingMonsters)) return;
 
-      // Validate existing locked encounter; once engaged within 80m, it persists even if player leaves radius
       let lockedMonster = null;
       if (activeEncounterId) {
         lockedMonster = gs.roamingMonsters.find(m => m.uid === activeEncounterId) || null;
@@ -260,7 +268,6 @@
       const nearestHudEl = document.getElementById('nearest-monster-val');
       const badgeMapEl = document.getElementById('badge-map');
 
-      // If not yet locked into combat, check if any monster is within 80m engage radius
       if (!lockedMonster && nearest && nearestDistKm <= ENGAGE_RADIUS_KM) {
         activeEncounterId = nearest.uid;
         nearest.engaged = true;
@@ -332,9 +339,9 @@
         }
       } else if (m.gimmick === 'scarab') {
         if (isCrit) {
-          mult *= 2.0; // Critical shatters beetle armor
+          mult *= 2.0;
         } else {
-          mult *= 0.30; // 70% armor reduction
+          mult *= 0.30;
         }
       } else if (m.gimmick === 'leech') {
         if (rollingPace === null || rollingPace > 8.0) {
@@ -354,6 +361,30 @@
       }
 
       const finalDamage = baseDamageKm * mult;
+      m.hpRemainKm = Math.max(0, parseFloat((m.hpRemainKm - finalDamage).toFixed(4)));
+
+      if (m.hpRemainKm <= 0.0005) {
+        this.handleRoamingMonsterDefeat(m);
+      } else {
+        App.core.saveGame();
+        this.renderEncounterCard();
+      }
+    },
+
+    applyElementalSpellToEncounter(baseSpellDamageKm, spellElement) {
+      const gs = App.core?.getGameState();
+      if (!gs || !activeEncounterId) return;
+
+      const m = gs.roamingMonsters.find(item => item.uid === activeEncounterId);
+      if (!m) return;
+
+      let mult = 1.0;
+      if (App.MagicEngine && App.MagicEngine.getElementalMultiplier) {
+        const aff = App.MagicEngine.getElementalMultiplier(spellElement, m.weakElement, m.resistElement);
+        mult = aff.mult;
+      }
+
+      const finalDamage = baseSpellDamageKm * mult;
       m.hpRemainKm = Math.max(0, parseFloat((m.hpRemainKm - finalDamage).toFixed(4)));
 
       if (m.hpRemainKm <= 0.0005) {
@@ -386,7 +417,6 @@
       gs.roamingMonsters = gs.roamingMonsters.filter(item => item.uid !== monster.uid);
       activeEncounterId = null;
 
-      // Update Bestiary & Stats
       if (!gs.bestiary[monster.templateId]) {
         gs.bestiary[monster.templateId] = { kills: 0, name: monster.name };
       }
@@ -397,46 +427,55 @@
       let goldGain = monster.rewardGold;
       let extraMsg = '';
 
+      // Drop Elemental Spell Tome from defeated Roaming Monster!
+      const tomeElemKey = monster.dropTomeElement || 'dark';
+      const tomeQty = (monster.gimmick === 'golem' || monster.gimmick === 'archdemon') ? 2 : 1;
+      if (App.MagicEngine && App.MagicEngine.awardSpellTome) {
+        const elemInfo = App.MagicEngine.awardSpellTome(tomeElemKey, tomeQty);
+        if (elemInfo) {
+          extraMsg += ` +📕 คัมภีร์${elemInfo.name} x${tomeQty}`;
+        }
+      }
+
       if (monster.gimmick === 'wisp') {
         App.core.addUltimateCharge(25);
-        extraMsg = ' +25% เกจไม้ตาย';
+        extraMsg += ' +25% เกจไม้ตาย';
       } else if (monster.gimmick === 'scarab') {
         const rune = App.core.rollRandomRuneDrop(false);
-        extraMsg = ` +🪨 ${rune.name} Rune`;
+        extraMsg += ` +🪨 ${rune.name} Rune`;
       } else if (monster.gimmick === 'leech') {
         goldGain = Math.floor(goldGain * 2.5);
       } else if (monster.gimmick === 'mimic') {
         gs.chestsAvailable = (gs.chestsAvailable || 0) + 1;
-        extraMsg = ' +📦 1 หีบสมบัติ';
+        extraMsg += ' +📦 1 หีบสมบัติ';
       } else if (monster.gimmick === 'berserker') {
         if (Math.random() < 0.25) {
           gs.statPoints = (gs.statPoints || 0) + 1;
-          extraMsg = ' +1 แต้มสเตตัส!';
+          extraMsg += ' +1 แต้มสเตตัส!';
         }
       } else if (monster.gimmick === 'stalker') {
         const rareRunes = ['shael', 'dol', 'hel', 'io', 'lum'];
         const chosen = rareRunes[Math.floor(Math.random() * rareRunes.length)];
         gs.runeStash[chosen] = (gs.runeStash[chosen] || 0) + 1;
-        extraMsg = ` +🪨 ${App.RUNE_DATABASE[chosen].name} Rune`;
+        extraMsg += ` +🪨 ${App.RUNE_DATABASE[chosen].name} Rune`;
       } else if (monster.gimmick === 'golem') {
         const rune = App.core.rollRandomRuneDrop(true);
         if (App.core.triggerOverdriveBuff) {
           App.core.triggerOverdriveBuff(60);
         }
-        extraMsg = ` +🔥 Overdrive 60วิ & 🪨 ${rune.name} Rune`;
+        extraMsg += ` +🔥 Overdrive 60วิ & 🪨 ${rune.name} Rune`;
       } else if (monster.gimmick === 'archdemon') {
         const rune = App.core.rollRandomRuneDrop(true);
         gs.chestsAvailable = (gs.chestsAvailable || 0) + 1;
-        extraMsg = ` +📦 หีบสมบัติ & 🪨 ${rune.name} Rune`;
+        extraMsg += ` +📦 หีบสมบัติ & 🪨 ${rune.name} Rune`;
       }
 
       gs.gold += goldGain;
       App.core.addExp(expGain);
 
       App.core.showToast(`⚔️ สยบ ${monster.name} (LV.${monster.level})! +${expGain.toLocaleString()} EXP, +${goldGain.toLocaleString()} 🪙${extraMsg}`);
-      App.core.speakVoice(`กำจัด ${monster.thName} สำเร็จแล้ว`, true);
+      App.core.speakVoice(`กำจัด ${monster.thName} สำเร็จ ได้รับคัมภีร์เวทมนตร์`, true);
 
-      // Spawn replacement inside 500m radius
       this.ensureMonstersSpawned();
       this.evaluateProximity();
       this.renderMapAndRadar();
@@ -453,7 +492,6 @@
         return;
       }
 
-      // Show locked persistent combat monster OR 120m proximity radar preview
       let target = null;
       let isCombat = false;
 
@@ -496,6 +534,18 @@
       document.getElementById('encounter-dist').textContent = isCombat && distMeters > 80
         ? `ห่าง ${distMeters} ม. • ติดตามสู้`
         : `ห่าง ${distMeters} ม.`;
+
+      const weakEl = document.getElementById('encounter-elem-weak');
+      const tomeEl = document.getElementById('encounter-tome-drop');
+      if (weakEl && App.ELEMENT_DATABASE[target.weakElement]) {
+        const w = App.ELEMENT_DATABASE[target.weakElement];
+        weakEl.textContent = `แพ้ทาง: ${w.icon} ${w.name}`;
+      }
+      if (tomeEl && App.ELEMENT_DATABASE[target.dropTomeElement]) {
+        const t = App.ELEMENT_DATABASE[target.dropTomeElement];
+        tomeEl.textContent = `📕 คัมภีร์${t.name}`;
+      }
+
       document.getElementById('encounter-gimmick').textContent = target.gimmickDesc;
 
       const hpPct = Math.max(0, Math.min(100, (target.hpRemainKm / target.maxHpKm) * 100));
@@ -585,6 +635,7 @@
       (gs.roamingMonsters || []).forEach(m => {
         const distM = Math.round(App.core.calculateDistance(playerLat, playerLon, m.lat, m.lon) * 1000);
         const isEngaged = m.engaged || m.uid === activeEncounterId;
+        const tomeElem = App.ELEMENT_DATABASE[m.dropTomeElement];
 
         if (isEngaged) {
           pursuitLine = L.polyline([[playerLat, playerLon], [m.lat, m.lon]], {
@@ -602,8 +653,9 @@
           iconAnchor: [15, 15]
         });
         const marker = L.marker([m.lat, m.lon], { icon: mIcon });
+        const tomeLine = tomeElem ? `<br>📕 ดรอป: คัมภีร์${tomeElem.name}` : '';
         const statusLine = isEngaged ? '<br><span style="color:#4ade80;">⚔️ กำลังต่อสู้ต่อเนื่อง!</span>' : '';
-        marker.bindPopup(`<strong>${m.name} (LV.${m.level})</strong><br>ระยะห่าง: ${distM} ม.<br>HP: ${m.hpRemainKm.toFixed(2)} กม.${statusLine}`);
+        marker.bindPopup(`<strong>${m.name} (LV.${m.level})</strong><br>ระยะห่าง: ${distM} ม.<br>HP: ${m.hpRemainKm.toFixed(2)} กม.${tomeLine}${statusLine}`);
         monsterMarkersLayer.addLayer(marker);
       });
     },
@@ -618,7 +670,6 @@
 
       ctx.clearRect(0, 0, w, h);
 
-      // Draw radar rings (125m, 250m, 375m, 500m)
       [0.25, 0.5, 0.75, 1.0].forEach((ratio, idx) => {
         ctx.beginPath();
         ctx.arc(cx, cy, maxR * ratio, 0, Math.PI * 2);
@@ -627,7 +678,6 @@
         ctx.stroke();
       });
 
-      // Draw 80m engage perimeter ring
       const engageR = Math.max(14, (ENGAGE_RADIUS_KM / SPAWN_RADIUS_KM) * maxR);
       ctx.beginPath();
       ctx.arc(cx, cy, engageR, 0, Math.PI * 2);
@@ -635,7 +685,6 @@
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
-      // Crosshairs
       ctx.beginPath();
       ctx.moveTo(cx - maxR, cy);
       ctx.lineTo(cx + maxR, cy);
@@ -644,13 +693,11 @@
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
       ctx.stroke();
 
-      // Player dot at center
       ctx.beginPath();
       ctx.arc(cx, cy, 5, 0, Math.PI * 2);
       ctx.fillStyle = '#38bdf8';
       ctx.fill();
 
-      // Plot monsters within 500m (clamp engaged monsters chasing outside 500m to edge)
       (gs.roamingMonsters || []).forEach(m => {
         const dLatKm = (m.lat - playerLat) * 111.32;
         const dLonKm = (m.lon - playerLon) * (111.32 * Math.cos(playerLat * Math.PI / 180));
@@ -708,6 +755,7 @@
         const isEngaged = m.engaged || m.uid === activeEncounterId;
         const inRange = distM <= 80 || isEngaged;
         const isSim = App.core?.isSimMode ? App.core.isSimMode() : false;
+        const tomeInfo = App.ELEMENT_DATABASE[m.dropTomeElement];
 
         const statusLabel = isEngaged
           ? (distM <= 80 ? '⚔️ กำลังปะทะ!' : `⚔️ ไล่ล่า (${distM} ม.)`)
@@ -722,7 +770,7 @@
               <span class="roaming-card-name">${m.name} (LV.${m.level})</span>
               <span class="roaming-card-dist">${statusLabel}</span>
             </div>
-            <div class="roaming-card-sub">HP: ${m.hpRemainKm.toFixed(2)}/${m.maxHpKm.toFixed(2)} กม. • ${m.thName}</div>
+            <div class="roaming-card-sub">HP: ${m.hpRemainKm.toFixed(2)}/${m.maxHpKm.toFixed(2)} กม. • ${tomeInfo ? `📕 คัมภีร์${tomeInfo.name}` : m.thName}</div>
           </div>
           ${isSim ? `<button class="btn-sim-engage-target" type="button">🎯 ประชิด</button>` : ''}
         `;
@@ -746,7 +794,6 @@
       const target = (gs.roamingMonsters || []).find(m => m.uid === uid);
       if (!target) return;
 
-      // Move player within ~25 meters of the pinned monster (inside 80m engage radius)
       const offsetLat = 0.00022;
       this.updatePlayerPosition(target.lat + offsetLat, target.lon, false);
       if (leafletMap) {

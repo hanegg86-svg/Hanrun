@@ -11,6 +11,7 @@
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style-rpg.css">
 </head>
 <body>
   <div class="app-container">
@@ -47,9 +48,9 @@
       </div>
     </header>
 
-    <!-- TAB 1: RUN / HUNT SCREEN (Dedicated Clean Runner Experience) -->
+    <!-- TAB 1: RUN / HUNT SCREEN -->
     <main class="tab-page active" id="tab-hunt">
-      <!-- Boss Encounter Card -->
+      <!-- Boss Encounter Card with Elemental Affinities -->
       <section class="boss-card" id="boss-card">
         <div class="boss-header">
           <span class="boss-tag">⚠️ ดันเจี้ยนบอส</span>
@@ -61,6 +62,12 @@
           </div>
           <div class="boss-details">
             <h3 class="boss-name" id="boss-name">Gargoyle of the Crypt</h3>
+            <!-- Boss Elemental Affinity Tags -->
+            <div class="boss-element-row" id="boss-element-row">
+              <span class="elem-badge elem-earth" id="boss-elem-main">🌍 ธาตุดิน</span>
+              <span class="elem-weak-tag" id="boss-elem-weak">แพ้ทาง: ⚡ สายฟ้า</span>
+              <span class="elem-res-tag" id="boss-elem-res">ต้านทาน: 🌍 ดิน</span>
+            </div>
             <p class="boss-desc" id="boss-desc">อสูรศิลาทมิฬที่ตื่นขึ้น จงวิ่งพิชิตระยะทางเพื่อทำลายผนึกหิน!</p>
             <div class="boss-hp-container">
               <div class="boss-hp-bar" id="boss-hp-bar" style="width: 100%;"></div>
@@ -88,6 +95,10 @@
             <div class="encounter-name-row">
               <h4 class="encounter-name" id="encounter-name">Shadow Wisp</h4>
               <span class="encounter-dist-tag" id="encounter-dist">ห่าง 15 ม.</span>
+            </div>
+            <div class="encounter-elem-row" id="encounter-elem-row">
+              <span class="elem-weak-tag" id="encounter-elem-weak">แพ้ทาง: ✨ แสง</span>
+              <span class="elem-drop-tag" id="encounter-tome-drop">📕 คัมภีร์แสง</span>
             </div>
             <p class="encounter-gimmick" id="encounter-gimmick">กลไกพิเศษ</p>
             <div class="encounter-hp-track">
@@ -136,6 +147,10 @@
 
         <div class="overdrive-banner" id="overdrive-banner" style="display: none;">
           🔥 OVERDRIVE SURGE: โบนัสทองคำ x2 & ดูดซับ EXP เร่งด่วน (<span id="overdrive-time-left">45</span>s) 🔥
+        </div>
+
+        <div class="freeze-banner" id="freeze-banner" style="display: none;">
+          ❄️ GLACIAL FREEZE: บอสถูกแช่แข็ง! หยุดการฟื้นฟูเลือด (<span id="freeze-time-left">30</span>s) ❄️
         </div>
 
         <!-- System Controls Bar -->
@@ -192,6 +207,26 @@
           </div>
         </div>
 
+        <!-- MANA & 6 ELEMENTAL MAGIC SPELLS PANEL -->
+        <div class="magic-container">
+          <div class="magic-header">
+            <div class="mana-title-group">
+              <span class="mana-label">💧 MANA (MP)</span>
+              <span class="mana-val" id="mana-val-text">100 / 100</span>
+            </div>
+            <button class="btn-automagic-toggle" id="btn-automagic-toggle" type="button" title="ร่ายเวทชนะทางธาตุอัตโนมัติ">
+              <span class="automagic-dot"></span>
+              <span id="automagic-status-text">ออโต้เวท: ปิด</span>
+            </button>
+          </div>
+          <div class="mana-bar-track">
+            <div class="mana-bar-fill" id="mana-bar-fill" style="width: 100%;"></div>
+          </div>
+          <div class="magic-spells-grid" id="magic-spells-grid">
+            <!-- Populated dynamically by MagicEngine -->
+          </div>
+        </div>
+
         <!-- Ultimate Skill & Auto-Cast Section -->
         <div class="ultimate-container">
           <div class="ultimate-header">
@@ -210,7 +245,6 @@
             <div class="ult-notch notch-200"></div>
           </div>
 
-          <!-- Big Tactile Quick-Cast Button for Runners -->
           <button class="btn-quick-cast-ult" id="btn-quick-cast-ult" type="button" disabled>
             <span class="quick-ult-icon">🗡️</span>
             <div class="quick-ult-info">
@@ -219,7 +253,6 @@
             </div>
           </button>
 
-          <!-- Precision Tier Selection -->
           <div class="ultimate-actions-row">
             <button class="btn-cast-ult" id="btn-cast-ult-1" type="button" disabled title="ใช้เกจ 100%: ดาเมจ 0.40 กม. / Overdrive 30 วิ">
               🗡️ Lv.1 (100%)
@@ -244,7 +277,7 @@
           </button>
         </div>
 
-        <!-- Simulation Tools (for in-room / testing) -->
+        <!-- Simulation Tools -->
         <div class="sim-controls" id="sim-controls" style="display: none;">
           <span class="sim-hint">จำลองการวิ่ง & มอนสเตอร์:</span>
           <button class="btn-sim-add" type="button" onclick="window.shadowStrider.simulateStep(0.2)">+200 ม.</button>
@@ -256,13 +289,13 @@
       </section>
     </main>
 
-    <!-- TAB 2: DARK FANTASY MAP & PROXIMITY RADAR (500m Spawn / 80m Persistent Engage) -->
+    <!-- TAB 2: DARK FANTASY MAP & PROXIMITY RADAR -->
     <section class="tab-page" id="tab-map" style="display: none;">
       <section class="map-section">
         <div class="section-title-row">
           <div>
             <h2 class="section-title">🗺️ แผนที่ล่าอสูรอเวจี (รัศมี 500 ม.)</h2>
-            <div class="map-subtitle">เข้าใกล้ในรัศมี <strong>80 เมตร</strong> เพื่อปะทะ (เมื่อปะทะแล้วศัตรูจะไล่ล่าต่อสู้จนกว่าจะตายแม้เดินออกนอกรัศมี)</div>
+            <div class="map-subtitle">เข้าใกล้ในรัศมี <strong>80 เมตร</strong> เพื่อปะทะ และปราบเพื่อชิง <strong>คัมภีร์เวทมนตร์ธาตุ</strong></div>
           </div>
           <div class="map-actions-cluster">
             <button class="btn-map-ctrl" id="btn-center-map" type="button" title="กึ่งกลางตำแหน่งฉัน">🎯 ฉัน</button>
@@ -270,7 +303,6 @@
           </div>
         </div>
 
-        <!-- Map & Radar Viewport -->
         <div class="map-viewport-wrapper">
           <div id="dungeon-map" class="dungeon-map-box"></div>
           <canvas id="offline-radar-canvas" class="offline-radar-canvas" width="400" height="280" style="display: none;"></canvas>
@@ -280,7 +312,6 @@
           </div>
         </div>
 
-        <!-- Spawned Roaming Monsters List -->
         <div class="roaming-list-header">
           <span class="roaming-list-title">มอนสเตอร์พิเศษในอาณาเขต (<span id="roaming-count">0</span>/5 ตัว)</span>
           <span class="roaming-scale-badge" id="roaming-scale-badge">สเกลพลัง: LV.1</span>
@@ -289,14 +320,13 @@
       </section>
     </section>
 
-    <!-- TAB 3: HERO & EQUIPMENT (Character, Stats, Inventory, Runes) -->
+    <!-- TAB 3: HERO, SPELL TOMES & EQUIPMENT -->
     <section class="tab-page" id="tab-hero" style="display: none;">
-      <!-- Stat Points Alert Bar -->
       <div class="stat-points-bar" id="stat-points-bar" style="display: none;">
         <span>✨ มีแต้มอัปเกรดคงเหลือ: <strong id="stat-points-val">0</strong> แต้ม</span>
       </div>
 
-      <!-- Stats Bar (STR, STA, AGI) with Allocation Buttons -->
+      <!-- Stats Bar (STR, STA+MP, AGI) -->
       <section class="stats-ribbon">
         <div class="stat-item">
           <span class="stat-label">STR (ดาเมจ x<span id="str-mult">1.0</span>)</span>
@@ -307,10 +337,10 @@
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
-          <span class="stat-label">STA (โบนัส +<span id="sta-mult">0</span>%)</span>
+          <span class="stat-label">STA (+<span id="sta-mult">0</span>% / MP <span id="sta-mp-preview">100</span>)</span>
           <div class="stat-val-row">
             <span class="stat-val" id="stat-sta">10</span>
-            <button class="btn-stat-add" id="btn-add-sta" type="button" title="อัปเกรด STA">+</button>
+            <button class="btn-stat-add" id="btn-add-sta" type="button" title="อัปเกรด STA (เพิ่ม Max MP +5)">+</button>
           </div>
         </div>
         <div class="stat-divider"></div>
@@ -320,6 +350,18 @@
             <span class="stat-val" id="stat-agi">10</span>
             <button class="btn-stat-add" id="btn-add-agi" type="button" title="อัปเกรด AGI">+</button>
           </div>
+        </div>
+      </section>
+
+      <!-- Elemental Spell Tomes Grimoire Section -->
+      <section class="tomes-section">
+        <div class="section-title-row">
+          <h2 class="section-title">📚 คัมภีร์เวทมนตร์ 6 ธาตุ (Spell Tomes)</h2>
+          <span class="tomes-hint" id="tomes-max-mp-badge">Max MP: 100</span>
+        </div>
+        <p class="tomes-desc">ปราบมอนสเตอร์พิเศษบนแผนที่เพื่อรับคัมภีร์ธาตุ และกดอัปเกรดเพิ่มความแรงเวท (+15% ต่อเลเวล)</p>
+        <div class="tomes-grid" id="tomes-grid">
+          <!-- Populated dynamically by MagicEngine -->
         </div>
       </section>
 
@@ -408,9 +450,8 @@
       </section>
     </section>
 
-    <!-- TAB 4: ARMORY & CODEX (Shop & Bestiary) -->
+    <!-- TAB 4: ARMORY & CODEX -->
     <section class="tab-page" id="tab-armory" style="display: none;">
-      <!-- Shadow Armory (Shop System) -->
       <section class="shop-section">
         <div class="section-title-row">
           <h2 class="section-title">คลังสรรพาวุธเงา (Shadow Armory)</h2>
@@ -501,7 +542,7 @@
         </div>
         <div class="codex-sub-header">⚠️ ดันเจี้ยนบอส (12 ตน)</div>
         <div class="codex-list" id="codex-list"></div>
-        <div class="codex-sub-header" style="margin-top: 12px;">🗺️ อสูรพิเศษบนแผนที่ (10 ประเภท)</div>
+        <div class="codex-sub-header" style="margin-top: 12px;">🗺️ อสูรพิเศษบนแผนที่ & คัมภีร์ที่ดรอป (10 ประเภท)</div>
         <div class="codex-list" id="codex-roaming-list"></div>
       </section>
     </section>
@@ -717,7 +758,7 @@
       </div>
     </div>
 
-    <!-- Item Action Modal (with Runeword Advisor) -->
+    <!-- Item Action Modal -->
     <div class="modal-overlay" id="item-modal" style="display: none;">
       <div class="modal-card modal-card-scrollable">
         <div class="modal-header">
@@ -740,7 +781,6 @@
             <span class="modal-runeword-title" id="modal-runeword-title">⚡ พลังคำรูนโบราณ:</span>
             <p class="modal-runeword-desc" id="modal-runeword-desc"></p>
           </div>
-          <!-- Runeword Advisor Box -->
           <div class="modal-rw-advisor-box" id="modal-rw-advisor-box" style="display: none;">
             <span class="modal-rw-advisor-title">📜 คำแนะนำคำรูน (Runeword Advisor):</span>
             <div class="modal-rw-advisor-list" id="modal-rw-advisor-list"></div>
@@ -760,7 +800,7 @@
       </div>
     </div>
 
-    <!-- Rune Socketing Modal (with Live Runeword Recipe Guide) -->
+    <!-- Rune Socketing Modal -->
     <div class="modal-overlay" id="socket-modal" style="display: none;">
       <div class="modal-card modal-card-socket modal-card-scrollable">
         <div class="modal-header">
@@ -773,7 +813,6 @@
         <div class="modal-body">
           <div class="socket-target-summary" id="socket-target-summary"></div>
           <div class="socket-slots-display" id="socket-slots-display"></div>
-          <!-- Live Runeword Advisor inside Socketing Station -->
           <div class="socket-advisor-box" id="socket-advisor-box" style="display: none;">
             <span class="socket-advisor-title">⚡ สูตรคำรูนที่รองรับสำหรับชิ้นนี้:</span>
             <div id="socket-advisor-list" class="socket-advisor-list"></div>
@@ -813,9 +852,13 @@
     <div class="game-toast" id="game-toast"></div>
   </div>
 
+  <!-- Scripts (10-File Modular Architecture) -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="data.js"></script>
+  <script src="monsters-data.js"></script>
+  <script src="magic-engine.js"></script>
   <script src="map-engine.js"></script>
+  <script src="combat-engine.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
