@@ -88,7 +88,12 @@
 
   let freezeBossSeconds = 0;
   let autoSpellCooldownSec = 0;
-  const AUTO_SPELL_INTERVAL_SEC = 10;
+  const AUTO_SPELL_TIERS = [10, 30, 60];
+
+  function getValidAutoInterval(gs) {
+    const val = gs && Number(gs.autoMagicInterval);
+    return AUTO_SPELL_TIERS.includes(val) ? val : 10;
+  }
 
   App.MagicEngine = {
     getMaxMp(gs) {
@@ -114,8 +119,14 @@
       if (!gs || distanceDeltaKm <= 0) return;
 
       const maxMp = this.getMaxMp(gs);
-      // Base regen: 45 MP per 1.0 km (4.5 MP per 100m)
-      let regenRate = 45;
+      const eqBonus = App.core?.calculateEquipmentBonuses ? App.core.calculateEquipmentBonuses() : { bonusMpRegen: 0 };
+      const charmLevel = (gs.upgrades && gs.upgrades.charm) || 0;
+
+      // Base regen: 45 MP per 1.0 km + Bloodlust Charm (+8%/Lv) + Arcane Weapon MP Regen bonus
+      const charmRegenMult = 1 + (charmLevel * 0.08);
+      const equipRegenMult = 1 + ((eqBonus.bonusMpRegen || 0) * 0.01);
+
+      let regenRate = 45 * charmRegenMult * equipRegenMult;
       if (context.isFlowStateActive) regenRate *= 1.5;
       if (context.currentHrZone === 2) regenRate *= 1.35;
 
@@ -123,11 +134,43 @@
       gs.currentMp = Math.min(maxMp, (gs.currentMp || 0) + gained);
     },
 
+    cycleAutoMagicInterval() {
+      const gs = App.core?.getGameState();
+      if (!gs) return;
+
+      const currentInterval = getValidAutoInterval(gs);
+      const nextIdx = (AUTO_SPELL_TIERS.indexOf(currentInterval) + 1) % AUTO_SPELL_TIERS.length;
+      const nextInterval = AUTO_SPELL_TIERS[nextIdx];
+      gs.autoMagicInterval = nextInterval;
+
+      // If no spell is selected yet, auto-pick current Boss's elemental weakness
+      if (!gs.selectedAutoSpell) {
+        const currentBoss = App.BOSS_DATABASE[gs.bossIndex];
+        gs.selectedAutoSpell = (currentBoss && currentBoss.weakElement) || 'fire';
+        gs.autoMagicMode = true;
+      }
+
+      if (autoSpellCooldownSec > nextInterval) {
+        autoSpellCooldownSec = nextInterval;
+      }
+
+      const tierNum = nextIdx + 1;
+      const elemInfo = App.ELEMENT_DATABASE[gs.selectedAutoSpell];
+      const elemLabel = elemInfo ? `${elemInfo.icon}${elemInfo.name}` : '';
+
+      App.core.saveGame();
+      this.renderMagicHUD();
+      App.core.showToast(`⏱️ ออโต้เวทระดับ ${tierNum}: ร่าย ${elemLabel} ทุก ${nextInterval} วินาที`);
+      App.core.speakVoice(`ตั้งเวลาออโต้เวทระดับ ${tierNum} ทุก ${nextInterval} วินาที`, true);
+    },
+
     selectAutoSpell(spellKey) {
       const gs = App.core?.getGameState();
       const spell = App.SPELL_DATABASE[spellKey];
       const elemInfo = App.ELEMENT_DATABASE[spellKey];
       if (!gs || !spell || !elemInfo) return;
+
+      const intervalSec = getValidAutoInterval(gs);
 
       // Toggle off if tapping the currently active auto-spell
       if (gs.selectedAutoSpell === spellKey) {
@@ -143,19 +186,19 @@
 
       gs.selectedAutoSpell = spellKey;
       gs.autoMagicMode = true;
-      autoSpellCooldownSec = AUTO_SPELL_INTERVAL_SEC;
+      autoSpellCooldownSec = intervalSec;
 
       const isRunning = App.core?.isRunning ? App.core.isRunning() : false;
       this.ensureManaBounds(gs);
 
       if (isRunning && gs.currentMp >= spell.mpCost) {
-        // Cast immediately on selection and start 10s timer
+        // Cast immediately on selection and start timer
         this.castSpell(spellKey, false);
-        autoSpellCooldownSec = AUTO_SPELL_INTERVAL_SEC;
+        autoSpellCooldownSec = intervalSec;
       } else {
         autoSpellCooldownSec = 0; // Ready to fire as soon as running & MP >= mpCost
-        App.core.showToast(`${spell.icon} ตั้งค่าออโต้เวท: ${spell.thName} (ทุก 10 วินาที)`);
-        App.core.speakVoice(`ตั้งค่าออโต้เวทธาตุ${elemInfo.name} ทุกสิบวินาที`, true);
+        App.core.showToast(`${spell.icon} ตั้งค่าออโต้เวท: ${spell.thName} (ทุก ${intervalSec} วินาที)`);
+        App.core.speakVoice(`ตั้งค่าออโต้เวทธาตุ${elemInfo.name} ทุก ${intervalSec} วินาที`, true);
       }
 
       App.core.saveGame();
@@ -173,11 +216,12 @@
         }
       }
 
-      // Selected Elemental Spell Auto-Cast every 10 seconds
+      // Selected Elemental Spell Auto-Cast by configured interval (10s / 30s / 60s)
       const gs = App.core?.getGameState();
       const isRunning = App.core?.isRunning ? App.core.isRunning() : false;
       if (isRunning && gs && gs.selectedAutoSpell) {
         const targetSpell = App.SPELL_DATABASE[gs.selectedAutoSpell];
+        const intervalSec = getValidAutoInterval(gs);
         if (targetSpell) {
           if (autoSpellCooldownSec > 0) {
             autoSpellCooldownSec--;
@@ -186,7 +230,7 @@
             this.ensureManaBounds(gs);
             if ((gs.currentMp || 0) >= targetSpell.mpCost) {
               this.castSpell(targetSpell.id, true);
-              autoSpellCooldownSec = AUTO_SPELL_INTERVAL_SEC;
+              autoSpellCooldownSec = intervalSec;
             }
           }
         }
@@ -213,8 +257,11 @@
       const tomeMult = 1 + ((level - 1) * 0.15);
       // STA also grants a subtle +1% spell affinity per point above 10
       const staBonus = 1 + Math.max(0, (((gs.stats && gs.stats.sta) || 10) - 10) * 0.01);
+      // Arcane Weapon Spell Damage bonus
+      const eqBonus = App.core?.calculateEquipmentBonuses ? App.core.calculateEquipmentBonuses() : { bonusSpellDmg: 0 };
+      const weaponSpellMult = 1 + ((eqBonus.bonusSpellDmg || 0) * 0.01);
 
-      return parseFloat((spell.baseDamageKm * tomeMult * staBonus).toFixed(3));
+      return parseFloat((spell.baseDamageKm * tomeMult * staBonus * weaponSpellMult).toFixed(3));
     },
 
     getElementalMultiplier(spellElement, targetWeakElement, targetResistElement) {
@@ -350,6 +397,8 @@
       this.ensureManaBounds(gs);
       const maxMp = this.getMaxMp(gs);
       const curMp = Math.floor(gs.currentMp);
+      const intervalSec = getValidAutoInterval(gs);
+      const tierNum = AUTO_SPELL_TIERS.indexOf(intervalSec) + 1;
 
       const manaTextEl = document.getElementById('mana-val-text');
       const manaFillEl = document.getElementById('mana-bar-fill');
@@ -368,15 +417,15 @@
           const elInfo = App.ELEMENT_DATABASE[selectedKey];
           autoBtn.classList.add('active');
           if (!isRunning) {
-            autoText.textContent = `ออโต้: ${elInfo.icon} ${elInfo.name} (รอเริ่ม)`;
+            autoText.textContent = `Lv.${tierNum} (${intervalSec}s): ${elInfo.icon}${elInfo.name}`;
           } else if (autoSpellCooldownSec > 0) {
-            autoText.textContent = `ออโต้: ${elInfo.icon} ${elInfo.name} (${autoSpellCooldownSec}s)`;
+            autoText.textContent = `Lv.${tierNum} (${intervalSec}s): ${elInfo.icon}${elInfo.name} (${autoSpellCooldownSec}s)`;
           } else {
-            autoText.textContent = `ออโต้: ${elInfo.icon} ${elInfo.name} (รอ MP)`;
+            autoText.textContent = `Lv.${tierNum} (${intervalSec}s): ${elInfo.icon}${elInfo.name} (รอ MP)`;
           }
         } else {
           autoBtn.classList.remove('active');
-          autoText.textContent = 'แตะธาตุเพื่อ Auto 10 วิ';
+          autoText.textContent = `ออโต้เวท Lv.${tierNum}: ทุก ${intervalSec} วิ`;
         }
       }
 
@@ -399,12 +448,12 @@
         } else if (hasEnoughMp) {
           btn.style.borderColor = sp.borderColor;
         }
-        btn.title = `${sp.thName} (Lv.${lv}): แตะเพื่อเปิด/ปิด Auto โจมตีทุก 10 วิ`;
+        btn.title = `${sp.thName} (Lv.${lv}): แตะเพื่อเปิด/ปิด Auto โจมตีทุก ${intervalSec} วิ`;
 
         let statusSubHtml = `💧 ${sp.mpCost} MP`;
         if (isSelectedAuto) {
           if (!isRunning) {
-            statusSubHtml = `🔄 Auto (10s) • 💧${sp.mpCost}`;
+            statusSubHtml = `🔄 Auto (${intervalSec}s) • 💧${sp.mpCost}`;
           } else if (autoSpellCooldownSec > 0) {
             statusSubHtml = `⏱ ${autoSpellCooldownSec}s • 💧${sp.mpCost}`;
           } else {
@@ -413,7 +462,7 @@
         }
 
         btn.innerHTML = `
-          ${isSelectedAuto ? '<span class="spell-auto-badge">AUTO 10s</span>' : (isWeakness ? '<span class="spell-weak-badge">แพ้ทาง x2</span>' : '')}
+          ${isSelectedAuto ? `<span class="spell-auto-badge">AUTO ${intervalSec}s</span>` : (isWeakness ? '<span class="spell-weak-badge">แพ้ทาง x2</span>' : '')}
           <div class="spell-btn-top">
             <span>${sp.icon}</span>
             <span>${App.ELEMENT_DATABASE[sp.element].name} Lv.${lv}</span>
@@ -481,23 +530,7 @@
       const autoBtn = document.getElementById('btn-automagic-toggle');
       if (autoBtn) {
         autoBtn.addEventListener('click', () => {
-          const gs = App.core?.getGameState();
-          if (!gs) return;
-
-          if (gs.selectedAutoSpell) {
-            gs.selectedAutoSpell = null;
-            gs.autoMagicMode = false;
-            autoSpellCooldownSec = 0;
-            this.renderMagicHUD();
-            App.core.saveGame();
-            App.core.showToast('ปิดระบบร่ายเวทอัตโนมัติแล้ว');
-            App.core.speakVoice('ปิดระบบร่ายเวทอัตโนมัติ', true);
-          } else {
-            // Auto-select the spell matching the current Boss's weakness
-            const currentBoss = App.BOSS_DATABASE[gs.bossIndex];
-            const weakKey = (currentBoss && currentBoss.weakElement) || 'fire';
-            this.selectAutoSpell(weakKey);
-          }
+          this.cycleAutoMagicInterval();
         });
       }
     }

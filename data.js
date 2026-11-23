@@ -276,6 +276,49 @@
     bracelet: ['กำไลทมิฬ', 'กำไลผลึกวิญญาณ', 'กำไลอัสนีบาต', 'กำไลสายฟ้าราตรี', 'กำไลมิติว่างเปล่า']
   };
 
+  // --- Arcane Weapon Affinity Resolver (Mana Regen & Spell Power on Arcane/Dimensional Weapons) ---
+  App.resolveWeaponArcaneAffinity = function (item) {
+    if (!item || item.type !== 'weapon') {
+      return { bonusMpRegen: 0, bonusSpellDmg: 0 };
+    }
+
+    if (typeof item.bonusMpRegen === 'number' && typeof item.bonusSpellDmg === 'number') {
+      return {
+        bonusMpRegen: item.bonusMpRegen,
+        bonusSpellDmg: item.bonusSpellDmg
+      };
+    }
+
+    const name = item.name || '';
+    const isArcaneWeapon =
+      name.includes('เคียวมรณะ') ||
+      name.includes('ดาบโบราณ') ||
+      name.includes('หอกพิฆาตมิติ') ||
+      item.setId === 'voidwalker' ||
+      item.setId === 'voidannihilator';
+
+    if (!isArcaneWeapon) {
+      return { bonusMpRegen: 0, bonusSpellDmg: 0 };
+    }
+
+    const rarityArcaneScale = {
+      common: { mpRegen: 10, spellDmg: 8 },
+      rare: { mpRegen: 14, spellDmg: 12 },
+      epic: { mpRegen: 18, spellDmg: 16 },
+      legendary: { mpRegen: 22, spellDmg: 22 },
+      mythic: { mpRegen: 26, spellDmg: 28 },
+      cosmic: { mpRegen: 32, spellDmg: 35 }
+    };
+
+    const base = rarityArcaneScale[item.rarity] || { mpRegen: 12, spellDmg: 10 };
+    const loopScale = 1 + ((item.loopLevel || 0) * 0.12);
+
+    return {
+      bonusMpRegen: Math.round(base.mpRegen * loopScale),
+      bonusSpellDmg: Math.round(base.spellDmg * loopScale)
+    };
+  };
+
   App.createDefaultState = function () {
     const bestiaryInit = {};
     if (Array.isArray(App.BOSS_DATABASE)) {
@@ -300,6 +343,7 @@
       ultimateCharge: 0,
       currentMp: 100, // Scales with STA (50 + STA * 5)
       autoMagicMode: false,
+      autoMagicInterval: 10, // 3-tier interval: 10s, 30s, or 60s
       selectedAutoSpell: null, // Element key ('earth', 'ice', 'fire', 'lightning', 'light', 'dark') or null
       spellLevels: {
         earth: 1,

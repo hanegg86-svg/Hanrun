@@ -287,6 +287,7 @@
       gameState.hideCompletedAchievements = typeof saved.hideCompletedAchievements === 'boolean' ? saved.hideCompletedAchievements : false;
       gameState.isClaimedAchAccordionOpen = typeof saved.isClaimedAchAccordionOpen === 'boolean' ? saved.isClaimedAchAccordionOpen : false;
       gameState.autoMagicMode = typeof saved.autoMagicMode === 'boolean' ? saved.autoMagicMode : false;
+      gameState.autoMagicInterval = [10, 30, 60].includes(Number(saved.autoMagicInterval)) ? Number(saved.autoMagicInterval) : 10;
       gameState.selectedAutoSpell = saved.selectedAutoSpell || null;
       gameState.spellLevels = Object.assign({}, freshTemplate.spellLevels, saved.spellLevels || {});
       gameState.spellTomes = Object.assign({}, freshTemplate.spellTomes, saved.spellTomes || {});
@@ -321,6 +322,11 @@
           item.socketedRunes = [];
           item.activeRuneword = null;
         }
+        if (item.type === 'weapon' && App.resolveWeaponArcaneAffinity) {
+          const arcane = App.resolveWeaponArcaneAffinity(item);
+          item.bonusMpRegen = arcane.bonusMpRegen;
+          item.bonusSpellDmg = arcane.bonusSpellDmg;
+        }
       });
     }
 
@@ -331,6 +337,11 @@
           item.socketsMax = 0;
           item.socketedRunes = [];
           item.activeRuneword = null;
+        }
+        if (item && item.type === 'weapon' && App.resolveWeaponArcaneAffinity) {
+          const arcane = App.resolveWeaponArcaneAffinity(item);
+          item.bonusMpRegen = arcane.bonusMpRegen;
+          item.bonusSpellDmg = arcane.bonusSpellDmg;
         }
       });
     }
@@ -559,7 +570,7 @@
     else if (rarity === 'epic') socketsMax = sRoll < 0.5 ? 2 : 1;
     else if (rarity === 'rare') socketsMax = sRoll < 0.6 ? 1 : 0;
 
-    return {
+    const generatedItem = {
       id: `item_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       name: `${baseName}แห่ง${setInfo.name.replace('เซ็ต', '')}`,
       type,
@@ -573,8 +584,18 @@
       goldValue: goldValues[rarity] || 3000,
       socketsMax,
       socketedRunes: [],
-      activeRuneword: null
+      activeRuneword: null,
+      bonusMpRegen: 0,
+      bonusSpellDmg: 0
     };
+
+    if (type === 'weapon' && App.resolveWeaponArcaneAffinity) {
+      const arcane = App.resolveWeaponArcaneAffinity(generatedItem);
+      generatedItem.bonusMpRegen = arcane.bonusMpRegen;
+      generatedItem.bonusSpellDmg = arcane.bonusSpellDmg;
+    }
+
+    return generatedItem;
   }
 
   function getActiveEquippedSets() {
@@ -614,13 +635,22 @@
     let bonusExp = 0;
     let bonusFlow = 0;
     let bonusMp = 0;
+    let bonusMpRegen = 0;
+    let bonusSpellDmg = 0;
 
     const eq = gameState.equipment;
     ['weapon', 'armor', 'boots', 'relic', 'ring', 'bracelet'].forEach(slot => {
       const item = eq[slot];
       if (!item) return;
 
-      if (slot === 'weapon') bonusDmg += item.mainStatVal;
+      if (slot === 'weapon') {
+        bonusDmg += item.mainStatVal;
+        if (App.resolveWeaponArcaneAffinity) {
+          const arcane = App.resolveWeaponArcaneAffinity(item);
+          bonusMpRegen += arcane.bonusMpRegen;
+          bonusSpellDmg += arcane.bonusSpellDmg;
+        }
+      }
       if (slot === 'armor') bonusSta += item.mainStatVal;
       if (slot === 'boots') bonusDmg += item.mainStatVal;
       if (slot === 'relic') bonusGold += item.mainStatVal;
@@ -699,6 +729,8 @@
       bonusExp,
       bonusFlow,
       bonusMp,
+      bonusMpRegen,
+      bonusSpellDmg,
       setCounts
     };
   }
@@ -835,6 +867,7 @@
 
   const lvlCharmEl = document.getElementById('lvl-charm');
   const charmBonusEl = document.getElementById('charm-bonus');
+  const charmMpBonusEl = document.getElementById('charm-mp-bonus');
   const priceCharmEl = document.getElementById('price-charm');
   const rateCharmEl = document.getElementById('rate-charm');
   const btnBuyCharm = document.getElementById('btn-buy-charm');
@@ -903,6 +936,7 @@
   const modalMainStatEl = document.getElementById('modal-main-stat');
   const modalSubStatEl = document.getElementById('modal-sub-stat');
   const modalSubStat2El = document.getElementById('modal-sub-stat-2');
+  const modalMagicWeaponPerkEl = document.getElementById('modal-magic-weapon-perk');
   const modalCosmicPerkEl = document.getElementById('modal-cosmic-perk');
   const modalRunewordDescBoxEl = document.getElementById('modal-runeword-desc-box');
   const modalRunewordTitleEl = document.getElementById('modal-runeword-title');
@@ -1502,7 +1536,9 @@
     const critBonusText = eqBonus.bonusCritDmg > 0 ? ` | คริแรง +${Math.round(eqBonus.bonusCritDmg * 100)}%` : '';
     const ultBonusText = eqBonus.bonusUltDmg > 0 ? ` | ไม้ตาย +${eqBonus.bonusUltDmg}%` : '';
     const pierceText = eqBonus.bonusArmorPierce > 0 ? ` | ทะลุเกราะ +${eqBonus.bonusArmorPierce}%` : '';
-    equipSummaryEl.textContent = `ดาเมจ +${eqBonus.bonusDmg}% | STA +${eqBonus.bonusSta}% | คริ +${eqBonus.bonusCrit}%${critBonusText}${ultBonusText}${pierceText}`;
+    const spellText = eqBonus.bonusSpellDmg > 0 ? ` | เวท +${eqBonus.bonusSpellDmg}%` : '';
+    const mpRegenText = eqBonus.bonusMpRegen > 0 ? ` | ฟื้นMP +${eqBonus.bonusMpRegen}%` : '';
+    equipSummaryEl.textContent = `ดาเมจ +${eqBonus.bonusDmg}% | STA +${eqBonus.bonusSta}% | คริ +${eqBonus.bonusCrit}%${critBonusText}${ultBonusText}${pierceText}${spellText}${mpRegenText}`;
 
     const slots = ['weapon', 'armor', 'boots', 'relic', 'ring', 'bracelet'];
     slots.forEach(slotType => {
@@ -1696,6 +1732,18 @@
         modalSubStat2El.textContent = `✨ ออปชันโบราณ: +${item.subStat2Val}% คริติคอลดาเมจ (Crit DMG)`;
       } else {
         modalSubStat2El.style.display = 'none';
+      }
+    }
+
+    if (modalMagicWeaponPerkEl) {
+      const arcane = item.type === 'weapon' && App.resolveWeaponArcaneAffinity
+        ? App.resolveWeaponArcaneAffinity(item)
+        : { bonusMpRegen: 0, bonusSpellDmg: 0 };
+      if (arcane.bonusMpRegen > 0 || arcane.bonusSpellDmg > 0) {
+        modalMagicWeaponPerkEl.style.display = 'block';
+        modalMagicWeaponPerkEl.textContent = `💧 ศาสตราเวท: ฟื้นฟู MP +${arcane.bonusMpRegen}% & ความแรงเวท +${arcane.bonusSpellDmg}%`;
+      } else {
+        modalMagicWeaponPerkEl.style.display = 'none';
       }
     }
 
@@ -2407,6 +2455,7 @@
 
     lvlCharmEl.textContent = gameState.upgrades.charm;
     charmBonusEl.textContent = gameState.upgrades.charm * 10;
+    if (charmMpBonusEl) charmMpBonusEl.textContent = gameState.upgrades.charm * 8;
     priceCharmEl.textContent = getCharmPrice();
     renderShopRateText(rateCharmEl, 'charm');
 
@@ -2766,14 +2815,14 @@
       if (Math.random() * 100 < rate) {
         gameState.upgrades.charm += 1;
         gameState.upgradeFailStreak.charm = 0;
-        showToast(`🧿 เสริมพลังเครื่องรางสำเร็จเป็น Lv.${gameState.upgrades.charm}!`);
+        showToast(`🧿 เสริมพลังเครื่องรางสำเร็จเป็น Lv.${gameState.upgrades.charm}! (ฟื้นฟู MP +${gameState.upgrades.charm * 8}%)`);
         voiceBatchState.charmSuccessLevel = gameState.upgrades.charm;
       } else {
         gameState.upgradeFailStreak.charm = (gameState.upgradeFailStreak.charm || 0) + 1;
         showToast(`❌ เสริมพลังล้มเหลว! โอกาสสำเร็จครั้งถัดไป +10%`);
       }
       scheduleBatchVoice('charm', () => {
-        speakVoice(voiceBatchState.charmSuccessLevel !== null ? `เสริมพลังเครื่องรางสำเร็จ เลเวล ${voiceBatchState.charmSuccessLevel}` : 'การอัปเกรดล้มเหลว ได้รับโบนัสก้าวหน้า', true);
+        speakVoice(voiceBatchState.charmSuccessLevel !== null ? `เสริมพลังเครื่องรางสำเร็จ เลเวล ${voiceBatchState.charmSuccessLevel} ฟื้นฟูมานาเร็วขึ้น` : 'การอัปเกรดล้มเหลว ได้รับโบนัสก้าวหน้า', true);
         voiceBatchState.charmSuccessLevel = null;
       }, 850);
       saveGame();
