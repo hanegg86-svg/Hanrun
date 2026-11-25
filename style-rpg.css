@@ -122,16 +122,42 @@
   background: #71717a;
 }
 
-.btn-automagic-toggle.active {
+.btn-automagic-toggle.active,
+.btn-automagic-toggle.active-15 {
   background: rgba(56, 189, 248, 0.2);
   border-color: #38bdf8;
   color: #7dd3fc;
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
 }
 
-.btn-automagic-toggle.active .automagic-dot {
+.btn-automagic-toggle.active .automagic-dot,
+.btn-automagic-toggle.active-15 .automagic-dot {
   background: #38bdf8;
   box-shadow: 0 0 6px #38bdf8;
+}
+
+.btn-automagic-toggle.active-30 {
+  background: rgba(192, 132, 252, 0.22);
+  border-color: #c084fc;
+  color: #f3e8ff;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.35);
+}
+
+.btn-automagic-toggle.active-30 .automagic-dot {
+  background: #c084fc;
+  box-shadow: 0 0 6px #c084fc;
+}
+
+.btn-automagic-toggle.active-60 {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #f59e0b;
+  color: #fde047;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+}
+
+.btn-automagic-toggle.active-60 .automagic-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
 }
 
 .mana-bar-track {
