@@ -379,7 +379,6 @@
       }
     });
 
-    // Migrate legacy 'smart' mode to 'tier3' or keep valid modes ('off', 'tier1', 'tier2', 'tier3')
     const validAutoModes = ['off', 'tier1', 'tier2', 'tier3'];
     if (!validAutoModes.includes(gameState.autoCastMode)) {
       gameState.autoCastMode = gameState.autoCastMode === 'smart' ? 'tier3' : 'off';
@@ -1364,13 +1363,63 @@
 
   btnOpenChest.addEventListener('click', openMysteryChest);
 
-  // --- Runeword Advisor & Codex Helper ---
+  // --- Runeword Advisor & One-Click Socketing Helper ---
   function getCompatibleRunewordsForItem(item) {
     if (!item) return [];
     return RUNEWORD_DATABASE.filter(rw => rw.types.includes(item.type));
   }
 
-  function renderRunewordAdvisorForItem(item, containerEl, listEl) {
+  function socketFullRuneword(rwId) {
+    const item = selectedInventoryItem;
+    const rw = RUNEWORD_DATABASE.find(r => r.id === rwId);
+    if (!item || !rw) return;
+
+    if (!rw.types.includes(item.type) || item.socketsMax !== rw.runes.length) {
+      showToast('⚠️ จำนวนช่องเจาะของไอเทมไม่ตรงกับสูตรคำรูนนี้');
+      return;
+    }
+
+    const inserted = item.socketedRunes || [];
+    for (let i = 0; i < inserted.length; i++) {
+      if (inserted[i] !== rw.runes[i]) {
+        showToast('⚠️ ลำดับรูนที่ฝังไว้ก่อนหน้าไม่ตรงกับสูตรคำรูนนี้');
+        return;
+      }
+    }
+
+    const neededCounts = {};
+    for (let i = inserted.length; i < rw.runes.length; i++) {
+      const rk = rw.runes[i];
+      neededCounts[rk] = (neededCounts[rk] || 0) + 1;
+    }
+
+    for (const rk of Object.keys(neededCounts)) {
+      if ((gameState.runeStash[rk] || 0) < neededCounts[rk]) {
+        const rName = RUNE_DATABASE[rk] ? RUNE_DATABASE[rk].name : rk;
+        showToast(`⚠️ หินรูน ${rName} ในคลังไม่เพียงพอ`);
+        return;
+      }
+    }
+
+    for (let i = inserted.length; i < rw.runes.length; i++) {
+      const rk = rw.runes[i];
+      gameState.runeStash[rk] -= 1;
+      item.socketedRunes.push(rk);
+    }
+
+    const activatedRw = checkRuneword(item);
+    if (activatedRw) {
+      item.activeRuneword = activatedRw;
+      showToast(`⚡ ฝังรูนครบเซ็ตและปลุกพลังคำรูน: ${activatedRw.name} สำเร็จ!`);
+      speakVoice(`ปลุกพลังคำรูนโบราณสำเร็จ ${activatedRw.name} พลังอสูรตื่นขึ้นแล้ว`, true);
+    }
+
+    saveGame();
+    renderUI();
+    renderSocketModalUI();
+  }
+
+  function renderRunewordAdvisorForItem(item, containerEl, listEl, allowDirectSocket = false) {
     if (!containerEl || !listEl || !item) return;
 
     const typeMatches = getCompatibleRunewordsForItem(item);
@@ -1401,7 +1450,7 @@
         const rk = rw.runes[i];
         neededCounts[rk] = (neededCounts[rk] || 0) + 1;
       }
-      let hasAllNeeded = isExactSocketCount && prefixMatches;
+      let hasAllNeeded = isExactSocketCount && prefixMatches && inserted.length < reqCount;
       Object.keys(neededCounts).forEach(rk => {
         if ((gameState.runeStash[rk] || 0) < neededCounts[rk]) {
           hasAllNeeded = false;
@@ -1433,6 +1482,10 @@
         return `<span class="rw-rune-pill ${pillClass}">${mark} ${rInfo ? rInfo.name : rk} (#${rInfo ? rInfo.number : '?'})</span>`;
       }).join(' ➔ ');
 
+      const quickSocketBtnHtml = (allowDirectSocket && hasAllNeeded)
+        ? `<button type="button" class="btn-socket-runeword-now" data-rwid="${rw.id}">⚡ ฝังรูนครบเซ็ตตามสูตรนี้ทันที</button>`
+        : '';
+
       card.innerHTML = `
         <div class="rw-advisor-header">
           <span class="rw-advisor-name">⚡ ${rw.name}</span>
@@ -1440,7 +1493,17 @@
         </div>
         <div class="rw-recipe-pills">${pillsHtml}</div>
         <div class="rw-advisor-desc">${rw.desc}</div>
+        ${quickSocketBtnHtml}
       `;
+
+      const quickBtn = card.querySelector('.btn-socket-runeword-now');
+      if (quickBtn) {
+        quickBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          socketFullRuneword(rw.id);
+        });
+      }
+
       listEl.appendChild(card);
     });
   }
@@ -1679,7 +1742,7 @@
       modalRunewordDescBoxEl.style.display = 'none';
     }
 
-    renderRunewordAdvisorForItem(item, modalRwAdvisorBoxEl, modalRwAdvisorListEl);
+    renderRunewordAdvisorForItem(item, modalRwAdvisorBoxEl, modalRwAdvisorListEl, false);
 
     const statTypeNames = {
       weapon: 'ดาเมจพื้นฐาน',
@@ -1799,7 +1862,7 @@
       socketSlotsDisplayEl.appendChild(row);
     }
 
-    renderRunewordAdvisorForItem(item, socketAdvisorBoxEl, socketAdvisorListEl);
+    renderRunewordAdvisorForItem(item, socketAdvisorBoxEl, socketAdvisorListEl, true);
 
     const hasEmptySlot = item.socketedRunes.length < item.socketsMax;
     socketRunesListEl.innerHTML = '';
@@ -1810,14 +1873,14 @@
       let availableCount = 0;
       Object.keys(RUNE_DATABASE).forEach(rKey => {
         const count = gameState.runeStash[rKey] || 0;
-        if (count > 0 && rKey !== 'hel') {
+        if (count > 0) {
           availableCount++;
           const r = RUNE_DATABASE[rKey];
           const choice = document.createElement('div');
           choice.className = 'socket-rune-choice';
           choice.innerHTML = `
             <span style="font-size: 1.1rem;">${r.icon}</span>
-            <span class="socket-choice-name">${r.name}</span>
+            <span class="socket-choice-name">${r.name} (#${r.number})</span>
             <span class="socket-choice-qty">${r.statDesc} (x${count})</span>
           `;
           choice.addEventListener('click', () => insertRuneIntoItem(rKey));
@@ -3232,7 +3295,6 @@
       gameState.statPoints -= 1;
       gameState.stats[statKey] += 1;
       if (statKey === 'sta' && App.MagicEngine) {
-        // Refill the newly gained +5 Max MP immediately
         gameState.currentMp = Math.min(App.MagicEngine.getMaxMp(gameState), (gameState.currentMp || 0) + 5);
         showToast(`💪 เสริมพลัง STA เป็น ${gameState.stats.sta}! (Max MP: ${App.MagicEngine.getMaxMp(gameState)})`);
       } else {

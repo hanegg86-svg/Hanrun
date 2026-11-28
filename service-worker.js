@@ -1,4 +1,4 @@
-const CACHE_NAME = 'shadowstrider-v32';
+const CACHE_NAME = 'shadowstrider-v33';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
